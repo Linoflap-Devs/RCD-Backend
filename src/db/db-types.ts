@@ -164,7 +164,7 @@ export interface TblAgents {
 export interface TblAgentSession {
   AgentUserID: number;
   ExpiresAt: Date;
-  SessionID: number;
+  SessionID: Generated<number>;
   SessionString: string;
 }
 
