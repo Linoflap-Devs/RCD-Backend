@@ -3,6 +3,7 @@ import { db } from './db/db'
 import helmet from 'helmet'
 import cors from 'cors'
 import cookieParser from "cookie-parser";
+import morgan from 'morgan'
 
 import usersRoutes from './routes/users.routes'
 
@@ -15,6 +16,7 @@ app.use(cors({
     origin: '*',
     credentials: true
 }))
+app.use(morgan('dev'))
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
