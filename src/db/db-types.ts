@@ -107,9 +107,9 @@ export interface TblAgentRegistration {
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
   FirstName: string;
-  IsVerified: number;
+  IsVerified: Generated<number>;
   LastName: string;
-  LastUpdate: Date;
+  LastUpdate: Generated<Date>;
   MiddleName: string;
   PagIbigNumber: string | null;
   PersonEmergency: string;
@@ -123,7 +123,7 @@ export interface TblAgentRegistration {
   SSSNumber: string | null;
   TelephoneNumber: string | null;
   TINNumber: string | null;
-  UpdateBy: number;
+  UpdateBy: number | null;
 }
 
 export interface TblAgents {
@@ -207,7 +207,7 @@ export interface TblAgentTaxRates {
 export interface TblAgentUser {
   AgentID: number | null;
   AgentRegistrationID: number | null;
-  AgentUserID: number;
+  AgentUserID: Generated<number>;
   Email: string;
   ImageID: number | null;
   Password: string;

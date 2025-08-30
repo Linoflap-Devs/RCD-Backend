@@ -4,11 +4,13 @@ import { z, ZodError } from 'zod'
 export const validate = <T>(schema: z.ZodSchema<T>) => {
     return (req: Request, res: Response, next: NextFunction) => {
         try {
+            console.log(req.body)
             schema.parse(req.body);
             next()
         }
         catch(err: unknown) {
             if (err instanceof ZodError) {
+                console.log(err.issues)
                 const errorMessages = err.issues.map((issue) => ({
                     [issue.path.join('.')]: `${issue.message}`,
                 }))
