@@ -73,12 +73,57 @@ export interface SalesTransTemp {
   SPRate: number;
 }
 
+export interface TblAgentEducation {
+  AgentEducationID: Generated<number>;
+  AgentID: number | null;
+  AgentRegistrationID: number | null;
+  Degree: string;
+  EndDate: Date;
+  School: string;
+  StartDate: Date;
+}
+
 export interface TblAgentReferral {
   AgentID: number;
   LastUpdate: Date;
   ReferralID: number;
   ReferredByID: number;
   Updateby: number;
+}
+
+export interface TblAgentRegistration {
+  Address: string;
+  AddressEmergency: string;
+  AffiliationDate: Date;
+  AgentCode: string;
+  AgentRegistrationID: Generated<number>;
+  AgentTaxRate: number;
+  Birthdate: Date;
+  Birthplace: string | null;
+  CivilStatus: string;
+  ContactEmergency: string;
+  ContactNumber: string;
+  DivisionID: string | null;
+  DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
+  FirstName: string;
+  IsVerified: number;
+  LastName: string;
+  LastUpdate: Date;
+  MiddleName: string;
+  PagIbigNumber: string | null;
+  PersonEmergency: string;
+  PhilhealthNumber: string | null;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number | null;
+  ReferredCode: string | null;
+  Religion: string | null;
+  Sex: string;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
+  UpdateBy: number;
 }
 
 export interface TblAgents {
@@ -89,23 +134,38 @@ export interface TblAgents {
   AgentID: number;
   AgentTaxRate: number;
   Birthdate: Date;
+  Birthplace: string | null;
   CivilStatus: string;
   ContactEmergency: string;
   ContactNumber: string;
   DivisionID: string | null;
   DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
   FirstName: string;
   IsActive: number;
   LastName: string;
   LastUpdate: Date;
   MiddleName: string;
+  PagIbigNumber: string | null;
   PersonEmergency: string;
+  PhilhealthNumber: string | null;
   PositionID: number | null;
   PRCNumber: string | null;
   ReferredByID: number | null;
   ReferredCode: string | null;
+  Religion: string | null;
   Sex: string;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
   UpdateBy: number;
+}
+
+export interface TblAgentSession {
+  AgentUserID: number;
+  ExpiresAt: Date;
+  SessionID: number;
+  SessionString: string;
 }
 
 export interface TblAgentsold {
@@ -142,6 +202,25 @@ export interface TblAgentTaxRates {
   UpdateBy: number;
   VATRate: number;
   WtaxRAte: number;
+}
+
+export interface TblAgentUser {
+  AgentID: number | null;
+  AgentRegistrationID: number | null;
+  AgentUserID: number;
+  Email: string;
+  ImageID: number | null;
+  Password: string;
+}
+
+export interface TblAgentWorkExp {
+  AgentID: number | null;
+  AgentRegistrationID: number | null;
+  AgentWorkExpID: Generated<number>;
+  Company: string;
+  EndDate: Date;
+  JobTitle: string;
+  StartDate: Date;
 }
 
 export interface TblBranchDivision {
@@ -1204,10 +1283,15 @@ export interface XTblClients {
 export interface DB {
   database_firewall_rules: DatabaseFirewallRules;
   SalesTransTemp: SalesTransTemp;
+  Tbl_AgentEducation: TblAgentEducation;
   Tbl_AgentReferral: TblAgentReferral;
+  Tbl_AgentRegistration: TblAgentRegistration;
   Tbl_Agents: TblAgents;
+  Tbl_AgentSession: TblAgentSession;
   Tbl_Agentsold: TblAgentsold;
   Tbl_AgentTaxRates: TblAgentTaxRates;
+  Tbl_AgentUser: TblAgentUser;
+  Tbl_AgentWorkExp: TblAgentWorkExp;
   tbl_BranchDivision: TblBranchDivision;
   Tbl_Broker: TblBroker;
   Tbl_Buyers: TblBuyers;
