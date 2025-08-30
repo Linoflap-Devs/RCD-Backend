@@ -2,6 +2,7 @@ import { DB } from './db-types' // this is the Database interface we defined ear
 import * as tedious from 'tedious'
 import * as tarn from 'tarn'
 import { Kysely, MssqlDialect } from 'kysely'
+import 'dotenv/config'
 
 const dialect = new MssqlDialect({
   tarn: {
@@ -9,6 +10,7 @@ const dialect = new MssqlDialect({
     options: {
       min: 0,
       max: 10,
+      propagateCreateError: true
     },
   },
   tedious: {
@@ -22,7 +24,7 @@ const dialect = new MssqlDialect({
         type: 'default',
       },
       options: {
-        database: 'RCDR2Stage',
+        database: process.env.DATABASE_NAME,
         port: 1433, 
         trustServerCertificate: true,
       },
