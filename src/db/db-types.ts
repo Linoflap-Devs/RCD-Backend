@@ -499,6 +499,16 @@ export interface TblDivision {
   UpdateBy: number;
 }
 
+export interface TblImage {
+  ContentType: string;
+  CreatedAt: Date;
+  FileContent: Buffer;
+  FileExtension: string;
+  Filename: string;
+  FileSize: number;
+  ImageID: Generated<number>;
+}
+
 export interface TblLogs {
   LogDate: Date;
   LogID: number;
@@ -1312,6 +1322,7 @@ export interface DB {
   Tbl_Developers: TblDevelopers;
   Tbl_Distribution: TblDistribution;
   Tbl_Division: TblDivision;
+  Tbl_Image: TblImage;
   Tbl_logs: TblLogs;
   tbl_Messages: TblMessages;
   Tbl_Position: TblPosition;
