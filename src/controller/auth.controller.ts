@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, getCurrentAgentService, loginAgentService, registerAgentService } from "../service/auth.service";
+import { approveAgentRegistrationService, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -161,6 +161,33 @@ export const getCurrentAgentController = async (req: Request, res: Response) => 
     return res.status(200).json({
         success: true, 
         message: "Current agent.", 
+        data: result.data
+    });
+}
+
+export const logoutAgentSessionController = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    const result = await logoutAgentSessionService(session.sessionID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to logout agent session.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Agent session logged out successfully.", 
         data: result.data
     });
 }

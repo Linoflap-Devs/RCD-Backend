@@ -189,3 +189,24 @@ export const getCurrentAgentService = async (userId: number): QueryResult<{agent
         }
     }
 }
+
+export const logoutAgentSessionService = async(sessionId: number): QueryResult<any> => {
+    const result = await deleteSession(sessionId)
+
+    if(!result.success){
+        logger('Failed to delete session.', {sessionId: sessionId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to delete session.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
