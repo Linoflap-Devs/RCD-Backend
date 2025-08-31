@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
 import { approveAgentRegistrationTransaction, deleteSession, extendSessionExpiry, findSession, insertSession, registerAgentTransaction } from "../repository/auth.repository";
-import { findAgentUserByEmail } from "../repository/users.repository";
+import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -164,3 +164,28 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
     }
 
 }   
+
+export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, email: string, isVerified: boolean}> => {
+    const result = await findAgentUserById(Number(userId));
+
+    if(!result.success){
+        logger('Failed to find user.', {userId: userId})
+        return {
+            success: false,
+            data: {} as {agentId: number, email: string, isVerified: boolean},
+            error: {
+                message: 'Failed to find user.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            agentId: result.data.agentUserId,
+            email: result.data.email,
+            isVerified: result.data.isVerified
+        }
+    }
+}

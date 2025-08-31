@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, loginAgentService, registerAgentService } from "../service/auth.service";
+import { approveAgentRegistrationService, getCurrentAgentService, loginAgentService, registerAgentService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -129,6 +129,38 @@ export const approveAgentRegistrationController = async (req: Request, res: Resp
     return res.status(200).json({
         success: true, 
         message: "Agent registration approved successfully.", 
+        data: result.data
+    });
+}
+
+export const getCurrentAgentController = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await getCurrentAgentService(session.userID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to get current agent.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Current agent.", 
         data: result.data
     });
 }

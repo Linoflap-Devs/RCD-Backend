@@ -19,7 +19,7 @@ export const validateSession = async (req: Request, res: Response, next: NextFun
 
     req.session = {
         sessionID: result.session.SessionID,
-        userID: result.user.AgentID,
+        userID: result.user.AgentUserID,
         isVerified: result.user.IsVerified
     }
 
