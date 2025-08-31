@@ -98,6 +98,8 @@ export const loginAgentController = async (req: Request, res: Response) => {
         return
     }
 
+    res.cookie('_rcd_agent_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
     return res.status(200).json({
         success: true, 
         message: "Agent logged in successfully.", 

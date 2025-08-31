@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, findSession, insertSession, registerAgentTransaction } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, deleteSession, extendSessionExpiry, findSession, insertSession, registerAgentTransaction } from "../repository/auth.repository";
 import { findAgentUserByEmail } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { verifyPassword } from "../utils/scrypt";
@@ -23,32 +23,32 @@ export const createSession = async (token: string, userId: number) => {
     return result;
 }   
 
-// export const validateSessionToken = async (token: string) => {   
-//     const find = await findSession(token)
+export const validateSessionToken = async (token: string) => {   
+    const find = await findSession(token)
     
-//     if(find === null) {
-//         logger('Session not found', {token: token})
-//         return { session: null, user: null }
-//     }
+    if(find === null) {
+        logger('Session not found', {token: token})
+        return { session: null, user: null }
+    }
 
-//     if(find !== undefined && find.data.session !== null) {
-//         console.log(find.data.session)
-//         if(Date.now() >= find.data.session?.ExpiresAt.getTime()) {
-//             await deleteSession(find.data.session.SessionID)
-//             return { session: null, user: null}
-//         }
+    if(find !== undefined && find.data.AgentSession !== null) {
+        console.log(find.data.AgentSession)
+        if(Date.now() >= find.data.AgentSession?.ExpiresAt.getTime()) {
+            await deleteSession(find.data.AgentSession.SessionID)
+            return { session: null, user: null}
+        }
 
-//         if(Date.now() >= find.data.session?.ExpiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
-//             find.data.session.ExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-//             await extendSessionExpiry(find.data.session.SessionID, find.data.session.ExpiresAt)
-//         }
+        if(Date.now() >= find.data.AgentSession?.ExpiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
+            find.data.AgentSession.ExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+            await extendSessionExpiry(find.data.AgentSession.SessionID, find.data.AgentSession.ExpiresAt)
+        }
 
-//         return { session: find.data.session, user: find.data.user }
-//     }
+        return { session: find.data.AgentSession, user: find.data.AgentUser }
+    }
 
-//     logger('Session not found', {token: token})
-//     return { session: null, user: null }
-// }
+    logger('Session not found', {token: token})
+    return { session: null, user: null }
+}
 
 export const registerAgentService = async (data: IAgentRegister, image?: Express.Multer.File): QueryResult<any> => {
     console.log(data, image)
