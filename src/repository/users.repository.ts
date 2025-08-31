@@ -1,6 +1,8 @@
 import { db } from "../db/db";
-import { TblUsers } from "../db/db-types";
+import { TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
+import { IAgent, IAgentPicture, VwAgentPicture } from "../types/users.types";
+import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
     try {
@@ -87,6 +89,62 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{agent
         return {
             success: false,
             data: {} as {agentUserId: number, email: string,  isVerified: boolean, password: string},
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult<VwAgentPicture> => {
+    try {
+
+        const account = await db.selectFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .select(['AgentID', 'ImageID'])
+            .executeTakeFirstOrThrow();
+
+        const agent: VwAgents = await db.selectFrom('Vw_Agents')
+            .where('AgentID', '=', account.AgentID)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        const picture = await db.selectFrom('Tbl_Image')
+            .where('ImageID', '=', account.ImageID)
+            .selectAll()
+            .executeTakeFirst();
+
+        let obj: VwAgentPicture = {
+            ...agent
+        }
+
+        if(picture){
+            obj = {
+                ...agent,
+                Image: {
+                    ContentType: picture.ContentType,
+                    CreatedAt: picture.CreatedAt,
+                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileExtension: picture.FileExtension,
+                    Filename: picture.Filename,
+                    FileSize: picture.FileSize,
+                    ImageID: picture.ImageID
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgentPicture,
             error: {
                 code: 400,
                 message: error.message

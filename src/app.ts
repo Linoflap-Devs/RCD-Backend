@@ -7,6 +7,7 @@ import morgan from 'morgan'
 
 import usersRoutes from './routes/users.routes'
 import authRoutes from './routes/auth.routes'
+import dashboardRoutes from './routes/dashboard.routes'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -25,6 +26,7 @@ app.use(cookieParser())
 
 app.use('/api/auth', authRoutes)
 app.use('/api/users', usersRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 app.listen(3000, () => {
     console.log('Server running on http://localhost:3000')

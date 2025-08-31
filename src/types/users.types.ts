@@ -1,3 +1,5 @@
+import { VwAgents } from "../db/db-types";
+
 export interface IAgent {
     Address: string;
     AddressEmergency: string;
@@ -31,4 +33,26 @@ export interface IAgent {
     TelephoneNumber: string | null;
     TINNumber: string | null;
     UpdateBy: number;
+}
+
+export type IAgentPicture = IAgent & {
+    ContentType?: string;
+    CreatedAt?: Date;
+    FileContent?: Buffer;
+    FileExtension?: string;
+    Filename?: string;
+    FileSize?: number;
+    ImageID?: number;
+}
+
+export type VwAgentPicture = VwAgents & {
+    Image?: {
+        ContentType: string;
+        CreatedAt: Date;
+        FileContent: string;
+        FileExtension: string;
+        Filename: string;
+        FileSize: number;
+        ImageID: number;
+    }
 }

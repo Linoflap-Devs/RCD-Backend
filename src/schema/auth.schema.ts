@@ -7,5 +7,5 @@ export const loginAgentSchema = z.object({
 
 export const approveRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
-    agentId: z.number().optional()
+    agentId: z.coerce.number().optional()
 })
