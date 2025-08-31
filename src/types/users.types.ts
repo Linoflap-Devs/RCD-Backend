@@ -1,0 +1,34 @@
+export interface IAgent {
+    Address: string;
+    AddressEmergency: string;
+    AffiliationDate: Date;
+    AgentCode: string;
+    AgentID: number;
+    AgentTaxRate: number;
+    Birthdate: Date;
+    Birthplace: string | null;
+    CivilStatus: string;
+    ContactEmergency: string;
+    ContactNumber: string;
+    DivisionID: string | null;
+    DSHUDNumber: string | null;
+    EmployeeIDNumber: string | null;
+    FirstName: string;
+    IsActive: number;
+    LastName: string;
+    LastUpdate: Date;
+    MiddleName: string;
+    PagIbigNumber: string | null;
+    PersonEmergency: string;
+    PhilhealthNumber: string | null;
+    PositionID: number | null;
+    PRCNumber: string | null;
+    ReferredByID: number | null;
+    ReferredCode: string | null;
+    Religion: string | null;
+    Sex: string;
+    SSSNumber: string | null;
+    TelephoneNumber: string | null;
+    TINNumber: string | null;
+    UpdateBy: number;
+}

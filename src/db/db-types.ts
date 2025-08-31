@@ -131,7 +131,7 @@ export interface TblAgents {
   AddressEmergency: string;
   AffiliationDate: Date;
   AgentCode: string;
-  AgentID: number;
+  AgentID: Generated<number>;
   AgentTaxRate: number;
   Birthdate: Date;
   Birthplace: string | null;
@@ -210,6 +210,7 @@ export interface TblAgentUser {
   AgentUserID: Generated<number>;
   Email: string;
   ImageID: number | null;
+  IsVerified: Generated<number>;
   Password: string;
 }
 

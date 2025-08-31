@@ -10,7 +10,8 @@ export interface IAgentUser {
     AgentRegistrationID: number | null
     AgentUserID: number
     Email: string
-    ImageID: number | null
+    ImageID: number | null,
+    IsVerified: number
 }
 
 export interface IAgentUserSession {

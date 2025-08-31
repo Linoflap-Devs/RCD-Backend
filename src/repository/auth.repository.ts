@@ -1,9 +1,12 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgentSession } from "../db/db-types";
+import { TblAgents, TblAgentSession } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUserSession } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
+import { hashPassword } from "../utils/scrypt";
+import { logger } from "../utils/logger";
+import { IAgent } from "../types/users.types";
 
 export const insertSession =  async (sessionString: string, agentUserId: number): QueryResult<IAgentSession> => {
     try {
@@ -11,9 +14,9 @@ export const insertSession =  async (sessionString: string, agentUserId: number)
             SessionString: sessionString,
             AgentUserID: agentUserId,
             ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
-        }).execute();
+        }).outputAll('inserted').executeTakeFirstOrThrow();
 
-        if(!result[0].insertId) return {
+        if(!result) return {
             success: false,
             data: {} as IAgentSession,
             error: {
@@ -22,7 +25,7 @@ export const insertSession =  async (sessionString: string, agentUserId: number)
             }
         }
 
-        const find = await db.selectFrom('Tbl_AgentSession').where('SessionID', '=', Number(result[0].insertId)).selectAll().executeTakeFirst();
+        const find = await db.selectFrom('Tbl_AgentSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
 
         if(!find) return {
             success: false,
@@ -89,7 +92,8 @@ export const findSession = async (sessionString: string): QueryResult<IAgentUser
                     AgentRegistrationID: result.AgentRegistrationID,
                     AgentUserID: result.AgentUserID,
                     Email: result.Email,
-                    ImageID: result.ImageID
+                    ImageID: result.ImageID,
+                    IsVerified: result.IsVerified
                 }
             }
         }
@@ -253,10 +257,13 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
         }
 
         // insert into Agent User
+
+        const hash = await hashPassword(data.password);
+
         const agentUser = await registerTransaction.insertInto('Tbl_AgentUser').values({
             AgentRegistrationID: agentRegistration.AgentRegistrationID,
             Email: data.email,
-            Password: data.password,
+            Password: hash,
             ImageID: imageId > 0 ? imageId : null
         }).executeTakeFirstOrThrow();
 
@@ -275,6 +282,221 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
         return {
             success: false,
             data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number): QueryResult<IAgentUser> => {
+    try {
+
+        // get all relevant data
+        const [registration, agentUser] = await Promise.all([
+            db.selectFrom('Tbl_AgentRegistration')
+                .where('AgentRegistrationID', '=', agentRegistrationId)
+                .where('IsVerified', '=', 0)
+                .selectAll()
+                .executeTakeFirstOrThrow(),
+            db.selectFrom('Tbl_AgentUser')
+                .where('AgentRegistrationID', '=', agentRegistrationId)
+                .where('IsVerified', '=', 0)
+                .selectAll()
+                .executeTakeFirstOrThrow()
+        ]);
+
+        if(!registration || !agentUser) {
+            logger(
+                'Failed to find agent registration or agent user account. Target registration may already be verified.', 
+                {
+                    agentRegistrationId: agentRegistrationId, 
+                    agentId: agentId
+                }
+            );
+            return {
+                success: false,
+                data: {} as IAgentUser,
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent registration or agent user account. Target registration may already be verified.'
+                }
+            }
+        }
+
+        let agentData: IAgent | undefined = undefined
+        if(agentId){
+            // prepare data for linking
+            const findAgent = await db.selectFrom('Tbl_Agents').where('AgentID', '=', agentId).selectAll().executeTakeFirstOrThrow();
+            if(!findAgent){
+                logger('Failed to find agent registration, agent user account, or agent data.', {agentRegistrationId: agentRegistrationId, agentId: agentId});
+                return {
+                    success: false,
+                    data: {} as IAgentUser,
+                    error: {
+                        code: 500,
+                        message: 'Failed to find agent data.'
+                    }
+                }
+            }
+            agentData = {
+                ...findAgent,
+                AgentID: Number(findAgent.AgentID)
+            }
+        }
+
+        const trx = await db.startTransaction().execute();
+
+        let agentIdInserted = 0;
+        try {
+            if(agentData){
+                // link existing agent to agent tables
+                const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
+                                            .set('IsVerified', 1)
+                                            .set('AgentID', Number(agentData.AgentID))
+                                            .executeTakeFirstOrThrow();
+
+                const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
+                                                .set('AgentID', Number(agentData.AgentID))
+                                                .executeTakeFirstOrThrow()
+                
+                const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
+                                                .set('AgentID', Number(agentData.AgentID))
+                                                .executeTakeFirstOrThrow()
+
+                const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
+                                                    .set('IsVerified', 1)
+                                                    .executeTakeFirstOrThrow();
+
+                // assign agent id
+                agentIdInserted = Number(agentData.AgentID);
+            }
+            else {
+                // push registration details to agents table
+
+                // generate 6 digit number
+                const generateAgentCode = (): string => {
+                    const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
+                    return `0.${randomNumber}`;
+                };
+
+                const checkDuplicateAgentCode = async (agentCode: string): Promise<boolean> => {
+                    const agent = await trx.selectFrom('Tbl_Agents')
+                        .where('AgentCode', '=', agentCode)
+                        .selectAll()
+                        .executeTakeFirst();
+                    return !!agent; // Returns true if agent exists, false otherwise
+                };
+
+                const getUniqueAgentCode = async (): Promise<string> => {
+                    let agentCode: string;
+                    do {
+                        agentCode = generateAgentCode();
+                    } while (await checkDuplicateAgentCode(agentCode));
+                    return agentCode;
+                };
+
+                const uniqueCode = await getUniqueAgentCode();
+
+                const insertAgent = await trx.insertInto('Tbl_Agents').values({
+                    AgentCode: uniqueCode,
+                    LastName: registration.LastName,
+                    FirstName: registration.FirstName,
+                    MiddleName: registration.MiddleName ?? '',
+                    ContactNumber: registration.ContactNumber,
+                    AgentTaxRate: 5,
+                    CivilStatus: registration.CivilStatus,
+                    Sex: registration.Sex,
+                    Address: registration.Address,
+                    Birthdate: registration.Birthdate,
+                    Birthplace: registration.Birthplace ?? '',
+                    Religion: registration.Religion ?? '',
+                    PhilhealthNumber: registration.PhilhealthNumber ?? '',
+                    SSSNumber: registration.SSSNumber ?? '',
+                    PagIbigNumber: registration.PagIbigNumber ?? '',
+                    TINNumber: registration.TINNumber ?? '',
+                    PRCNumber: registration.PRCNumber ?? '',
+                    DSHUDNumber: registration.DSHUDNumber ?? '',
+                    EmployeeIDNumber: registration.EmployeeIDNumber ?? '',
+                    PersonEmergency: '',
+                    ContactEmergency: '',
+                    AddressEmergency: '',
+                    AffiliationDate: new Date(),
+
+                    IsActive: 1,
+                    LastUpdate: new Date(),
+                    UpdateBy: 0
+                })
+                .output('inserted.AgentID')
+                .executeTakeFirstOrThrow();
+                
+                // update related tables
+
+                const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
+                                            .set('IsVerified', 1)
+                                            .set('AgentID', Number(insertAgent.AgentID))
+                                            .executeTakeFirstOrThrow();
+
+                const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
+                                                .set('AgentID', Number(insertAgent.AgentID))
+                                                .executeTakeFirstOrThrow()
+                
+                const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
+                                                .set('AgentID', Number(insertAgent.AgentID))
+                                                .executeTakeFirstOrThrow()
+
+                const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
+                                                    .set('IsVerified', 1)
+                                                    .executeTakeFirstOrThrow();
+
+                // assign new id
+                agentIdInserted = insertAgent.AgentID;
+            }
+
+            if(agentIdInserted > 0){
+                await trx.commit().execute()
+
+                const data = await db.selectFrom('Tbl_Agents')
+                                    .where('AgentID', '=', agentIdInserted)
+                                    .selectAll()
+                                    .executeTakeFirstOrThrow();
+
+                if(!data){
+                    throw new Error('Unknown error.')
+                }
+
+                return {
+                    success: true,
+                    data: agentUser
+                }
+            }
+        }
+
+        catch(err: unknown){
+            await trx.rollback().execute();
+            const error = err as Error;
+            return {
+                success: false,
+                data: {} as IAgentUser,
+                error: {
+                    code: 500,
+                    message: error.message
+                }
+            }
+        }
+
+        return {
+            success: false,
+            data: {} as IAgentUser
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IAgentUser,
             error: {
                 code: 500,
                 message: error.message
