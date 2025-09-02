@@ -39,7 +39,7 @@ export const getAgentDashboard = async (agentUserId: number): QueryResult<any> =
         middleName: result.data.MiddleName?.trim() ?? '',
         division: result.data.Division?.trim() || '',
         position: result.data.Position?.trim() || '',
-        //profileImage: result.data.Image ? result.data.Image : null,
+        profileImage: result.data.Image ? result.data.Image : null,
     }
 
     // personal sales
