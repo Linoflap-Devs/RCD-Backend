@@ -50,7 +50,7 @@ export const getAgentDashboard = async (agentUserId: number): QueryResult<any> =
     let divisionSales = null
     let divisionSalesData: any[] = []
     if(result.data.DivisionID){
-        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), 3)
+        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, isUnique: true})
 
         if(!getDivSales.success){
             logger('Failed to find division.', {agentUserId: agentUserId})
