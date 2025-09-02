@@ -34,6 +34,8 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
 
     const sales = result.data.map((sale: VwSalesTransactions) => {
         return {
+            salesId: sale.SalesTranID,
+            salesTransDtlId: sale.SalesTransDtlID,
             projectName: sale.ProjectName,
             projectCode: sale.SalesTranCode,
             agentName: sale.AgentName,
