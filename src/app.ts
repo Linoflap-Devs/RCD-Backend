@@ -28,6 +28,10 @@ app.use('/api/auth', authRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 
-app.listen(3000, () => {
-    console.log('Server running on http://localhost:3000')
+app.get('/', (async (req, res) => {
+    res.send('Hello World!')
+}))
+
+app.listen(port, () => {
+    console.log(`Server running on http://localhost:${port}`)
 })
