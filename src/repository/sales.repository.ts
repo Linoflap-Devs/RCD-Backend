@@ -1,5 +1,5 @@
 import { db } from "../db/db"
-import { VwSalesTransactions } from "../db/db-types"
+import { TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 
 export const getPersonalSales = async (agentId: number): QueryResult<VwSalesTransactions[]> => {
@@ -151,6 +151,117 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
         return {
             success: false,
             data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getSalesTransactionDetail = async (salesTransDtlId: number): QueryResult<VwSalesTransactions> => {
+    try {
+        const result = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTransDtlID', '=', salesTransDtlId)
+            .executeTakeFirst();
+        
+        if(!result){
+            return {
+                success: false,
+                data: {} as VwSalesTransactions,
+                error: {
+                    code: 404,
+                    message: 'No sales found.'
+                }
+            }
+        }
+    
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getSalesBranch = async (branchId: number): QueryResult<TblSalesBranch> => {
+    try {
+        const result = await db.selectFrom('Tbl_SalesBranch')
+            .selectAll()
+            .where('BranchID', '=', branchId)
+            .executeTakeFirst();
+        
+        if(!result){
+            return {
+                success: false,
+                data: {} as TblSalesBranch,
+                error: {
+                    code: 404,
+                    message: 'No sales branch found.'
+                }
+            }
+        }
+    
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as TblSalesBranch,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getSalesSector = async (sectorId: number): QueryResult<TblSalesSector> => {
+    try {
+        const result = await db.selectFrom('Tbl_SalesSector')
+            .selectAll()
+            .where('SectorID', '=', sectorId)
+            .executeTakeFirst();
+        
+        if(!result){
+            return {
+                success: false,
+                data: {} as TblSalesSector,
+                error: {
+                    code: 404,
+                    message: 'No sales sector found.'
+                }
+            }
+        }
+    
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as TblSalesSector,
             error: {
                 code: 500,
                 message: error.message

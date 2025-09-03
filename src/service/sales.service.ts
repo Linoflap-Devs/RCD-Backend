@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getDivisionSales } from "../repository/sales.repository";
+import { getDivisionSales, getSalesBranch, getSalesTransactionDetail } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 
@@ -47,4 +47,69 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
         success: true,
         data: sales
     }
+}
+
+export const getSalesTransactionDetailService = async (salesTransDtlId: number): QueryResult<any> => {
+    const result = await getSalesTransactionDetail(salesTransDtlId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: result.error?.code || 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    let branchName = undefined
+    if(result.data.SalesBranchID){
+        const fetchBranch = await getSalesBranch(result.data.SalesBranchID)
+        if(fetchBranch.success){
+            branchName = fetchBranch.data.BranchName
+        }
+    }
+
+    const sales = {
+        salesInfo: {
+            salesStatus: result.data.SalesStatus,
+            salesNumber: result.data.SalesTranCode,
+            fileDate: result.data.DateFiled,
+            reservationDate: result.data.ReservationDate,
+            branch: branchName || '',
+            sector: '',
+            division: result.data.Division,
+        },
+        propertyInfo: {
+            projectName: result.data.ProjectName?.trim() || '',
+            projectType: '',
+            phase: result.data.Phase || '',
+            block: result.data.Block || '',
+            lot: result.data.Lot || '',
+            lotArea: result.data.LotArea,
+            floorArea: result.data.FloorArea,
+            developer: result.data.DeveloperName,
+            commission: result.data.CommissionRate,
+            dasAmount: '',
+            miscFee: result.data.MiscFee,
+            financingScheme: result.data.FinancingScheme
+        },
+        buyerInfo: {
+            buyerName: result.data.BuyersName,
+            address: result.data.BuyersAddress,
+            contactNumber: result.data.BuyersContactNumber,
+            occupation: result.data.BuyersOccupation,
+            downPayment: result.data.DownPayment,
+            downPaymentTerms: result.data.DPTerms,
+            monthlyPayment: result.data.MonthlyDP,
+            downpaymentStartDate: result.data.DPStartSchedule
+        }
+    }
+
+    return {
+        success: true,
+        data: sales
+    }
+
 }
