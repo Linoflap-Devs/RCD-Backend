@@ -56,3 +56,23 @@ export type VwAgentPicture = VwAgents & {
         ImageID: number;
     }
 }
+
+export type IAgentWorkExp = {
+    AgentID: number | null;
+    AgentRegistrationID: number | null;
+    AgentWorkExpID: number;
+    Company: string;
+    EndDate: Date;
+    JobTitle: string;
+    StartDate: Date;
+}
+
+export type IAgentEducation = {
+    AgentEducationID: number;
+    AgentID: number | null;
+    AgentRegistrationID: number | null;
+    Degree: string;
+    EndDate: Date;
+    School: string;
+    StartDate: Date;
+}

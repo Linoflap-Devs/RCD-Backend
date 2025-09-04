@@ -1,7 +1,7 @@
 import { db } from "../db/db";
-import { TblUsers, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
-import { IAgent, IAgentPicture, VwAgentPicture } from "../types/users.types";
+import { IAgent, IAgentEducation, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
 import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
@@ -26,6 +26,84 @@ export const getUsers = async (): QueryResult<TblUsers[]> => {
     }
     
 };
+
+export const getAgentDetails = async (agentId: number): QueryResult<IAgent> => {
+    try {
+        const result = await db.selectFrom('Tbl_Agents')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IAgent,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getAgentWorkExp = async (agentId: number): QueryResult<IAgentWorkExp[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentWorkExp')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+            .execute();
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentWorkExp[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getAgentEducation = async (agentId: number): QueryResult<IAgentEducation[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentEducation')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+            .execute();
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
 
 export const findAgentUserByEmail = async (email: string): QueryResult<{agentUserId: number, email: string, isVerified: boolean, password: string}> => {
     try {
