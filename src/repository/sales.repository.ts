@@ -1,6 +1,7 @@
 import { db } from "../db/db"
 import { TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
+import { logger } from "../utils/logger"
 
 export const getPersonalSales = async (agentId: number): QueryResult<VwSalesTransactions[]> => {
     try {
@@ -105,10 +106,11 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
             .where('AgentName', '<>', '')
 
         if(filters && filters.agentId){
-            result.where('AgentID', '=', filters.agentId)
+            logger('getDivisionSales | Filtering by agentId', {agentId: filters.agentId})
+            result = result.where('AgentID', '=', filters.agentId)
         }
 
-        result = result.orderBy('ReservationDate', 'desc')
+        result = result.orderBy('DateFiled', 'desc')
 
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)

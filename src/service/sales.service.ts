@@ -2,6 +2,7 @@ import { VwSalesTransactions } from "../db/db-types";
 import { getDivisionSales, getSalesBranch, getSalesTransactionDetail } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
+import { logger } from "../utils/logger";
 
 export const getUserDivisionSalesService = async (userId: number, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -18,7 +19,19 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
         }
     }
 
-    const result = await getDivisionSales(userId, {agentId: agent.data.AgentID}, pagination);
+    if(!agent.data.DivisionID){    
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No division found.'
+            }
+        }
+    }
+
+    logger('getUserDivisionSalesService', {userId: userId, agentId: agent.data.AgentID, divisionId: agent.data.DivisionID})
+    const result = await getDivisionSales(Number(agent.data.DivisionID), {}, pagination);
 
     if(!result.success){
         return {
@@ -39,6 +52,63 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
             projectName: sale.ProjectName,
             projectCode: sale.SalesTranCode,
             agentName: sale.AgentName,
+            reservationDate: sale.ReservationDate
+        }
+    })
+
+    return {
+        success: true,
+        data: sales
+    }
+}
+
+export const getUserPersonalSalesService = async (userId: number, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
+    const agent = await findAgentDetailsByUserId(userId)
+
+    if(!agent.data.AgentID){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No agent found.'
+            }
+        }
+    }
+
+    if(!agent.data.DivisionID){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No division found.'
+            }
+        }
+    }
+
+    logger('getUserDivisionSalesService', {userId: userId, agentId: agent.data.AgentID, divisionId: agent.data.DivisionID})
+    const result = await getDivisionSales(Number(agent.data.DivisionID), {agentId: agent.data.AgentID}, pagination);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+
+    const sales = result.data.map((sale: VwSalesTransactions) => {
+        return {
+            salesId: sale.SalesTranID,
+            salesTransDtlId: sale.SalesTransDtlID,
+            projectName: sale.ProjectName?.trim() || '',
+            projectCode: sale.SalesTranCode?.trim() || '',
+            agentName: sale.AgentName || '',
             reservationDate: sale.ReservationDate
         }
     })
