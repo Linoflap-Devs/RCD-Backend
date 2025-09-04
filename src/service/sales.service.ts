@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getDivisionSales, getSalesBranch, getSalesTransactionDetail } from "../repository/sales.repository";
+import { getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -56,9 +56,16 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
         }
     })
 
+    const totalDivisionSales = await getTotalDivisionSales(Number(agent.data.DivisionID))
+
+    const obj = {
+        totalSalesAmount: totalDivisionSales.data,
+        sales: sales
+    }
+
     return {
         success: true,
-        data: sales
+        data: obj
     }
 }
 
@@ -113,9 +120,16 @@ export const getUserPersonalSalesService = async (userId: number, pagination?: {
         }
     })
 
+    const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID)
+
+    const obj = {
+        totalSalesAmount: totalSalesAmount.data,
+        sales: sales
+    }
+
     return {
         success: true,
-        data: sales
+        data: obj
     }
 }
 
