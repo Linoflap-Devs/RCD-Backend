@@ -1,3 +1,5 @@
+import { TblImage } from "../db/db-types";
+import { IImage } from "../types/image.types";
 import { IAgent, IAgentEdit } from "../types/users.types";
 
 export const mapToEditAgent = (data: IAgentEdit): Partial<IAgent> => {
@@ -14,6 +16,18 @@ export const mapToEditAgent = (data: IAgentEdit): Partial<IAgent> => {
     if(data.middleName) dbData.MiddleName = data.middleName
     if(data.religion) dbData.Religion = data.religion
     if(data.telephoneNumber) dbData.TelephoneNumber = data.telephoneNumber
+
+    return dbData
+}
+
+export const mapToImageEdit = (data: IImage): Partial<TblImage> => {
+    const dbData: Partial<TblImage> = {}
+
+    if(data.FileName) dbData.Filename = data.FileName
+    if(data.ContentType) dbData.ContentType = data.ContentType
+    if(data.FileExt) dbData.FileExtension = data.FileExt
+    if(data.FileSize) dbData.FileSize = data.FileSize
+    if(data.FileContent) dbData.FileContent = data.FileContent
 
     return dbData
 }

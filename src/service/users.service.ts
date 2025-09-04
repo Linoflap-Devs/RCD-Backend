@@ -1,7 +1,10 @@
+import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { editAgentDetails, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { editAgentDetails, editAgentImage, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit } from "../types/users.types";
+import { IImage, IImageBase64 } from "../types/image.types";
+import path from "path";
 
 export const getUsersService = async (): QueryResult<TblUsers[]> => {
     const result = await getUsers();
@@ -153,4 +156,65 @@ export const editAgentService = async (agentUserId: number, data: IAgentEdit): Q
     }
 
     return result
+}
+
+export const editAgentImageService = async (agentId: number, image: Express.Multer.File): QueryResult<any> => {
+
+    const agentUserDetails = await findAgentDetailsByUserId(agentId)
+
+    if(!agentUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agentUserDetails.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const filename = `${agentUserDetails.data.LastName}-${agentUserDetails.data.FirstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    
+    let metadata: IImage = {
+        FileName: filename,
+        ContentType: image.mimetype,
+        FileExt: path.extname(image.originalname),
+        FileSize: image.size,
+        FileContent: image.buffer
+    }
+
+    let result: IImageBase64 | undefined = undefined
+
+    if(agentUserDetails.data.Image){
+
+        // update existing image
+        const editImage = await editAgentImage(agentUserDetails.data.Image?.ImageID, metadata)
+
+        if(!editImage.success) return {
+            success: false,
+            data: {},
+            error: editImage.error
+        }
+        result = editImage.data
+    }
+
+    else {
+        // add new image + update user agent image id
+
+        
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
 }

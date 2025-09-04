@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentService, getUserDetailsService, getUsersService } from "../service/users.service";
+import { editAgentImageService, editAgentService, getUserDetailsService, getUsersService } from "../service/users.service";
 import { IAgentEdit } from "../types/users.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
@@ -110,4 +110,35 @@ export const editAgentDetailsController = async (req: Request, res: Response) =>
         message: "User details.",
         data: result.data
     });
+}
+
+export const editAgentImageController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    if(!profileImage){
+        res.status(400).json({success: false, data: {}, message: 'Image not found'})
+        return
+    }
+
+    const result = await editAgentImageService(session.userID, profileImage.profileImage[0])
+
+    if(!result.success) {
+        res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit user image'})
+        return;
+    }
+
+    res.status(200).json({success: true, data: result.data, message: 'User image edited'})
 }

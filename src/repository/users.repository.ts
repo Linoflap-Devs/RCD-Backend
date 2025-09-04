@@ -1,8 +1,9 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
+import { IImage, IImageBase64 } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
-import { mapToEditAgent } from "../utils/maps";
+import { mapToEditAgent, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
@@ -264,6 +265,110 @@ export const editAgentDetails = async (agentId: number, data: IAgentEdit): Query
         return {
             success: false,
             data: {} as IAgent,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editAgentImage = async (imageId: number, imageData: IImage): QueryResult<IImageBase64> => {
+    try {
+
+        const imageMapped = {
+            ContentType: imageData.ContentType,
+            FileContent: imageData.FileContent,
+            FileExtension: imageData.FileExt,
+            Filename: imageData.FileName,
+            FileSize: imageData.FileSize
+        };
+
+        const result = await db.updateTable('Tbl_Image')
+            .where('ImageID', '=', imageId)
+            .set(imageMapped)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        const obj = {
+            ContentType: result.ContentType,
+            CreatedAt: result.CreatedAt,
+            FileContent: `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`,
+            FileExt: result.FileExtension,
+            FileName: result.Filename,
+            FileSize: result.FileSize,
+            ImageID: result.ImageID
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IImageBase64,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const addAgentImage = async (agentId: number, imageData: IImage): QueryResult<IImageBase64> => {
+
+    const trx = await db.startTransaction().execute();
+    try {
+
+        const addImage = await trx.insertInto('Tbl_Image')
+            .values({
+                ContentType: imageData.ContentType,
+                FileContent: imageData.FileContent,
+                FileExtension: imageData.FileExt,
+                Filename: imageData.FileName,
+                FileSize: imageData.FileSize,
+                CreatedAt: new Date()
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        const updateAgent = trx.updateTable('Tbl_AgentUser')
+            .where('AgentID', '=', agentId)
+            .set({
+                ImageID: addImage.ImageID
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        trx.commit().execute()
+
+        const obj = {
+            ContentType: addImage.ContentType,
+            CreatedAt: addImage.CreatedAt,
+            FileContent: `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}`,
+            FileExt: addImage.FileExtension,
+            FileName: addImage.Filename,
+            FileSize: addImage.FileSize,
+            ImageID: addImage.ImageID
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+        
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        trx.rollback().execute();
+        return {
+            success: false,
+            data: {} as IImageBase64,
             error: {
                 code: 400,
                 message: error.message
