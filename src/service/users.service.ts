@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { editAgentDetails, editAgentImage, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentImage, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -204,13 +204,22 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
             data: {},
             error: editImage.error
         }
+
         result = editImage.data
     }
 
     else {
         // add new image + update user agent image id
 
-        
+        const transaction = await addAgentImage(agentUserDetails.data.AgentID, metadata)
+
+        if(!transaction.success) return {
+            success: false,
+            data: {},
+            error: transaction.error
+        }
+
+        result = transaction.data
     }
 
     return {
