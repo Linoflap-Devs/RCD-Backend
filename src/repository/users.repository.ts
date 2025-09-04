@@ -1,7 +1,8 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
-import { IAgent, IAgentEducation, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
+import { mapToEditAgent } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
@@ -223,6 +224,46 @@ export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult
         return {
             success: false,
             data: {} as VwAgentPicture,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editAgentDetails = async (agentId: number, data: IAgentEdit): QueryResult<any> => {
+    try {
+        
+        // editing logic
+        const filteredData = Object.fromEntries(
+            Object.entries(data).filter(([_, value]) => value !== undefined)
+        );
+        
+        // Check if there's actually data to update
+        if (Object.keys(filteredData).length === 0) {
+            throw new Error('No valid fields to update');
+        }
+
+        const partialData = mapToEditAgent(data);
+        
+        const result = await db.updateTable('Tbl_Agents')
+            .where('AgentID', '=', agentId)
+            .set(partialData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IAgent,
             error: {
                 code: 400,
                 message: error.message

@@ -1,6 +1,7 @@
 import { TblUsers } from "../db/db-types";
-import { findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { editAgentDetails, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
+import { IAgentEdit } from "../types/users.types";
 
 export const getUsersService = async (): QueryResult<TblUsers[]> => {
     const result = await getUsers();
@@ -116,3 +117,40 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         data: obj
     }
 };
+
+export const editAgentService = async (agentUserId: number, data: IAgentEdit): QueryResult<any> => {
+
+    const agentUserDetails = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agentUserDetails.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editAgentDetails(agentUserDetails.data.AgentID, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    return result
+}

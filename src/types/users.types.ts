@@ -76,3 +76,17 @@ export type IAgentEducation = {
     School: string;
     StartDate: Date;
 }
+
+export interface IAgentEdit {
+    firstName?: string,
+    middleName?: string,
+    lastName?: string,
+    gender?: 'Male' | 'Female',
+    civilStatus?: 'Single' | 'Married',
+    religion?: string,
+    birthdate?: Date,
+    birthplace?: string,
+    address?: string,
+    telephoneNumber?: string,
+    contactNumber?: string,
+}
