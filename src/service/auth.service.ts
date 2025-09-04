@@ -68,7 +68,16 @@ export const registerAgentService = async (data: IAgentRegister, image?: Express
 
     const result = await registerAgentTransaction(data, metadata)
 
-    if(!result.success) return result
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register agent.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
 
     return result
 }

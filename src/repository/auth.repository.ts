@@ -277,14 +277,24 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
     catch (err: unknown) {
 
         await registerTransaction.rollback().execute();
-
         const error = err as Error;
+
+        let message = error.message
+        let code = 500
+        console.log(error.message)
+        console.log(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser'))
+        if(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser')){
+            message = 'Email already exists.'
+            code = 401
+        }
+
+
         return {
             success: false,
             data: null,
             error: {
-                code: 500,
-                message: error.message
+                code: code,
+                message: message
             }
         }
     }
