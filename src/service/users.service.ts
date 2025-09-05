@@ -1,8 +1,8 @@
 import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, NewEducation } from "../types/users.types";
+import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 
@@ -284,6 +284,70 @@ export const editAgentEducationService = async (
     }
 
     const result = await editAgentEducation(agentDetails.data.AgentID, validEdits, validCreates);
+
+    if (!result.success) {
+        return { success: false, data: {}, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+};
+
+export const editAgentWorkExpService = async (
+    userId: number,
+    editInputs: IAgentWorkExpEditController[],
+    createInputs: NewWorkExp[]
+): QueryResult<any> => {
+    const agentDetails = await findAgentDetailsByUserId(userId);
+    if (!agentDetails.success || !agentDetails.data.AgentID) {
+        return { success: false, data: {}, error: { message: 'No agent found', code: 400 } };
+    }
+
+    const userDetails = await findAgentUserById(userId);
+    if (!userDetails.success || !userDetails.data.agentRegistrationId) {
+        return { success: false, data: {}, error: { message: 'No agent registration found', code: 400 } };
+    }
+
+    if (editInputs.length === 0 && createInputs.length === 0) {
+        return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
+    }
+
+    // Validate and format creates
+    const validCreates: IAgentWorkExp[] = [];
+    for (const work of createInputs) {
+        if (!work.Company) return { success: false, data: {}, error: { message: 'Company not found', code: 400 } };
+        if (!work.JobTitle) return { success: false, data: {}, error: { message: 'Job Title not found', code: 400 } };
+        if (!work.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        validCreates.push({
+            AgentID: agentDetails.data.AgentID,
+            AgentRegistrationID: userDetails.data.agentRegistrationId,
+            AgentWorkExpID: 0, // Assuming auto-gen
+            Company: work.Company,
+            EndDate: work.EndDate || null,
+            JobTitle: work.JobTitle,
+            StartDate: work.StartDate
+        });
+    }
+
+    // Validate and format edits (partial)
+    const validEdits: IAgentWorkExpEdit[] = [];
+    for (const work of editInputs) {
+        if (!work.agentWorkExpID) {
+            return { success: false, data: {}, error: { message: 'Agent work exp id not found', code: 400 } };
+        }
+
+        validEdits.push({
+            AgentID: agentDetails.data.AgentID,
+            AgentRegistrationID: userDetails.data.agentRegistrationId,
+            AgentWorkExpID: work.agentWorkExpID,
+            Company: work.company,
+            EndDate: work.endDate,
+            JobTitle: work.jobTitle,
+            StartDate: work.startDate
+        });
+    }
+
+    const result = await editAgentWorkExp(agentDetails.data.AgentID, validEdits, validCreates);
 
     if (!result.success) {
         return { success: false, data: {}, error: result.error };

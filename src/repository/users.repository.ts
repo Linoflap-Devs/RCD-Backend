@@ -2,8 +2,8 @@ import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64 } from "../types/image.types";
-import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
-import { mapToEditAgent, mapToEditEducation, mapToImageEdit } from "../utils/maps";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
+import { mapToEditAgent, mapToEditEducation, mapToEditWorkExp, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
@@ -449,6 +449,84 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
         return {
             success: false,
             data: [] as IAgentEducation[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWorkExpEdit[], createdWorkExp: IAgentWorkExp[]): QueryResult<any> => {
+    
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedWorks = []
+        const addedWorks = []
+
+        if(editedWorkExp.length > 0){
+            for(const work of editedWorkExp){
+
+                const mapped = mapToEditWorkExp(work);
+
+                console.log(mapped)
+                console.log('AgentID: ', agentId, 'AgentWorkExpID: ', work.AgentWorkExpID)
+
+                const result = await trx.updateTable('Tbl_AgentWorkExp')
+                    .where('AgentID', '=', agentId)
+                    .where('AgentWorkExpID', '=', work.AgentWorkExpID)
+                    .set(mapped)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedWorks.push(result)
+            }
+        }
+
+        if(createdWorkExp.length > 0){
+            const insertValues = createdWorkExp.map(work => ({
+                AgentID: agentId,
+                AgentRegistrationID: work.AgentRegistrationID,
+                Company: work.Company,
+                EndDate: work.EndDate,
+                JobTitle: work.JobTitle,
+                StartDate: work.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_AgentWorkExp')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedWorks.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedWorks,
+                added: addedWorks
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentWorkExp[],
             error: {
                 code: 400,
                 message: error.message

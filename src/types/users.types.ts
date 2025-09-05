@@ -74,6 +74,13 @@ export type NewEducation = {
     StartDate: Date;
 }
 
+export type NewWorkExp = {
+    Company: string;
+    EndDate: Date;
+    JobTitle: string;
+    StartDate: Date;
+}
+
 export type IAgentEducation = {
     AgentEducationID: number;
     AgentID: number | null;
@@ -91,6 +98,16 @@ export type IAgentEducationEdit = {
     Degree?: string;
     EndDate?: Date | null;
     School?: string;
+    StartDate?: Date;
+}
+
+export type IAgentWorkExpEdit = {
+    AgentWorkExpID: number;
+    AgentID: number | null;
+    AgentRegistrationID?: number | null;
+    Company?: string;
+    EndDate?: Date;
+    JobTitle?: string;
     StartDate?: Date;
 }
 
@@ -113,5 +130,13 @@ export interface IAgentEducationEditController {
     degree?: string;
     endDate?: Date;
     school?: string;
+    startDate?: Date;
+}
+
+export interface IAgentWorkExpEditController {
+    agentWorkExpID: number;
+    company?: string;
+    endDate?: Date;
+    jobTitle?: string;
     startDate?: Date;
 }
