@@ -67,14 +67,31 @@ export type IAgentWorkExp = {
     StartDate: Date;
 }
 
+export type NewEducation = {
+    Degree: string;
+    EndDate: Date | null;
+    School: string;
+    StartDate: Date;
+}
+
 export type IAgentEducation = {
     AgentEducationID: number;
     AgentID: number | null;
     AgentRegistrationID: number | null;
     Degree: string;
-    EndDate: Date;
+    EndDate: Date | null;
     School: string;
     StartDate: Date;
+}
+
+export type IAgentEducationEdit = {
+    AgentEducationID: number;
+    AgentID: number | null;
+    AgentRegistrationID?: number | null;
+    Degree?: string;
+    EndDate?: Date | null;
+    School?: string;
+    StartDate?: Date;
 }
 
 export interface IAgentEdit {
@@ -89,4 +106,12 @@ export interface IAgentEdit {
     address?: string,
     telephoneNumber?: string,
     contactNumber?: string,
+}
+
+export interface IAgentEducationEditController {
+    agentEducationID: number;
+    degree?: string;
+    endDate?: Date;
+    school?: string;
+    startDate?: Date;
 }

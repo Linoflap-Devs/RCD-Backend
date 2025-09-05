@@ -1,6 +1,6 @@
 import { TblImage } from "../db/db-types";
 import { IImage } from "../types/image.types";
-import { IAgent, IAgentEdit } from "../types/users.types";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit } from "../types/users.types";
 
 export const mapToEditAgent = (data: IAgentEdit): Partial<IAgent> => {
     const dbData: Partial<IAgent> = {}
@@ -28,6 +28,17 @@ export const mapToImageEdit = (data: IImage): Partial<TblImage> => {
     if(data.FileExt) dbData.FileExtension = data.FileExt
     if(data.FileSize) dbData.FileSize = data.FileSize
     if(data.FileContent) dbData.FileContent = data.FileContent
+
+    return dbData
+}
+
+export const mapToEditEducation = (data: IAgentEducationEdit): Partial<IAgentEducation> => {
+    const dbData: Partial<IAgentEducation> = {}
+
+    if(data.Degree) dbData.Degree = data.Degree
+    if(data.EndDate) dbData.EndDate = data.EndDate
+    if(data.School) dbData.School = data.School
+    if(data.StartDate) dbData.StartDate = data.StartDate
 
     return dbData
 }

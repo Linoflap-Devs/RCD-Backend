@@ -78,7 +78,7 @@ export interface TblAgentEducation {
   AgentID: number | null;
   AgentRegistrationID: number | null;
   Degree: string;
-  EndDate: Date;
+  EndDate: Date | null;
   School: string;
   StartDate: Date;
 }

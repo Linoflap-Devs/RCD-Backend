@@ -1,8 +1,8 @@
 import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentImage, findAgentDetailsByUserId, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgentEdit } from "../types/users.types";
+import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, NewEducation } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 
@@ -227,3 +227,67 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
         data: {}
     }
 }
+
+export const editAgentEducationService = async (
+    userId: number,
+    editInputs: IAgentEducationEditController[],
+    createInputs: NewEducation[]
+): QueryResult<any> => {
+    const agentDetails = await findAgentDetailsByUserId(userId);
+    if (!agentDetails.success || !agentDetails.data.AgentID) {
+        return { success: false, data: {}, error: { message: 'No agent found', code: 400 } };
+    }
+
+    const userDetails = await findAgentUserById(userId);
+    if (!userDetails.success || !userDetails.data.agentRegistrationId) {
+        return { success: false, data: {}, error: { message: 'No agent registration found', code: 400 } };
+    }
+
+    if (editInputs.length === 0 && createInputs.length === 0) {
+        return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
+    }
+
+    // Validate and format creates
+    const validCreates: IAgentEducation[] = [];
+    for (const edu of createInputs) {
+        if (!edu.School) return { success: false, data: {}, error: { message: 'School not found', code: 400 } };
+        if (!edu.Degree) return { success: false, data: {}, error: { message: 'Degree not found', code: 400 } };
+        if (!edu.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        validCreates.push({
+            AgentID: agentDetails.data.AgentID,
+            AgentRegistrationID: userDetails.data.agentRegistrationId,
+            AgentEducationID: 0, // Assuming auto-gen
+            Degree: edu.Degree,
+            EndDate: edu.EndDate || null,
+            School: edu.School,
+            StartDate: edu.StartDate
+        });
+    }
+
+    // Validate and format edits (partial)
+    const validEdits: IAgentEducationEdit[] = [];
+    for (const edu of editInputs) {
+        if (!edu.agentEducationID) {
+            return { success: false, data: {}, error: { message: 'Agent education id not found', code: 400 } };
+        }
+
+        validEdits.push({
+            AgentID: agentDetails.data.AgentID,
+            AgentRegistrationID: userDetails.data.agentRegistrationId,
+            AgentEducationID: edu.agentEducationID,
+            Degree: edu.degree,
+            EndDate: edu.endDate,
+            School: edu.school,
+            StartDate: edu.startDate
+        });
+    }
+
+    const result = await editAgentEducation(agentDetails.data.AgentID, validEdits, validCreates);
+
+    if (!result.success) {
+        return { success: false, data: {}, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+};

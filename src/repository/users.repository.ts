@@ -2,8 +2,8 @@ import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64 } from "../types/image.types";
-import { IAgent, IAgentEdit, IAgentEducation, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
-import { mapToEditAgent, mapToImageEdit } from "../utils/maps";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
+import { mapToEditAgent, mapToEditEducation, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
 export const getUsers = async (): QueryResult<TblUsers[]> => {
@@ -142,11 +142,11 @@ export const findAgentUserByEmail = async (email: string): QueryResult<{agentUse
     }
 }
 
-export const findAgentUserById = async (agentUserId: number): QueryResult<{agentUserId: number, email: string, isVerified: boolean, password: string}> => {
+export const findAgentUserById = async (agentUserId: number): QueryResult<{agentUserId: number, agentRegistrationId: number | null, email: string, isVerified: boolean, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_AgentUser')
             .where('AgentUserID', '=', agentUserId)
-            .select(['AgentUserID', 'Email', 'IsVerified', 'Password'])
+            .select(['AgentUserID', 'Email', 'IsVerified', 'Password', 'AgentRegistrationID'])
             .executeTakeFirstOrThrow()
 
         if(!user){
@@ -157,6 +157,7 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{agent
             success: true,
             data: { 
                 agentUserId: user.AgentUserID, 
+                agentRegistrationId: user.AgentRegistrationID || null,
                 email: user.Email, 
                 isVerified: user.IsVerified == 1 ? true : false, 
                 password: user.Password 
@@ -168,7 +169,7 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{agent
         const error = err as Error
         return {
             success: false,
-            data: {} as {agentUserId: number, email: string,  isVerified: boolean, password: string},
+            data: {} as {agentUserId: number, agentRegistrationId: number | null, email: string,  isVerified: boolean, password: string},
             error: {
                 code: 400,
                 message: error.message
@@ -369,6 +370,85 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
         return {
             success: false,
             data: {} as IImageBase64,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editAgentEducation = async (agentId: number, editedEducation: IAgentEducationEdit[], createdEducation: IAgentEducation[]): QueryResult<any> => {
+    
+    console.log(editedEducation, createdEducation)
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedEducs = []
+        const addedEducs = []
+
+        if(editedEducation.length > 0){
+            for(const edu of editedEducation){
+
+                const mapped = mapToEditEducation(edu);
+
+                console.log(mapped)
+                console.log('AgentID: ', agentId, 'AgentEducationID: ', edu.AgentEducationID)
+
+                const result = await trx.updateTable('Tbl_AgentEducation')
+                    .where('AgentID', '=', agentId)
+                    .where('AgentEducationID', '=', edu.AgentEducationID)
+                    .set(mapped)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedEducs.push(result)
+            }
+        }
+
+        if(createdEducation.length > 0){
+            const insertValues = createdEducation.map(edu => ({
+                AgentID: agentId,
+                AgentRegistrationID: edu.AgentRegistrationID,
+                Degree: edu.Degree,
+                EndDate: edu.EndDate,
+                School: edu.School,
+                StartDate: edu.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_AgentEducation')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedEducs.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedEducs,
+                added: addedEducs
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
             error: {
                 code: 400,
                 message: error.message

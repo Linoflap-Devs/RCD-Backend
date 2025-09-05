@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { editAgentImageService, editAgentService, getUserDetailsService, getUsersService } from "../service/users.service";
-import { IAgentEdit } from "../types/users.types";
+import { editAgentEducationService, editAgentImageService, editAgentService, getUserDetailsService, getUsersService } from "../service/users.service";
+import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
     const result = await getUsersService();
@@ -142,3 +142,25 @@ export const editAgentImageController = async (req: Request, res: Response) => {
 
     res.status(200).json({success: true, data: result.data, message: 'User image edited'})
 }
+
+export const editAgentEducationController = async (req: Request, res: Response) => {
+    const session = req.session;
+
+    if (!session || !session.userID) {
+        return res.status(401).json({ success: false, data: {}, message: 'Unauthorized' });
+    }
+
+    const { edit = [], create = [] } = req.body; // Default to empty arrays
+
+    const result = await editAgentEducationService(session.userID, edit, create);
+
+    if (!result.success) {
+        return res.status(result.error?.code || 400).json({
+            success: false,
+            data: {},
+            message: result.error?.message || 'Failed to edit user education'
+        });
+    }
+
+    return res.status(200).json({ success: true, data: result.data, message: 'User education edited' });
+};
