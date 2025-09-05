@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService } from "../service/auth.service";
+import { approveAgentRegistrationService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -57,8 +57,6 @@ export const registerAgentController = async (req: Request, res: Response) => {
         education,
         experience
     }
-
-    
 
     const result = await registerAgentService(obj, profileImage?.profileImage[0]);
 
@@ -188,6 +186,21 @@ export const logoutAgentSessionController = async (req: Request, res: Response) 
     return res.status(200).json({
         success: true, 
         message: "Agent session logged out successfully.", 
+        data: result.data
+    });
+}
+
+export const sendOTPController = async (req: Request, res: Response) => {
+
+    const {
+        email
+    } = req.body
+
+    const result = await findEmailSendOTP(email)
+
+    return res.status(200).json({
+        success: true, 
+        message: "Check your email.", 
         data: result.data
     });
 }

@@ -620,3 +620,29 @@ export const deleteOTP = async (token: string): QueryResult<null> => {
         }
     }
 }
+
+export const findAgentEmail = async (email: string): QueryResult<IAgentUser> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentUser')
+            .where('Email', '=', email)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

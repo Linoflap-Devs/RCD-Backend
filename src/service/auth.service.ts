@@ -1,14 +1,19 @@
 import { IAgentRegister } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
-import { format } from 'date-fns'
+import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, deleteSession, extendSessionExpiry, findSession, insertSession, registerAgentTransaction } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, deleteSession, extendSessionExpiry, findAgentEmail, findSession, insertOTP, insertSession, registerAgentTransaction } from "../repository/auth.repository";
 import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
-import { success } from "zod";
+import { sendMail } from "../utils/email";
+import { emailOTPTemplate } from "../assets/email/email.template";
+
+const generateOTP = (): number => {
+    return crypto.randomInt(100000, 999999);
+}
 
 export const generateSessionToken = (): string => {
     const bytes = new Uint8Array(20);
@@ -217,5 +222,50 @@ export const logoutAgentSessionService = async(sessionId: number): QueryResult<a
     return {
         success: true,
         data: {}
+    }
+}
+
+export const findEmailSendOTP = async (email: string): QueryResult<null> => {
+    const findEmail = await findAgentEmail(email)
+
+    if(!findEmail.success){
+        logger('Failed to find email.', {email: email})
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: 'Failed to find email.',
+                code: 500
+            }
+        }
+    }
+
+    const code = generateOTP().toString()
+    const minuteExpiry = 5
+    const expiry = addMinutes(new Date(), minuteExpiry)
+
+    // insert otp
+
+    const otpInsert = await insertOTP(findEmail.data.AgentUserID, code, expiry)
+
+    if(!otpInsert.success){
+        logger('Failed to insert otp.', {email: email})
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: 'Failed to insert otp.',
+                code: 500
+            }
+        }
+    }
+
+    // send email
+    //const send = sendMail(findEmail.data.Email, 'Password OTP', emailOTPTemplate(code, minuteExpiry))
+    const spare = sendMail('wendell.ravago@linoflaptech.com', 'Password OTP', emailOTPTemplate(code, minuteExpiry))
+
+    return {
+        success: true,
+        data: null
     }
 }
