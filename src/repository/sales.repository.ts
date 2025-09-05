@@ -92,7 +92,7 @@ export const getTotalDivisionSales = async (divisionId: number): QueryResult<num
     }
 }
 
-export const getDivisionSales = async (divisionId: number, filters?:{amount?: number,  agentId?: number, isUnique?: boolean}, pagination?: {page?: number, pageSize?: number}): QueryResult<VwSalesTransactions[]> => {
+export const getDivisionSales = async (divisionId: number, filters?:{amount?: number,  agentId?: number, isUnique?: boolean}, pagination?: {page?: number, pageSize?: number}): QueryResult<{ totalPages: number, results: VwSalesTransactions[]}> => {
     try {
 
         const page = pagination?.page ?? 1;
@@ -105,23 +105,37 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
             .where('SalesStatus', '<>', 'ARCHIVED')
             .where('AgentName', '<>', '')
 
+        let totalCountResult = await db
+            .selectFrom("Vw_SalesTransactions")
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+            .where("DivisionID", "=", divisionId)
+            .where("SalesStatus", "<>", "ARCHIVED")
+            .where("AgentName", "<>", "")
+
+
         if(filters && filters.agentId){
             logger('getDivisionSales | Filtering by agentId', {agentId: filters.agentId})
             result = result.where('AgentID', '=', filters.agentId)
+            totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
         }
 
         result = result.orderBy('DateFiled', 'desc')
-
+        
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)
         }
-
+        
         const queryResult = await result.execute();
-    
+        const countResult = await totalCountResult.execute();
         if(!result){
             throw new Error('No sales found.')
         }
 
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+        console.log('totalPages', totalPages)
+        
         let filteredResult = queryResult
 
         // Filter to get unique ProjectName records (keeps first occurrence)
@@ -144,7 +158,10 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
         
         return {
             success: true,
-            data: filteredResult
+            data: {
+                totalPages: totalPages,
+                results: filteredResult
+            }
         }
     }
 
@@ -152,7 +169,7 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
         const error = err as Error;
         return {
             success: false,
-            data: [] as VwSalesTransactions[],
+            data: {} as {totalPages: number, results: VwSalesTransactions[]},
             error: {
                 code: 500,
                 message: error.message

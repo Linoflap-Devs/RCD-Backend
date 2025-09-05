@@ -68,7 +68,7 @@ export const getAgentDashboard = async (agentUserId: number): QueryResult<any> =
     }
 
     if(divisionSales){
-        divisionSales.map((sale: VwSalesTransactions) => {
+        divisionSales.results.map((sale: VwSalesTransactions) => {
             divisionSalesData.push({
                 salesId: sale.SalesTranID,
                 salesCode: sale.SalesTranCode?.trim() || '',

@@ -45,7 +45,7 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
     }
 
 
-    const sales = result.data.map((sale: VwSalesTransactions) => {
+    const sales = result.data.results.map((sale: VwSalesTransactions) => {
         return {
             salesId: sale.SalesTranID,
             salesTransDtlId: sale.SalesTransDtlID,
@@ -59,6 +59,7 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
     const totalDivisionSales = await getTotalDivisionSales(Number(agent.data.DivisionID))
 
     const obj = {
+        totalPages: result.data.totalPages,
         totalSalesAmount: totalDivisionSales.data,
         sales: sales
     }
@@ -109,7 +110,7 @@ export const getUserPersonalSalesService = async (userId: number, pagination?: {
     }
 
 
-    const sales = result.data.map((sale: VwSalesTransactions) => {
+    const sales = result.data.results.map((sale: VwSalesTransactions) => {
         return {
             salesId: sale.SalesTranID,
             salesTransDtlId: sale.SalesTransDtlID,
@@ -123,6 +124,7 @@ export const getUserPersonalSalesService = async (userId: number, pagination?: {
     const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID)
 
     const obj = {
+        totalPages: result.data.totalPages,
         totalSalesAmount: totalSalesAmount.data,
         sales: sales
     }
