@@ -675,6 +675,14 @@ export interface TblSMSTemplate {
   UpdateBy: number;
 }
 
+export interface TblTokens {
+  CreatedAt: Generated<Date>;
+  Token: string;
+  TokenID: Generated<number>;
+  UserID: number;
+  ValidUntil: Date;
+}
+
 export interface TblTraining {
   IsActive: number;
   LastUpdate: Date;
@@ -1339,6 +1347,7 @@ export interface DB {
   Tbl_SalesTransDtl: TblSalesTransDtl;
   tbl_SMSOut: TblSMSOut;
   Tbl_SMSTemplate: TblSMSTemplate;
+  Tbl_Tokens: TblTokens;
   Tbl_Training: TblTraining;
   Tbl_Users: TblUsers;
   vw_AgentCommisionReleaseSMS: VwAgentCommisionReleaseSMS;

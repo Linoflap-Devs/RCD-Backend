@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgents, TblAgentSession } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
@@ -507,6 +507,112 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         return {
             success: false,
             data: {} as IAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findUserOTP = async (userId: number, token: string): QueryResult<boolean> => {
+    try {
+        const result = await db.selectFrom('Tbl_Tokens')
+            .where('Token', '=', token)
+            .where('UserID', '=', userId)
+            .selectAll()
+            .executeTakeFirst()
+        
+        if(!result){
+            return {
+                success: false,
+                data: false,
+                error: {
+                    code: 404,
+                    message: 'Token not found.'
+                }
+            }
+        }
+
+        if(result.ValidUntil){
+            if(result.ValidUntil < new Date()){
+                return {
+                    success: false,
+                    data: false,
+                    error: {
+                        code: 400,
+                        message: 'Token is expired.'
+                    }
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: true
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: false,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const insertOTP = async (userId: number, token: string, expiry: Date): QueryResult<Token> => {
+    try {
+        const result = await db.insertInto('Tbl_Tokens')
+            .values({
+                Token: token,
+                UserID: userId,
+                ValidUntil: expiry
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as Token,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteOTP = async (token: string): QueryResult<null> => {
+    try {
+        const result = await db.deleteFrom('Tbl_Tokens')
+            .where('Token', '=', token)
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
             error: {
                 code: 500,
                 message: error.message

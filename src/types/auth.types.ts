@@ -56,3 +56,11 @@ export interface IAgentRegister {
         endDate?: Date | null
     }[]
 }
+
+export interface Token {
+    CreatedAt: Date;
+    Token: string;
+    TokenID: number;
+    UserID: number;
+    ValidUntil: Date;
+}
