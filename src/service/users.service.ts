@@ -1,10 +1,11 @@
 import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
+import { logger } from "../utils/logger";
 
 export const getUsersService = async (): QueryResult<TblUsers[]> => {
     const result = await getUsers();
@@ -120,6 +121,100 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         data: obj
     }
 };
+
+export const getUserDetailsWithValidationService = async (agentUserId: number, targetAgentId: number): QueryResult<any> => {
+    const agentUserDetails = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agentUserDetails.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const targetAgentDetails = await findAgentDetailsByAgentId(targetAgentId)
+
+    if(!targetAgentDetails.success) {
+        logger('No user found', {parameter: targetAgentId, details: targetAgentDetails})
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    // validations per role
+
+    if(agentUserDetails.data.Position == 'SALES PERSON'){
+        if(targetAgentDetails.data.Position !== 'SALES PERSON'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'You are not authorized to view this agent',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(agentUserDetails.data.Position == 'UNIT MANAGER'){
+        if(targetAgentDetails.data.Position !== 'UNIT MANAGER' && targetAgentDetails.data.Position !== 'SALES PERSON'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'You are not authorized to view this agent',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    const userInfo = {
+        firstName: targetAgentDetails.data.FirstName?.trim() || '',
+        lastName: targetAgentDetails.data.LastName?.trim() || '',
+        middleName: targetAgentDetails.data.MiddleName?.trim() ?? '',
+        division: targetAgentDetails.data.Division?.trim() || '',
+        position: targetAgentDetails.data.Position?.trim() || '',
+        profileImage: targetAgentDetails.data.Image ? agentUserDetails.data.Image : null,
+    }
+
+    const agentDetails = await getAgentDetails(agentUserDetails.data.AgentID)
+
+    // agent details
+    const basicInfo = {
+        telephoneNumber: agentDetails.data.TelephoneNumber?.trim() || '',
+        contactNumber: agentDetails.data.ContactNumber.trim() || '' ,
+    }
+
+    const obj = {
+        ...userInfo,
+        ...basicInfo
+    }
+
+    return {
+        success: true,
+        data: obj
+    }
+};
+
 
 export const getAgentGovIdsService = async (agentUserId: number): QueryResult<any> => {
     const result = await findAgentDetailsByUserId(agentUserId)

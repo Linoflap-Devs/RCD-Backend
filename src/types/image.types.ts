@@ -13,3 +13,13 @@ export interface IImageBase64 {
     FileSize: number,
     FileContent: string
 }
+
+export interface TblImageWithId {
+    ContentType: string;
+    CreatedAt: Date;
+    FileContent: Buffer;
+    FileExtension: string;
+    Filename: string;
+    FileSize: number;
+    ImageID: number;
+}

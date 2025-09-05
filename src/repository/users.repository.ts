@@ -1,7 +1,7 @@
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblUsers, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblImage, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
 import { mapToEditAgent, mapToEditEducation, mapToEditWorkExp, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
@@ -284,6 +284,75 @@ export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult
         }
     }
 }
+
+export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<VwAgentPicture> => {
+    try {
+
+        const agent: VwAgents = await db.selectFrom('Vw_Agents')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        const account = await db.selectFrom('Tbl_AgentUser')
+            .where('AgentID', '=', agentId)
+            .select(['AgentUserID', 'ImageID'])
+            .executeTakeFirst();
+
+        let pictureDetails: TblImageWithId | undefined = undefined
+
+        if(account?.ImageID){
+            const picture = await db.selectFrom('Tbl_Image')
+                .where('ImageID', '=', account.ImageID)
+                .selectAll()
+                .executeTakeFirst();
+
+            if(picture){
+                pictureDetails = {
+                    ...picture,
+                    ImageID: picture.ImageID
+                }
+            }
+            
+        }
+
+        let obj: VwAgentPicture = {
+            ...agent
+        }
+
+        if(pictureDetails){
+            obj = {
+                ...agent,
+                Image: {
+                    ContentType: pictureDetails.ContentType,
+                    CreatedAt: pictureDetails.CreatedAt,
+                    FileContent: `data:${pictureDetails.ContentType};base64,${bufferToBase64(pictureDetails.FileContent)}`,
+                    FileExtension: pictureDetails.FileExtension,
+                    Filename: pictureDetails.Filename,
+                    FileSize: pictureDetails.FileSize,
+                    ImageID: pictureDetails.ImageID
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgentPicture,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 
 export const editAgentDetails = async (agentId: number, data: IAgentEdit): QueryResult<any> => {
     try {

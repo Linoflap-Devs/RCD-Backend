@@ -1,5 +1,5 @@
 import express from 'express';
-import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, getAgentGovIdsController, getAgentUserDetailsController, getUsersController } from '../controller/users.controller';
+import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getUsersController } from '../controller/users.controller';
 import { validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -15,5 +15,7 @@ router.route('/user-details').patch([validateSession, validate(editAgentSchema)]
 router.route('/user-image').patch([validateSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editAgentImageController)
 router.route('/user-education').patch([validateSession], editAgentEducationController);
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
+
+router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
 
 export default router;
