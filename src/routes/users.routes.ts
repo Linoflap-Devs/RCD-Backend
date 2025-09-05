@@ -1,5 +1,5 @@
 import express from 'express';
-import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, getAgentUserDetailsController, getUsersController } from '../controller/users.controller';
+import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, getAgentGovIdsController, getAgentUserDetailsController, getUsersController } from '../controller/users.controller';
 import { validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -10,6 +10,7 @@ const router = express.Router();
 router.route('/').get([validateSession],getUsersController);
 router.route('/user-details').get([validateSession], getAgentUserDetailsController);
 
+router.route('/user-ids').get([validateSession], getAgentGovIdsController);
 router.route('/user-details').patch([validateSession, validate(editAgentSchema)], editAgentDetailsController);
 router.route('/user-image').patch([validateSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editAgentImageController)
 router.route('/user-education').patch([validateSession], editAgentEducationController);

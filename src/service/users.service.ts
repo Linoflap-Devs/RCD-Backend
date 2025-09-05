@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblUsers } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -120,6 +120,44 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         data: obj
     }
 };
+
+export const getAgentGovIdsService = async (agentUserId: number): QueryResult<any> => {
+    const result = await findAgentDetailsByUserId(agentUserId)
+    if(!result.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!result.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const govIds = await getAgentGovIds(result.data.AgentID)
+
+    if(!govIds.success){
+        return {
+            success: false,
+            data: {},
+            error: govIds.error
+        }
+    }
+
+    return {
+        success: true,
+        data: govIds.data
+    }
+}
 
 export const editAgentService = async (agentUserId: number, data: IAgentEdit): QueryResult<any> => {
 

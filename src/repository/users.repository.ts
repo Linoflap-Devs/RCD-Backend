@@ -107,6 +107,57 @@ export const getAgentEducation = async (agentId: number): QueryResult<IAgentEduc
     }
 }
 
+export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Agents')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+            .executeTakeFirst();
+
+        if(!result){
+            throw new Error('No agent found.')
+        }
+
+        console.log(result)
+
+        const columns = [
+            'PRCNumber',
+            'DSHUDNumber',
+            'SSSNumber',
+            'PhilhealthNumber',
+            'PagIbigNumber',
+            'TINNumber',
+            'EmployeeIDNumber'
+        ]
+
+        const ids = columns.map((column: string) => {
+            const value = result[column as keyof TblAgents]
+
+            return {
+                IdType: column,
+                IdNumber: value?.toString() || null
+            }
+        })
+        
+        return {
+            success: true,
+            data: ids
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as {IdType: string, IdNumber: string}[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findAgentUserByEmail = async (email: string): QueryResult<{agentUserId: number, email: string, isVerified: boolean, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_AgentUser')

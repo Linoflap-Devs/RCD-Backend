@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getUserDetailsService, getUsersService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getUserDetailsService, getUsersService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
@@ -50,6 +50,37 @@ export const getAgentUserDetailsController = async (req: Request, res: Response)
         message: "User details.",
         data: result.data
     });
+}
+
+export const getAgentGovIdsController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await getAgentGovIdsService(session.userID)
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get user gov ids.",
+            data: {}
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Agent government IDs.",
+        data: result.data
+    })
 }
 
 export const editAgentDetailsController = async (req: Request, res: Response) => {
