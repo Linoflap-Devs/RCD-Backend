@@ -14,3 +14,10 @@ export const verifyOTPSchema = z.object({
     email: z.email(),
     otp: z.string()
 })
+
+export const changePasswordSchema = z.object({
+    email: z.email(),
+    resetToken: z.string(),
+    oldPassword: z.string(),
+    newPassword: z.string(),
+})

@@ -1,9 +1,9 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, getCurrentAgentController, loginAgentController, logoutAgentSessionController, registerAgentController, sendOTPController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, getCurrentAgentController, loginAgentController, logoutAgentSessionController, registerAgentController, sendOTPController, updateAgentPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
-import { approveRegistrationSchema, loginAgentSchema, verifyOTPSchema } from '../schema/auth.schema';
+import { approveRegistrationSchema, changePasswordSchema, loginAgentSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateSession } from '../middleware/auth';
 
 const router = express.Router();
@@ -18,5 +18,6 @@ router.route('/current-user').get(validateSession, getCurrentAgentController);
 
 router.route('/send-otp').post(sendOTPController)
 router.route('/verify-otp').post(validate(verifyOTPSchema), verifyOTPController)
+router.route('/change-password').post(validate(changePasswordSchema), updateAgentPasswordController)
 
 export default router;

@@ -685,8 +685,8 @@ export const updateResetPasswordToken = async (userId: number, token: string, va
     try {
         const result = await db.updateTable('Tbl_ResetPasswordToken')
             .set({ ValidUntil: validUntil })
+            .set({ Token: token })
             .where('UserID', '=', userId)
-            .where('Token', '=', token)
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
 
@@ -799,5 +799,31 @@ export const deleteResetPasswordToken = async (userId: number, token: string): Q
                 message: error.message
             }
         }   
+    }
+}
+
+export const changePassword = async (userId: number, password: string): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentUser')
+            .set({ Password: password })
+            .where('AgentUserID', '=', userId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
     }
 }

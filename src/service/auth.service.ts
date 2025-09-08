@@ -3,10 +3,10 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, deleteOTP, deleteSession, extendSessionExpiry, findAgentEmail, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendSessionExpiry, findAgentEmail, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
 import { logger } from "../utils/logger";
-import { verifyPassword } from "../utils/scrypt";
+import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
 import { sendMail } from "../utils/email";
 import { emailOTPTemplate } from "../assets/email/email.template";
@@ -304,10 +304,11 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
     let resultToken = null;
 
     const existingToken = await findResetPasswordTokenByUserId(user.data.agentUserId)
-    logger('existingToken', existingToken)
+    console.log('existingToken', existingToken)
 
     if(existingToken.success || existingToken.data){
         const updateToken = await updateResetPasswordToken(user.data.agentUserId, token, date30Mins)
+        
 
         if(!updateToken.success){
             logger('Failed to update reset token.', {email: email, code: code})
@@ -315,7 +316,7 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
                 success: false,
                 data: {} as any,
                 error: {
-                    message: 'Failed to update reset token.',
+                    message: updateToken.error?.message || 'Failed to update reset token.',
                     code: 500
                 }
             }
@@ -351,5 +352,74 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
         data: {
             token: resultToken
         }
+    }
+}
+
+export const changePasswordService = async (email: string, resetToken: string, oldPassword: string, newPassword: string): QueryResult<any> => {
+    const user = await findAgentUserByEmail(email)
+
+    if(!user.success){
+        logger('Failed to find user.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    // find token for email
+    const tokenExists = await findResetPasswordToken(user.data.agentUserId, resetToken)
+
+    if(!tokenExists.success){
+        logger('Failed to find token.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find token.',
+                code: 404
+            }
+        }
+    }
+
+    // check if old password matches
+    const checkOldPassword = await verifyPassword(oldPassword, user.data.password)
+
+    if(!checkOldPassword) {
+        logger('Old password does not match.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Old password does not match.',
+                code: 400
+            }
+        }
+    }
+
+    // update password
+    const pwHash = await hashPassword(newPassword)
+    const updatePassword = await changePassword(user.data.agentUserId, pwHash)
+
+    if(!updatePassword.success){
+        logger('Failed to update password.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to update password.',
+                code: 500
+            }
+        }
+    }
+
+    const deleteResetPasswordTokenResult = await deleteResetPasswordToken(user.data.agentUserId, resetToken)
+
+    return {
+        success: true,
+        data: null
     }
 }

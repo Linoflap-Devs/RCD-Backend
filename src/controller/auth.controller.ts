@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -227,6 +227,35 @@ export const verifyOTPController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true, 
         message: "OTP verified successfully.", 
+        data: result.data
+    });
+
+}
+
+export const updateAgentPasswordController = async (req: Request, res: Response) => {
+
+    const {
+        email,
+        resetToken,
+        oldPassword,
+        newPassword
+    } = req.body
+
+    const result = await changePasswordService(email, resetToken, oldPassword, newPassword)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
         data: result.data
     });
 
