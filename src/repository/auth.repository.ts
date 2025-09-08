@@ -646,3 +646,158 @@ export const findAgentEmail = async (email: string): QueryResult<IAgentUser> => 
         }
     }
 }
+
+export const insertResetPasswordToken = async (userId: number, token: string, validUntil: Date): QueryResult<{UserID: number, Token: string, ValidUntil: Date}> => {
+    try {
+        const result = await db.insertInto('Tbl_ResetPasswordToken')
+            .values({
+                UserID: userId,
+                Token: token,
+                ValidUntil: validUntil
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                UserID: userId,
+                Token: token,
+                ValidUntil: validUntil
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {UserID: number, Token: string, ValidUntil: Date},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const updateResetPasswordToken = async (userId: number, token: string, validUntil: Date): QueryResult<{UserID: number, Token: string, ValidUntil: Date}> => {
+    try {
+        const result = await db.updateTable('Tbl_ResetPasswordToken')
+            .set({ ValidUntil: validUntil })
+            .where('UserID', '=', userId)
+            .where('Token', '=', token)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                UserID: result.UserID,
+                Token: result.Token,
+                ValidUntil: result.ValidUntil
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {UserID: number, Token: string, ValidUntil: Date},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findResetPasswordToken = async (userId: number, token: string): QueryResult<any> => {
+    try {
+        const result = await db.selectFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .where('Token', '=', token)
+            .where('ValidUntil', '>', new Date())
+            .selectAll()
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}
+
+export const findResetPasswordTokenByUserId = async (userId: number): QueryResult<boolean> => {
+    try {
+        const result = await db.selectFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        if(result) {
+            return {
+                success: true,
+                data: true
+            }
+        }
+
+        else {
+            return {
+                success: true,
+                data: false
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: false,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}
+
+export const deleteResetPasswordToken = async (userId: number, token: string): QueryResult<any> => {
+    try {
+        const result = await db.deleteFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .where('Token', '=', token)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}

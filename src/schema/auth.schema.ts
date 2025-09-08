@@ -1,11 +1,16 @@
 import z from 'zod'
 
 export const loginAgentSchema = z.object({
-    email: z.string().email(),
+    email: z.email(),
     password: z.string()
 })
 
 export const approveRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
     agentId: z.coerce.number().optional()
+})
+
+export const verifyOTPSchema = z.object({
+    email: z.email(),
+    otp: z.string()
 })

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService } from "../service/auth.service";
+import { approveAgentRegistrationService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -203,4 +203,31 @@ export const sendOTPController = async (req: Request, res: Response) => {
         message: "Check your email.", 
         data: result.data
     });
+}
+
+export const verifyOTPController = async (req: Request, res: Response) => {
+
+    const {
+        email,
+        otp,
+    } = req.body
+
+    const result = await verifyOTPService(email, otp)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to verify otp.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "OTP verified successfully.", 
+        data: result.data
+    });
+
 }

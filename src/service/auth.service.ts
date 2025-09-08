@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, deleteSession, extendSessionExpiry, findAgentEmail, findSession, insertOTP, insertSession, registerAgentTransaction } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, deleteOTP, deleteSession, extendSessionExpiry, findAgentEmail, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { verifyPassword } from "../utils/scrypt";
@@ -267,5 +267,89 @@ export const findEmailSendOTP = async (email: string): QueryResult<null> => {
     return {
         success: true,
         data: null
+    }
+}
+
+export const verifyOTPService = async (email: string, code: string): QueryResult<any> => {
+    const user = await findAgentUserByEmail(email)
+
+    if(!user.success){
+        logger('Failed to find user.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    const otp = await findUserOTP(user.data.agentUserId, code)
+
+    if(!otp.success){
+        logger('Failed to find otp.', {email: email, code: code})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: otp.error?.message || 'Failed to find otp.',
+                code: 404
+            }
+        }
+    }
+
+    const token = crypto.randomBytes(32).toString('hex')
+    const date30Mins = addMinutes(new Date(), 30)
+    let resultToken = null;
+
+    const existingToken = await findResetPasswordTokenByUserId(user.data.agentUserId)
+    logger('existingToken', existingToken)
+
+    if(existingToken.success || existingToken.data){
+        const updateToken = await updateResetPasswordToken(user.data.agentUserId, token, date30Mins)
+
+        if(!updateToken.success){
+            logger('Failed to update reset token.', {email: email, code: code})
+            return {
+                success: false,
+                data: {} as any,
+                error: {
+                    message: 'Failed to update reset token.',
+                    code: 500
+                }
+            }
+        }
+
+        resultToken = updateToken.data.Token
+    }
+
+    else {
+        const resetToken = await insertResetPasswordToken(user.data.agentUserId, token, date30Mins)
+
+        if(!resetToken.success){
+            logger('Failed to insert reset token.', {email: email, code: code})
+            return {
+                success: false,
+                data: {} as any,
+                error: {
+                    message: 'Failed to insert reset token.',
+                    code: 500
+                }
+            }
+        }
+
+        resultToken = resetToken.data.Token
+    }
+
+    // delete otp
+
+    const deleteOTPResult = await deleteOTP(code)
+
+    return {
+        success: true,
+        data: {
+            token: resultToken
+        }
     }
 }
