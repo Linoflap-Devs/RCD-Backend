@@ -9,7 +9,7 @@ import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
 import { sendMail } from "../utils/email";
-import { emailOTPTemplate } from "../assets/email/email.template";
+import { emailChangePasswordTemplate, emailOTPTemplate } from "../assets/email/email.template";
 
 const generateOTP = (): number => {
     return crypto.randomInt(100000, 999999);
@@ -444,8 +444,17 @@ export const changePasswordService = async (email: string, resetToken: string, o
     }
 
     const deleteResetPasswordTokenResult = await deleteResetPasswordToken(user.data.agentUserId, resetToken)
+    
+    // send email
 
-    return {
+    const now = new Date()
+    const date = format(now, 'MMM dd, yyyy')
+    const time = format(now, 'hh:mmaa')
+
+    //const send = sendMail(findEmail.data.Email, 'Password OTP', emailOTPTemplate(code, minuteExpiry))
+    const spare = sendMail('wendell.ravago@linoflaptech.com', 'Password OTP', emailChangePasswordTemplate(date, time))
+
+    return {    
         success: true,
         data: null
     }
