@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendSessionExpiry, findAgentEmail, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -49,6 +49,33 @@ export const validateSessionToken = async (token: string) => {
         }
 
         return { session: find.data.AgentSession, user: find.data.AgentUser }
+    }
+
+    logger('Session not found', {token: token})
+    return { session: null, user: null }
+}
+
+export const validateEmployeeSessionToken = async (token: string) => {   
+    const find = await findEmployeeSession(token)
+    
+    if(find === null) {
+        logger('Session not found', {token: token})
+        return { session: null, user: null }
+    }
+
+    if(find !== undefined && find.data.EmployeeSession !== null) {
+        console.log(find.data.EmployeeSession)
+        if(Date.now() >= find.data.EmployeeSession?.ExpiresAt.getTime()) {
+            await deleteSession(find.data.EmployeeSession.SessionID)
+            return { session: null, user: null}
+        }
+
+        if(Date.now() >= find.data.EmployeeSession?.ExpiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
+            find.data.EmployeeSession.ExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+            await extendEmployeeSessionExpiry(find.data.EmployeeSession.SessionID, find.data.EmployeeSession.ExpiresAt)
+        }
+
+        return { session: find.data.EmployeeSession, user: find.data.EmployeeUser }
     }
 
     logger('Session not found', {token: token})
