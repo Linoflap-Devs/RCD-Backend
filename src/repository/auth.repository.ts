@@ -1,12 +1,14 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgents, TblAgentSession } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeSession, IEmployeeUserSession, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
+
+// Agent Sessions
 
 export const insertSession =  async (sessionString: string, agentUserId: number): QueryResult<IAgentSession> => {
     try {
@@ -182,6 +184,158 @@ export const extendSessionExpiry = async (sessionId: number, expiry: Date): Quer
         }
     }
 }
+
+// Employee Sessions
+
+export const insertEmployeeSession =  async (sessionString: string, userId: number): QueryResult<IEmployeeSession> => {
+    try {
+        const result = await db.insertInto('Tbl_UserSession').values({
+            SessionString: sessionString,
+            UserID: userId,
+            ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        if(!result) return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: 'Failed to insert session.',
+                code: 500
+            }
+        }
+
+        const find = await db.selectFrom('Tbl_UserSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
+
+        if(!find) return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                SessionID: find.SessionID,
+                SessionString: find.SessionString,
+                UserID: find.UserID,
+                ExpiresAt: find.ExpiresAt
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const findEmployeeSession = async (sessionString: string): QueryResult<IEmployeeUserSession> => {
+    try {
+
+        const result = await db.
+            selectFrom('Tbl_UserSession').
+            innerJoin('Tbl_Users', 'Tbl_Users.UserID', 'Tbl_UserSession.UserID').
+            where('SessionString', '=', sessionString).
+            selectAll().
+            executeTakeFirst();
+
+        if(!result) return {
+            success: false,
+            data: {} as IEmployeeUserSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                EmployeeSession: {
+                    SessionID: result.SessionID,
+                    SessionString: result.SessionString,
+                    UserID: result.UserID,
+                    ExpiresAt: result.ExpiresAt
+                },
+                EmployeeUser: {
+                    UserID: result.UserID,
+                    UserName: result.UserName,
+                    EmpName: result.EmpName,
+                    Role: result.Role,
+                    BranchName: result.BranchName
+                }
+            }
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IEmployeeUserSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const deleteEmployeeSession = async (sessionId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_UserSession').where('SessionID', '=', sessionId).executeTakeFirst();
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
+    try {
+
+        const result = await db.updateTable('Tbl_UserSession').set({ ExpiresAt: expiry }).where('SessionID', '=', sessionId).executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 
 export const registerAgentTransaction = async(data: IAgentRegister, imageMetadata?: IImage): QueryResult<any> => {
 

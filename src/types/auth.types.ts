@@ -19,6 +19,26 @@ export interface IAgentUserSession {
     AgentUser: IAgentUser
 }
 
+export interface IEmployeeSession {
+    UserID: number
+    ExpiresAt: Date
+    SessionID: number
+    SessionString: string
+}
+
+export interface IEmployeeUser {
+    UserID: number | null
+    UserName: string,
+    EmpName: string,
+    Role: string,
+    BranchName: string
+}
+
+export interface IEmployeeUserSession {
+    EmployeeSession: IEmployeeSession
+    EmployeeUser: IEmployeeUser
+}
+
 export interface IAgentRegister {
     firstName: string,
     middleName?: string | null,

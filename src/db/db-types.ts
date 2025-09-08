@@ -711,6 +711,13 @@ export interface TblUsers {
   UserName: string;
 }
 
+export interface TblUserSession {
+  ExpiresAt: Date;
+  SessionID: Generated<number>;
+  SessionString: string;
+  UserID: number;
+}
+
 export interface VwAgentCommisionReleaseSMS {
   AgentName: string;
   CA: number;
@@ -1359,6 +1366,7 @@ export interface DB {
   Tbl_Tokens: TblTokens;
   Tbl_Training: TblTraining;
   Tbl_Users: TblUsers;
+  Tbl_UserSession: TblUserSession;
   vw_AgentCommisionReleaseSMS: VwAgentCommisionReleaseSMS;
   vw_AgentCommissionLedger: VwAgentCommissionLedger;
   vw_AgentCommissionLedgerReport: VwAgentCommissionLedgerReport;
