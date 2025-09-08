@@ -288,13 +288,13 @@ export interface TblCommCollection {
   CollectionAmount: number;
   CollectionDate: Date;
   CollectionRefNumber: string;
-  CommCollectionID: number;
+  CommCollectionID: Generated<number>;
   DeveloperCV: string;
   DeveloperCVDate: Date;
   DeveloperID: number;
-  LastUpdate: Date;
+  LastUpdate: Generated<Date>;
   NetCollectionAmount: number;
-  UpdateBy: number;
+  UpdateBy: Generated<number>;
   WtaxDeduction: number;
 }
 
@@ -303,7 +303,7 @@ export interface TblCommCollectionDtl {
   AdvanceCommission: number;
   BuyerName: string;
   CollectionRefNumber: string;
-  CommCollectionDtlID: number;
+  CommCollectionDtlID: Generated<number>;
   CommRelRefNo: string;
   ContractPrice: number;
   GrossAmount: number;
@@ -321,7 +321,7 @@ export interface TblCommCollectionDtl {
 
 export interface TblCommDeductionDetail {
   BuyersName: string;
-  CommDedDetailID: number;
+  CommDedDetailID: Generated<number>;
   CommReleaseDate: Date;
   CommReleaseNo: string;
   DeductionNumber: string | null;
@@ -339,15 +339,15 @@ export interface TblCommDeductionSummary {
   AgentID: number;
   AgentName: string;
   CA: number;
-  CommDedHeaderID: number;
+  CommDedHeaderID: Generated<number>;
   CommDeductionDate: Date;
-  CommissionRefNumber: string;
-  CommissionStatus: string;
+  CommissionRefNumber: Generated<string>;
+  CommissionStatus: Generated<string>;
   CPD: number;
   DeductionNumber: string;
   DeductionType: number;
   GrossCommission: number;
-  IsDeleted: number;
+  IsDeleted: Generated<number>;
   Loan: number;
   NetCommision: number;
   RCDF: number;
@@ -387,15 +387,15 @@ export interface TblCommissionRelease {
   CommReleaseNo: string;
   CommReleaseType: string;
   CommRelStatus: string;
-  ComReleaseID: number;
+  ComReleaseID: Generated<number>;
   DeductionNumber: string;
   DeveloperTaxAmount: number;
   DeveloperTaxRate: number;
   InputVATAmt: number;
   InputVATRate: number;
-  IsActive: number;
-  LastUpdate: Date;
-  LastUpdateBy: number;
+  IsActive: Generated<number>;
+  LastUpdate: Generated<Date>;
+  LastUpdateBy: Generated<number>;
   NetCommission: number;
   PercentReleased: number;
   PreviousReleasedAmt: number;
@@ -412,7 +412,7 @@ export interface TblCommissionReleaseDtl {
   CommissionDue: number;
   CommissionRate: number;
   CommissionStatus: string;
-  ComReleaseDtlID: number;
+  ComReleaseDtlID: Generated<number>;
   ComReleaseNo: string;
   DeductionNumber: string;
   DevInputVat: number;
@@ -558,6 +558,14 @@ export interface TblProjectType {
   ProjectTypeID: number;
   ProjectTypeName: string;
   UpdateBy: number;
+}
+
+export interface TblResetPasswordToken {
+  CreatedAt: Generated<Date>;
+  ResetPasswordTokenID: Generated<number>;
+  Token: string;
+  UserID: number;
+  ValidUntil: Date;
 }
 
 export interface TblSalesBranch {
@@ -1337,6 +1345,7 @@ export interface DB {
   Tbl_Position: TblPosition;
   Tbl_Projects: TblProjects;
   Tbl_ProjectType: TblProjectType;
+  Tbl_ResetPasswordToken: TblResetPasswordToken;
   Tbl_SalesBranch: TblSalesBranch;
   tbl_SalesDistribution: TblSalesDistribution;
   Tbl_SalesParameterDetail: TblSalesParameterDetail;
