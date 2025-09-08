@@ -1,3 +1,5 @@
+import { IImage, IImageBase64 } from "./image.types"
+
 export interface IAgentSession {
     AgentUserID: number
     ExpiresAt: Date
@@ -74,6 +76,44 @@ export interface IAgentRegister {
         company: string,
         startDate: Date,
         endDate?: Date | null
+    }[]
+}
+
+export interface IAgentRegistration {
+    FirstName: string,
+    MiddleName?: string | null,
+    LastName: string,
+    Gender: 'Male' | 'Female',
+    CivilStatus: 'Single' | 'Married',
+    Religion: string,
+    Birthdate: Date,
+    Birthplace: string,
+    Address: string,
+    TelephoneNumber: string,
+    ContactNumber: string,
+    SssNumber?: string | null,
+    PhilhealthNumber?: string | null,
+    PagibigNumber?: string | null,
+    TinNumber?: string | null,
+    PrcNumber?: string | null,
+    DshudNumber?: string | null,
+    EmployeeIdNumber?: string | null,
+    Email: string,
+    Password: string,
+
+    ProfileImage?: IImageBase64 | null
+
+    Education: {
+        School: string,
+        Degree: string,
+        StartDate: Date,
+        EndDate?: Date | null
+    }[],
+    Experience: {
+        JobTitle: string,
+        Company: string,
+        StartDate: Date,
+        EndDate?: Date | null
     }[]
 }
 
