@@ -3,13 +3,17 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentUserByEmail, findAgentUserById } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
 import { sendMail } from "../utils/email";
 import { emailChangePasswordTemplate, emailOTPTemplate } from "../assets/email/email.template";
+import 'dotenv/config'
+import { verifyDESPassword } from "../utils/utils";
+
+const DES_KEY = process.env.DES_KEY || ''
 
 const generateOTP = (): number => {
     return crypto.randomInt(100000, 999999);
@@ -27,6 +31,12 @@ export const createSession = async (token: string, userId: number) => {
 
     return result;
 }   
+
+export const createEmployeeSession = async (token: string, userId: number) => {
+    const result = await insertEmployeeSession(token, userId);
+
+    return result
+}
 
 export const validateSessionToken = async (token: string) => {   
     const find = await findSession(token)
@@ -179,6 +189,60 @@ export const loginAgentService = async (email: string, password: string): QueryR
             email: email
         }
     }
+}
+
+export const loginEmployeeService = async (username: string, password: string): QueryResult<{token: string, username: string}> => {
+    const user = await findEmployeeUserByUsername(username)
+
+    if(!user.success) {
+        logger((user.error?.message || 'Failed to find user.'), {username: username})
+        return {
+            success: false,
+            data: {} as {token: string, username: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    // compare passwords
+    const checkPw = await verifyDESPassword(password, user.data.password, DES_KEY)
+
+    if(!checkPw){
+        logger(('Password does not match.'), {username: username})
+        return {
+            success: false,
+            data: {} as {token: string, username: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    const token = generateSessionToken()
+    const session = await createEmployeeSession(token, user.data.userId)
+
+    if(!session.success) {
+        logger(( session.error?.message || 'Failed to create session.'), {username: username})
+        return {
+            success: false,
+            data: {} as {token: string, username: string},
+            error: {
+                message: 'Failed to create session.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            token: token,
+            username: username
+        }
+    }    
 }
 
 export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number) => {

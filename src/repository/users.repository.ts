@@ -158,6 +158,42 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
     }
 }
 
+export const findEmployeeUserByUsername = async (username: string): QueryResult<{userId: number, username: string, branch: string, role: string, password: string}> => {
+    try {
+        const user = await db.selectFrom('Tbl_Users')
+            .where('UserName', '=', username)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+
+        if(!user){
+            throw new Error('No user found.')
+        }
+
+        return {    
+            success: true,
+            data: { 
+                userId: user.UserID, 
+                username: user.UserName, 
+                branch: user.BranchName,
+                role: user.Role, 
+                password: user.Password 
+            }
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as {userId: number, username: string, branch: string, role: string, password: string},
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findAgentUserByEmail = async (email: string): QueryResult<{agentUserId: number, email: string, isVerified: boolean, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_AgentUser')
