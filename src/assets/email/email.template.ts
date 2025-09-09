@@ -39,7 +39,7 @@ export const emailChangePasswordTemplate = (date: string, time: string) => {
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="border: 1px solid #e1e1e1; border-radius: 5px; padding: 30px;">
-            <img src="cid:IMSPHLogo" style="width: 64px; margin-bottom: 20px;" />
+            <img src="cid:RCDLogo" style="width: 64px; margin-bottom: 20px;" />
             
             <h1 style="font-size: 24px; color: #333333; margin-bottom: 15px;">Password changed</h1>
             
