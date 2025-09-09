@@ -5,6 +5,11 @@ export const loginAgentSchema = z.object({
     password: z.string()
 })
 
+export const loginEmployeeSchema = z.object({
+    username: z.string(),
+    password: z.string()
+})
+
 export const approveRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
     agentId: z.coerce.number().optional()

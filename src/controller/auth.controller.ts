@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -101,6 +101,33 @@ export const loginAgentController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true, 
         message: "Agent logged in successfully.", 
+        data: result.data
+    });
+}
+
+export const loginEmployeeController = async (req: Request, res: Response) => {
+    const {
+        email,
+        password
+    } = req.body
+
+    const result = await loginEmployeeService(email, password)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to login employee.", 
+            data: {}
+        });
+
+        return
+    }
+
+    res.cookie('_rcd_employee_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee logged in successfully.", 
         data: result.data
     });
 }
