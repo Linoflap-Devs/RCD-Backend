@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -297,6 +297,27 @@ export const getCurrentAgentService = async (userId: number): QueryResult<{agent
 
 export const logoutAgentSessionService = async(sessionId: number): QueryResult<any> => {
     const result = await deleteSession(sessionId)
+
+    if(!result.success){
+        logger('Failed to delete session.', {sessionId: sessionId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to delete session.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const logoutEmployeeSessionService = async(sessionId: number): QueryResult<any> => {
+    const result = await deleteEmployeeSession(sessionId)
 
     if(!result.success){
         logger('Failed to delete session.', {sessionId: sessionId})

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -213,6 +213,33 @@ export const logoutAgentSessionController = async (req: Request, res: Response) 
     return res.status(200).json({
         success: true, 
         message: "Agent session logged out successfully.", 
+        data: result.data
+    });
+}
+
+export const logoutEmployeeSessionConroller = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    const result = await logoutEmployeeSessionService(session.sessionID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to logout employee session.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee session logged out successfully.", 
         data: result.data
     });
 }
