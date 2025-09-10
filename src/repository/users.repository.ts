@@ -534,7 +534,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
     }
 }
 
-export const editAgentEducation = async (agentId: number, editedEducation: IAgentEducationEdit[], createdEducation: IAgentEducation[]): QueryResult<any> => {
+export const editAgentEducation = async (agentId: number, editedEducation: IAgentEducationEdit[], createdEducation: IAgentEducation[], deletedEducation: number[]): QueryResult<any> => {
     
     console.log(editedEducation, createdEducation)
     const trx = await db.startTransaction().execute();
@@ -543,6 +543,7 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
 
         const editedEducs = []
         const addedEducs = []
+        const deletedEducs = []
 
         if(editedEducation.length > 0){
             for(const edu of editedEducation){
@@ -587,13 +588,25 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
             if(result) addedEducs.push(...result)
         }
 
+        if(deletedEducation.length > 0){
+            const result = await trx.deleteFrom('Tbl_AgentEducation')
+                .where('AgentEducationID', 'in', deletedEducation)
+                .outputAll('deleted')
+                .execute();
+
+            console.log('delete result:', result)
+
+            if(result) deletedEducs.push(...result)
+        }
+
         trx.commit().execute()
 
         return {
             success: true,
             data: {
                 edited: editedEducs,
-                added: addedEducs
+                added: addedEducs,
+                deleted: deletedEducs
             }
         }
 
@@ -613,7 +626,7 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
     }
 }
 
-export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWorkExpEdit[], createdWorkExp: IAgentWorkExp[]): QueryResult<any> => {
+export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWorkExpEdit[], createdWorkExp: IAgentWorkExp[], deletedWorkExp: number[]): QueryResult<any> => {
     
     const trx = await db.startTransaction().execute();
     
@@ -621,6 +634,7 @@ export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWor
 
         const editedWorks = []
         const addedWorks = []
+        const deletedWorks = []
 
         if(editedWorkExp.length > 0){
             for(const work of editedWorkExp){
@@ -665,13 +679,23 @@ export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWor
             if(result) addedWorks.push(...result)
         }
 
+        if(deletedWorkExp.length > 0){
+            const result = await trx.deleteFrom('Tbl_AgentWorkExp')
+                .where('AgentWorkExpID', 'in', deletedWorkExp)
+                .outputAll('deleted')
+                .execute();
+            
+            if(result) deletedWorks.push(...result)
+        }
+
         trx.commit().execute()
 
         return {
             success: true,
             data: {
                 edited: editedWorks,
-                added: addedWorks
+                added: addedWorks,
+                deleted: deletedWorks
             }
         }
 

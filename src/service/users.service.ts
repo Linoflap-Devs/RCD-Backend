@@ -364,7 +364,8 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
 export const editAgentEducationService = async (
     userId: number,
     editInputs: IAgentEducationEditController[],
-    createInputs: NewEducation[]
+    createInputs: NewEducation[],
+    deleteInputs: number[]
 ): QueryResult<any> => {
     const agentDetails = await findAgentDetailsByUserId(userId);
     if (!agentDetails.success || !agentDetails.data.AgentID) {
@@ -376,7 +377,7 @@ export const editAgentEducationService = async (
         return { success: false, data: {}, error: { message: 'No agent registration found', code: 400 } };
     }
 
-    if (editInputs.length === 0 && createInputs.length === 0) {
+    if (editInputs.length === 0 && createInputs.length === 0 && deleteInputs.length === 0) {
         return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
     }
 
@@ -416,7 +417,7 @@ export const editAgentEducationService = async (
         });
     }
 
-    const result = await editAgentEducation(agentDetails.data.AgentID, validEdits, validCreates);
+    const result = await editAgentEducation(agentDetails.data.AgentID, validEdits, validCreates, deleteInputs);
 
     if (!result.success) {
         return { success: false, data: {}, error: result.error };
@@ -428,7 +429,8 @@ export const editAgentEducationService = async (
 export const editAgentWorkExpService = async (
     userId: number,
     editInputs: IAgentWorkExpEditController[],
-    createInputs: NewWorkExp[]
+    createInputs: NewWorkExp[],
+    deleteInputs: number[]
 ): QueryResult<any> => {
     const agentDetails = await findAgentDetailsByUserId(userId);
     if (!agentDetails.success || !agentDetails.data.AgentID) {
@@ -440,7 +442,7 @@ export const editAgentWorkExpService = async (
         return { success: false, data: {}, error: { message: 'No agent registration found', code: 400 } };
     }
 
-    if (editInputs.length === 0 && createInputs.length === 0) {
+    if (editInputs.length === 0 && createInputs.length === 0 && deleteInputs.length === 0) {
         return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
     }
 
@@ -480,7 +482,7 @@ export const editAgentWorkExpService = async (
         });
     }
 
-    const result = await editAgentWorkExp(agentDetails.data.AgentID, validEdits, validCreates);
+    const result = await editAgentWorkExp(agentDetails.data.AgentID, validEdits, validCreates, deleteInputs);
 
     if (!result.success) {
         return { success: false, data: {}, error: result.error };

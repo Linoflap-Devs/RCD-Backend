@@ -214,9 +214,9 @@ export const editAgentEducationController = async (req: Request, res: Response) 
         return res.status(401).json({ success: false, data: {}, message: 'Unauthorized' });
     }
 
-    const { edit = [], create = [] } = req.body; // Default to empty arrays
+    const { edit = [], create = [], remove = [] } = req.body; // Default to empty arrays
 
-    const result = await editAgentEducationService(session.userID, edit, create);
+    const result = await editAgentEducationService(session.userID, edit, create, remove);
 
     if (!result.success) {
         return res.status(result.error?.code || 400).json({
@@ -236,9 +236,9 @@ export const editAgentWorkExpController = async (req: Request, res: Response) =>
         return res.status(401).json({ success: false, data: {}, message: 'Unauthorized' });
     }
 
-    const { edit = [], create = [] } = req.body; // Default to empty arrays
+    const { edit = [], create = [], remove = [] } = req.body; // Default to empty arrays
 
-    const result = await editAgentWorkExpService(session.userID, edit, create);
+    const result = await editAgentWorkExpService(session.userID, edit, create, remove);
 
     if (!result.success) {
         return res.status(result.error?.code || 400).json({
