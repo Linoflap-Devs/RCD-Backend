@@ -26,3 +26,9 @@ export const changePasswordSchema = z.object({
     oldPassword: z.string(),
     newPassword: z.string(),
 })
+
+export const changeForgottonPasswordSchema = z.object({
+    email: z.email(),
+    resetToken: z.string(),
+    newPassword: z.string(),
+})

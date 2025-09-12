@@ -467,7 +467,7 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
     }
 }
 
-export const changePasswordService = async (email: string, resetToken: string, oldPassword: string, newPassword: string): QueryResult<any> => {
+export const changePasswordService = async (email: string, resetToken: string, oldPassword: string, newPassword: string, forgotPass?: boolean): QueryResult<any> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success){
@@ -498,16 +498,18 @@ export const changePasswordService = async (email: string, resetToken: string, o
     }
 
     // check if old password matches
-    const checkOldPassword = await verifyPassword(oldPassword, user.data.password)
-
-    if(!checkOldPassword) {
-        logger('Old password does not match.', {email: email})
-        return {
-            success: false,
-            data: {} as any,
-            error: {
-                message: 'Old password does not match.',
-                code: 400
+    if(!forgotPass){
+        const checkOldPassword = await verifyPassword(oldPassword, user.data.password)
+    
+        if(!checkOldPassword) {
+            logger('Old password does not match.', {email: email})
+            return {
+                success: false,
+                data: {} as any,
+                error: {
+                    message: 'Old password does not match.',
+                    code: 400
+                }
             }
         }
     }

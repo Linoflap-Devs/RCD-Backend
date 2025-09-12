@@ -314,3 +314,29 @@ export const updateAgentPasswordController = async (req: Request, res: Response)
     });
 
 }
+
+export const updateForgottenPasswordController = async (req: Request, res: Response) => {
+    const {
+        email,
+        resetToken,
+        newPassword
+    } = req.body
+
+    const result = await changePasswordService(email, resetToken, '', newPassword, true)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
+        data: result.data
+    });
+}

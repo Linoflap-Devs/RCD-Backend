@@ -50,16 +50,32 @@ export const getAgentCommissionsService = async (userId: number, filters?: { mon
         }
     }
 
-    const totalCommisionMap = commissions.data.results.map((commission: VwCommissionReleaseDeductionReport) => ({
-        ReleaseDate: commission.CommReleaseDate,
-        AgentId: commission.AgentID,
-        CommReleaseId: commission.ComReleaseID,
-    }))
+     const groupedCommissions = commissions.data.results.reduce((acc: any, commission: VwCommissionReleaseDeductionReport) => {
+        const date = commission.CommReleaseDate;
+        const releaseDate = commission.CommReleaseDate.toString();
+        
+        if (!acc[releaseDate]) {
+            acc[releaseDate] = {
+                ReleaseDate: date,
+                AgentId: commission.AgentID,
+                CommReleaseIds: [],
+                count: 0
+            };
+        }
+        
+        acc[releaseDate].CommReleaseIds.push(commission.ComReleaseID);
+        acc[releaseDate].count += 1;
+        
+        return acc;
+    }, {});
+    
+    // Convert grouped object to array
+    const commissionsGroupedByDate = Object.values(groupedCommissions);
 
     const obj = {
         totalPages: commissions.data.totalPages,
         totalCommission: totalCommission.data,
-        commissions: totalCommisionMap
+        commissions: commissionsGroupedByDate
     }
 
     return {
