@@ -41,7 +41,9 @@ export const getCommissions = async (
             totalCount = totalCount.where('CommReleaseDate', '<', lastDay)
         }
 
-
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
 
         const queryResult = await result.execute()
         const totalCountResult = await totalCount.execute()
