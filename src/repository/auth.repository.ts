@@ -68,6 +68,7 @@ export const findSession = async (sessionString: string): QueryResult<IAgentUser
             selectFrom('Tbl_AgentSession').
             where('SessionString', '=', sessionString).
             innerJoin('Tbl_AgentUser', 'Tbl_AgentSession.AgentUserID', 'Tbl_AgentUser.AgentUserID').
+            innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID').
             selectAll().
             executeTakeFirst();
 
@@ -95,7 +96,8 @@ export const findSession = async (sessionString: string): QueryResult<IAgentUser
                     AgentUserID: result.AgentUserID,
                     Email: result.Email,
                     ImageID: result.ImageID,
-                    IsVerified: result.IsVerified
+                    IsVerified: result.IsVerified,
+                    Position: result.Position || ''
                 }
             }
         }
@@ -465,6 +467,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 .selectAll()
                 .executeTakeFirstOrThrow(),
             db.selectFrom('Tbl_AgentUser')
+                .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
                 .where('AgentRegistrationID', '=', agentRegistrationId)
                 .where('IsVerified', '=', 0)
                 .selectAll()
@@ -632,7 +635,15 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
 
                 return {
                     success: true,
-                    data: agentUser
+                    data: {
+                        AgentID: agentUser.AgentID,
+                        AgentRegistrationID: agentUser.AgentRegistrationID,
+                        AgentUserID: agentUser.AgentUserID,
+                        Email: agentUser.Email,
+                        ImageID: agentUser.ImageID,
+                        IsVerified: agentUser.IsVerified,
+                        Position: agentUser.Position || ''
+                    }
                 }
             }
         }
@@ -778,13 +789,22 @@ export const deleteOTP = async (token: string): QueryResult<null> => {
 export const findAgentEmail = async (email: string): QueryResult<IAgentUser> => {
     try {
         const result = await db.selectFrom('Tbl_AgentUser')
+            .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
             .where('Email', '=', email)
             .selectAll()
             .executeTakeFirstOrThrow()
         
         return {
             success: true,
-            data: result
+            data: {
+                AgentID: result.AgentID,
+                AgentRegistrationID: result.AgentRegistrationID,
+                AgentUserID: result.AgentUserID,
+                Email: result.Email,
+                ImageID: result.ImageID,
+                IsVerified: result.IsVerified,
+                Position: result.Position || ''
+            }
         }
     }
 

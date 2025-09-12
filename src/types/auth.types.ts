@@ -13,7 +13,8 @@ export interface IAgentUser {
     AgentUserID: number
     Email: string
     ImageID: number | null,
-    IsVerified: number
+    IsVerified: number,
+    Position: string
 }
 
 export interface IAgentUserSession {

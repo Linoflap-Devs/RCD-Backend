@@ -20,6 +20,7 @@ export const validateSession = async (req: Request, res: Response, next: NextFun
     req.session = {
         sessionID: result.session.SessionID,
         userID: result.user.AgentUserID,
+        userRole: result.user.Position,
         isVerified: result.user.IsVerified
     }
 
@@ -44,6 +45,7 @@ export const validateEmployeeSession = async (req: Request, res: Response, next:
     req.session = {
         sessionID: result.session.SessionID,
         userID: result.user.UserID,
+        userRole: result.user.Role || '',
         isVerified: 1
     }
 
@@ -53,6 +55,7 @@ export const validateEmployeeSession = async (req: Request, res: Response, next:
 export type ExpressSession = {
     sessionID: number,
     userID: number | null,
+    userRole: string | null,
     isVerified: number
 }
 

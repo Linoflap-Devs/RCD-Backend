@@ -171,6 +171,8 @@ export const getCurrentAgentController = async (req: Request, res: Response) => 
         return;
     }
 
+    console.log('Current agent', session)
+
     const result = await getCurrentAgentService(session.userID)
 
     if(!result.success) {
