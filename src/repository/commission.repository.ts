@@ -1,3 +1,4 @@
+import { endOfDay, setHours, startOfDay } from "date-fns"
 import { db } from "../db/db"
 import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
@@ -109,6 +110,46 @@ export const getTotalAgentCommissions = async (agentId: number, filters?: { mont
         return {
             success: false,
             data: 0,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getAgentCommissionDetails = async (agentId: number, date?: Date): QueryResult<VwCommissionReleaseDeductionReport[]> => {
+    try {
+
+        let query = await db.selectFrom('Vw_CommissionReleaseDeductionReport')
+            .where('AgentID', '=', agentId)
+            .selectAll()
+
+        if(date){
+            const dayStart = startOfDay(date)
+            const dayEnd = endOfDay(date)
+
+            query = query.where('CommReleaseDate', '>', dayStart)
+            query = query.where('CommReleaseDate', '<', dayEnd)
+        }
+
+        const result = await query.execute()
+
+        if(!result){
+            throw new Error('No commission found.');
+        }
+
+        return {
+            success: true,
+            data: result
+        }
+        
+    }
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as VwCommissionReleaseDeductionReport[],
             error: {
                 code: 400,
                 message: error.message
