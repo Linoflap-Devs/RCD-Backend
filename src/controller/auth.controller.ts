@@ -107,11 +107,11 @@ export const loginAgentController = async (req: Request, res: Response) => {
 
 export const loginEmployeeController = async (req: Request, res: Response) => {
     const {
-        email,
+        username,
         password
     } = req.body
 
-    const result = await loginEmployeeService(email, password)
+    const result = await loginEmployeeService(username, password)
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({

@@ -407,7 +407,6 @@ export const editAgentEducationService = async (
         }
 
         validEdits.push({
-            AgentID: agentDetails.data.AgentID,
             AgentRegistrationID: userDetails.data.agentRegistrationId,
             AgentEducationID: edu.agentEducationID,
             Degree: edu.degree,
@@ -472,7 +471,6 @@ export const editAgentWorkExpService = async (
         }
 
         validEdits.push({
-            AgentID: agentDetails.data.AgentID,
             AgentRegistrationID: userDetails.data.agentRegistrationId,
             AgentWorkExpID: work.agentWorkExpID,
             Company: work.company,

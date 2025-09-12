@@ -93,7 +93,6 @@ export type IAgentEducation = {
 
 export type IAgentEducationEdit = {
     AgentEducationID: number;
-    AgentID: number | null;
     AgentRegistrationID?: number | null;
     Degree?: string;
     EndDate?: Date | null;
@@ -103,7 +102,6 @@ export type IAgentEducationEdit = {
 
 export type IAgentWorkExpEdit = {
     AgentWorkExpID: number;
-    AgentID: number | null;
     AgentRegistrationID?: number | null;
     Company?: string;
     EndDate?: Date;
