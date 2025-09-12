@@ -5,6 +5,7 @@ import { approveAgentRegistrationController, getCurrentAgentController, loginAge
 import { multerUpload } from '../middleware/multer';
 import { approveRegistrationSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
+import { validateRole } from '../middleware/roles';
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ router.route('/logout-agent').delete(validateSession, logoutAgentSessionControll
 router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmployeeController)
 router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSessionController);
 
-router.route('/approve-registration').post(validate(approveRegistrationSchema), approveAgentRegistrationController);
+router.route('/approve-registration').post([validateSession, validateRole(['UM', 'SD']), validate(approveRegistrationSchema)], approveAgentRegistrationController);
 
 router.route('/current-user').get(validateSession, getCurrentAgentController);
 

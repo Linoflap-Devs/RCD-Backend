@@ -24,6 +24,8 @@ export const validateSession = async (req: Request, res: Response, next: NextFun
         isVerified: result.user.IsVerified
     }
 
+    logger('Session found', {session: req.session})
+
     next();
 }
 
