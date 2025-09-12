@@ -4,7 +4,7 @@ import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
 import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -124,14 +124,14 @@ export const registerAgentService = async (data: IAgentRegister, image?: Express
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, email: string}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
         logger((user.error?.message || 'Failed to find user.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string},
+            data: {} as {token: string, email: string, position: string},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -143,7 +143,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('User is not verified.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string},
+            data: {} as {token: string, email: string, position: string},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -159,7 +159,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('Password does not match.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string},
+            data: {} as {token: string, email: string, position: string},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -174,9 +174,23 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(( session.error?.message || 'Failed to create session.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string},
+            data: {} as {token: string, email: string, position: string},
             error: {
                 message: 'Failed to create session.',
+                code: 500
+            }
+        }
+    }
+
+    const agentDetails = await findAgentDetailsByUserId(user.data.agentUserId)
+
+    if(!agentDetails.success) {
+        logger(( agentDetails.error?.message || 'Failed to find agent details.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to find agent details.',
                 code: 500
             }
         }
@@ -186,7 +200,8 @@ export const loginAgentService = async (email: string, password: string): QueryR
         success: true,
         data: {
             token: token,
-            email: email
+            email: email,
+            position: agentDetails.data.Position || ''
         }
     }
 }
