@@ -4,7 +4,7 @@ import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 
-export const getAgentDashboard = async (agentUserId: number): QueryResult<any> => {
+export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
     // user info
 
@@ -44,13 +44,13 @@ export const getAgentDashboard = async (agentUserId: number): QueryResult<any> =
 
     // personal sales
 
-    const personalSales = await getTotalPersonalSales(result.data.AgentID)
+    const personalSales = await getTotalPersonalSales(result.data.AgentID, filters)
     console.log(personalSales)
 
     let divisionSales = null
     let divisionSalesData: any[] = []
     if(result.data.DivisionID){
-        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, isUnique: true})
+        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, isUnique: true, month: filters?.month, year: filters?.year})
 
         if(!getDivSales.success){
             logger('Failed to find division.', {agentUserId: agentUserId})
@@ -81,7 +81,6 @@ export const getAgentDashboard = async (agentUserId: number): QueryResult<any> =
             })
         })
     }
-
 
     const salesInfo = {
         totalSales: personalSales.data

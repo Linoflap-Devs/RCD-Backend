@@ -21,7 +21,15 @@ export const getAgentDashboardController = async (req: Request, res: Response) =
         return;
     }
 
-    const result = await getAgentDashboard(session.userID)
+    const { month, year } = req.query
+
+    const result = await getAgentDashboard(
+        session.userID, 
+        {
+            month: month ? Number(month) : undefined,
+            year: year ? Number(year) : undefined
+        }
+    )
 
     return res.status(200).json({
         success: true, 

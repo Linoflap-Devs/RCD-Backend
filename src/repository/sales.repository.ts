@@ -3,21 +3,32 @@ import { TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-ty
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 
-export const getPersonalSales = async (agentId: number): QueryResult<VwSalesTransactions[]> => {
+export const getPersonalSales = async (agentId: number, filters?: { month?: number }): QueryResult<VwSalesTransactions[]> => {
     try {
-        const result = await db.selectFrom('Vw_SalesTransactions')
+        let result = await db.selectFrom('Vw_SalesTransactions')
             .selectAll()
             .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .execute()
 
-        if(!result){
+        if(filters && filters.month){
+            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
+
+            result = result.where('DateFiled', '>', firstDay)
+            result = result.where('DateFiled', '<', lastDay)
+        }
+
+            
+        const queryResult = await result.execute()
+        
+        if(!queryResult){
             throw new Error('No sales found.')
         }
+
     
         return {
             success: true,
-            data: result
+            data: queryResult
         }
     }
 
@@ -34,19 +45,32 @@ export const getPersonalSales = async (agentId: number): QueryResult<VwSalesTran
     }
 }
 
-export const getTotalPersonalSales = async (agentId: number): QueryResult<number> => {
+export const getTotalPersonalSales = async (agentId: number, filters?: { month?: number}): QueryResult<number> => {
     try {
-        const result = await db.selectFrom('Vw_SalesTransactions')
+        let result = await db.selectFrom('Vw_SalesTransactions')
             .select(({fn, val, ref}) => [
                 fn.sum(ref('NetTotalTCP')).as('TotalSales')
             ])
             .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .execute()
+
+        if(filters && filters.month){
+            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
+
+            result = result.where('DateFiled', '>', firstDay)
+            result = result.where('DateFiled', '<', lastDay)
+        }
+
+        const queryResult = await result.execute()
+
+        if(!queryResult){
+            throw new Error('No sales found.')
+        }
 
         return {
             success: true,
-            data: Number(result[0].TotalSales)
+            data: Number(queryResult[0].TotalSales)
         }
     }
 
@@ -92,7 +116,20 @@ export const getTotalDivisionSales = async (divisionId: number): QueryResult<num
     }
 }
 
-export const getDivisionSales = async (divisionId: number, filters?:{amount?: number,  agentId?: number, isUnique?: boolean}, pagination?: {page?: number, pageSize?: number}): QueryResult<{ totalPages: number, results: VwSalesTransactions[]}> => {
+export const getDivisionSales = async (
+    divisionId: number, 
+    filters?: {
+        amount?: number,  
+        agentId?: number, 
+        isUnique?: boolean, 
+        month?: number,
+        year?: number,
+    }, 
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{ totalPages: number, results: VwSalesTransactions[]}> => {
     try {
 
         const page = pagination?.page ?? 1;
@@ -117,6 +154,16 @@ export const getDivisionSales = async (divisionId: number, filters?:{amount?: nu
             logger('getDivisionSales | Filtering by agentId', {agentId: filters.agentId})
             result = result.where('AgentID', '=', filters.agentId)
             totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
+        }
+
+        if(filters && filters.month){
+            const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+            logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
+            result = result.where('DateFiled', '>', firstDay)
+            result = result.where('DateFiled', '<', lastDay)
+            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
+            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
         }
 
         result = result.orderBy('DateFiled', 'desc')
