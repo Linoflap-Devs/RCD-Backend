@@ -1,4 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
+import { getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -86,14 +87,20 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
         totalSales: personalSales.data
     }
 
+    // commission
+
+    const commissions = await getTotalAgentCommissions(result.data.AgentID, {month: filters?.month, year: filters?.year})
+
+    const commissionInfo = {
+        totalCommissions: commissions.data || 0
+    }
+
     return {
         success: true,
         data: {
             user: userInfo,
             sales: salesInfo,
-            commission: {
-                totalCommissions: 0
-            },
+            commission: commissionInfo,
             divisionSales: divisionSalesData
         }
     }
