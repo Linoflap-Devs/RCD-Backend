@@ -17,7 +17,7 @@ export const getAgentCommissionController = async (req: Request, res: Response) 
 
     const { month, year } = req.query
 
-    const result = await getAgentCommissionsService(session.userID, {month: Number(month)});
+    const result = await getAgentCommissionsService(session.userID, {month: Number(month), year: Number(year)});
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agent commissions', data: {}})
