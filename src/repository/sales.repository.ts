@@ -1,7 +1,35 @@
+import { format } from "date-fns";
 import { db } from "../db/db"
 import { TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
+
+// UTILS
+function padRandomNumber(num: number, length: number): string {
+    return num.toString().padStart(length, '0');
+}
+
+async function generateUniqueTranCode(): Promise<string> {
+    const dateStr = format(new Date(), 'yyyyMMdd'); // YYYYMMDD
+    let tranCode = '';
+    let exists = true;
+
+    while (exists) {
+        const randomNum = Math.floor(Math.random() * 999999); // 0 - 999999
+        const randomStr = padRandomNumber(randomNum, 6); // ensures 6 digits
+        tranCode = `S-${dateStr}${randomStr}-001`;
+
+        // Check if transaction code exists in DB
+        const found = await db.selectFrom('Tbl_AgentPendingSales')
+            .select('PendingSalesTranCode')
+            .where('PendingSalesTranCode', '=', tranCode)
+            .executeTakeFirst();
+
+        exists = Boolean(found);
+    }
+
+    return tranCode;
+}
 
 export const getPersonalSales = async (agentId: number, filters?: { month?: number }): QueryResult<VwSalesTransactions[]> => {
     try {
@@ -337,6 +365,212 @@ export const getSalesSector = async (sectorId: number): QueryResult<TblSalesSect
         return {
             success: false,
             data: {} as TblSalesSector,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addPendingSale = async (
+    userId: number,
+    data: {
+        reservationDate: Date,
+        divisionID: number,
+        salesBranchID: number,
+        sectorID: number
+        buyer: {
+            buyersName: string,
+            address: string,
+            phoneNumber: string,
+            occupation: string,
+        },
+        property: {
+            projectID: number,
+            blkFlr: string,
+            lotUnit: string,
+            phase: string,
+            lotArea: number,
+            flrArea: number,
+            developerID: number,
+            developerCommission: number,
+            netTCP: number,
+            miscFee: number,
+            financingScheme: string,
+        },
+        payment: {
+            downpayment: number,
+            dpTerms: number,
+            monthlyPayment: number
+            dpStartDate: Date,
+            sellerName: string,
+        },
+        
+    }
+): QueryResult<any> => {
+
+    const transactionNumber = await generateUniqueTranCode();
+
+    const trx = await db.startTransaction().execute();
+
+    try {
+        const result = await trx.insertInto('Tbl_AgentPendingSales')
+            .values({
+                ReservationDate: data.reservationDate,
+                DivisionID: data.divisionID,
+                SalesBranchID: data.salesBranchID,
+                SalesSectorID: data.sectorID,
+
+                BuyersName: data.buyer.buyersName,
+                BuyersAddress: data.buyer.address,
+                BuyersContactNumber: data.buyer.phoneNumber,
+                BuyersOccupation: data.buyer.occupation,
+
+                ProjectID: data.property.projectID,
+                Block: data.property.blkFlr,
+                Lot: data.property.lotUnit,
+                Phase: data.property.phase,
+                LotArea: data.property.lotArea,
+                FloorArea: data.property.flrArea,
+                DeveloperID: data.property.developerID,
+                DevCommType: data.property.developerCommission.toString(),
+                NetTotalTCP: data.property.netTCP,
+                MiscFee: data.property.miscFee,
+                FinancingScheme: data.property.financingScheme,
+
+                DownPayment: data.payment.downpayment,
+                DPTerms: data.payment.dpTerms.toString(),
+                MonthlyDP: data.payment.monthlyPayment,
+                CreatedBy: userId,
+                SellerName: data.payment.sellerName,
+
+                LastUpdateby: userId,
+                LastUpdate: new Date(),
+
+                PendingSalesTranCode: transactionNumber,
+                ApprovalStatus: 1,
+                SalesStatus: 'PENDING APPROVAL - UNIT MANAGER'
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
+            .values([
+                // Broker
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'BROKER',
+                    PositionID: 76,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Director
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES DIRECTOR',
+                    PositionID: 85,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Unit Manager
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'UNIT MANAGER',
+                    PositionID: 86,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Person
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES PERSON',
+                    PositionID: 0,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Associate
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES ASSOCIATE',
+                    PositionID: 0,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Assistance Fee
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'ASSISTANCE FEE',
+                    PositionID: 0,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Referral Fee
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'REFERRAL FEE',
+                    PositionID: 0,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Others
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'OTHERS',
+                    PositionID: 0,
+                    AgentName: '',
+                    AgentID: 0,
+                    CommissionRate: 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+            ])
+            .outputAll('inserted')
+            .execute()
+        
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error;
+        return {
+            success: false,
+            data: {},
             error: {
                 code: 500,
                 message: error.message

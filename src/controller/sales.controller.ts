@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService } from "../service/sales.service";
+import { addPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService } from "../service/sales.service";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
     const session = req.session
@@ -72,4 +72,82 @@ export const getSalesTransactionDetailController = async (req: Request, res: Res
     }
 
     res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const addPendingSaleController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        buyersName,
+        address,
+        phoneNumber,
+        occupation,
+        projectID,
+        blkFlr,
+        lotUnit,
+        phase,
+        lotArea,
+        flrArea,
+        developerID,
+        developerCommission,
+        netTCP,
+        miscFee,
+        financingScheme,
+        downpayment,
+        dpTerms,
+        monthlyPayment,
+        dpStartDate,
+        sellerName
+    } = req.body
+
+    const result = await addPendingSalesService(session.userID, {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        buyer: {
+            buyersName,
+            address,
+            phoneNumber,
+            occupation
+        },
+        property: {
+            projectID,
+            blkFlr,
+            lotUnit,
+            phase,
+            lotArea,
+            flrArea,
+            developerCommission,
+            netTCP,
+            miscFee,
+            financingScheme
+        },
+        payment: {
+            downpayment,
+            dpTerms,
+            monthlyPayment,
+            dpStartDate,
+            sellerName
+        }
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales added', data: result.data})
 }

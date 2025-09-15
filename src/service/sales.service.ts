@@ -1,8 +1,9 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { addPendingSale, getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
+import { getProjectById } from "../repository/projects.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -198,4 +199,116 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         data: sales
     }
 
+}
+
+export const addPendingSalesService = async (
+    agentUserId: number,
+    data: {
+        reservationDate: Date,
+        salesBranchID: number,
+        sectorID: number
+        buyer: {
+            buyersName: string,
+            address: string,
+            phoneNumber: string,
+            occupation: string,
+        },
+        property: {
+            projectID: number,
+            blkFlr: string,
+            lotUnit: string,
+            phase: string,
+            lotArea: number,
+            flrArea: number,
+            developerCommission: number,
+            netTCP: number,
+            miscFee: number,
+            financingScheme: string,
+        },
+        payment: {
+            downpayment: number,
+            dpTerms: number,
+            monthlyPayment: number
+            dpStartDate: Date,
+            sellerName: string,
+        }
+    }
+): QueryResult<any> => {
+
+    const agentData = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No division found',
+                code: 400
+            }
+        }
+    }
+
+    const project = await getProjectById(data.property.projectID)
+
+    if(!project.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No project found',
+                code: 400
+            }
+        }
+    }
+
+    const updatedData = {
+        ...data,
+        divisionID: Number(agentData.data.DivisionID),
+        property: {
+            ...data.property,
+            developerID: Number(project.data.DeveloperID)
+        }
+    }
+
+    const result = await addPendingSale(agentData.data.AgentID, updatedData)
+
+    if(!result.success){
+        logger('addPendingSalesService', {data: data})
+        logger('addPendingSalesService', {error: result.error})
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Adding sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }
