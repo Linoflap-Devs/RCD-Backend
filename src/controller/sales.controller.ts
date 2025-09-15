@@ -14,9 +14,19 @@ export const getDivisionSalesController = async (req: Request, res: Response) =>
         return;
     }
 
-    const { page, pageSize } = req.query
+    const { page, pageSize, month, year } = req.query
 
-    const result = await getUserDivisionSalesService(session.userID, {page: Number(page), pageSize: Number(pageSize)})
+    const result = await getUserDivisionSalesService(
+        session.userID, 
+        {
+            month: month ? Number(month) : undefined,
+            year: year ? Number(year) : undefined
+        }, 
+        {
+            page: Number(page), 
+            pageSize: Number(pageSize)
+        }
+    )
 
     res.status(200).json({success: true, message: 'List of division sales', data: result.data})
 }

@@ -4,7 +4,7 @@ import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 
-export const getUserDivisionSalesService = async (userId: number, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
+export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
     const agent = await findAgentDetailsByUserId(userId)
 
@@ -31,7 +31,7 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
     }
 
     logger('getUserDivisionSalesService', {userId: userId, agentId: agent.data.AgentID, divisionId: agent.data.DivisionID})
-    const result = await getDivisionSales(Number(agent.data.DivisionID), {}, pagination);
+    const result = await getDivisionSales(Number(agent.data.DivisionID), filters, pagination);
 
     if(!result.success){
         return {
@@ -56,7 +56,7 @@ export const getUserDivisionSalesService = async (userId: number, pagination?: {
         }
     })
 
-    const totalDivisionSales = await getTotalDivisionSales(Number(agent.data.DivisionID))
+    const totalDivisionSales = await getTotalDivisionSales(Number(agent.data.DivisionID), { month: filters?.month, year: filters?.year });
 
     const obj = {
         totalPages: result.data.totalPages,

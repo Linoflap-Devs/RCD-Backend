@@ -87,19 +87,28 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
     }
 }
 
-export const getTotalDivisionSales = async (divisionId: number): QueryResult<number> => {
+export const getTotalDivisionSales = async (divisionId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
-        const result = await db.selectFrom('Vw_SalesTransactions')
+        let result = await db.selectFrom('Vw_SalesTransactions')
                 .select(({fn, val, ref}) => [
                     fn.sum(ref('NetTotalTCP')).as('TotalSales')
                 ])
                 .where('DivisionID', '=', divisionId)
                 .where('SalesStatus', '<>', 'ARCHIVED')
-                .execute()
+
+        if(filters && filters.month){
+            const firstDay = new Date( filters.year || (new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date( filters.year || (new Date).getFullYear(), filters.month, 1)
+
+            result = result.where('DateFiled', '>', firstDay)
+            result = result.where('DateFiled', '<', lastDay)
+        }
+
+        const queryResult = await result.execute()
     
         return {
             success: true,
-            data: Number(result[0].TotalSales)
+            data: Number(queryResult[0].TotalSales)
         }
     }
 
