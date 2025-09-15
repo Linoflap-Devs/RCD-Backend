@@ -3,7 +3,7 @@ import { getAgentCommissionDetails, getCommissions, getTotalAgentCommissions } f
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 
-export const getAgentCommissionsService = async (userId: number, filters?: { month?: number }, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
+export const getAgentCommissionsService = async (userId: number, filters?: { month?: number, year?: number }, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
     const user = await findAgentDetailsByUserId(userId)
 
     if(!user.success){
@@ -30,7 +30,7 @@ export const getAgentCommissionsService = async (userId: number, filters?: { mon
 
     console.log(user.data)
 
-    const commissions = await getCommissions({ agentId: user.data.AgentID ?? undefined, month: filters?.month ?? undefined })
+    const commissions = await getCommissions({ agentId: user.data.AgentID ?? undefined, month: filters?.month ?? undefined, year: filters?.year ?? undefined }, pagination);
 
     if(!commissions.success){
         return {
@@ -40,7 +40,7 @@ export const getAgentCommissionsService = async (userId: number, filters?: { mon
         }
     }
 
-    const totalCommission = await getTotalAgentCommissions(user.data.AgentID, { month: filters?.month ?? undefined })
+    const totalCommission = await getTotalAgentCommissions(user.data.AgentID, { month: filters?.month ?? undefined, year: filters?.year ?? undefined })
 
     if(!totalCommission.success){
         return {

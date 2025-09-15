@@ -15,7 +15,7 @@ export const getAgentCommissionController = async (req: Request, res: Response) 
         return;
     }
 
-    const { month } = req.query
+    const { month, year } = req.query
 
     const result = await getAgentCommissionsService(session.userID, {month: Number(month)});
 

@@ -6,7 +6,8 @@ import { QueryResult } from "../types/global.types"
 export const getCommissions = async (
     filters?: { 
         agentId?: number, 
-        month?: number 
+        month?: number,
+        year?: number 
     }, 
     pagination?: {
         page?: number, 
@@ -34,8 +35,8 @@ export const getCommissions = async (
         }
 
         if(filters?.month){
-            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
+            const firstDay = new Date( filters.year || (new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date( filters.year || (new Date).getFullYear(), filters.month, 1)
             result = result.where('CommReleaseDate', '>', firstDay)
             result = result.where('CommReleaseDate', '<', lastDay)
             totalCount = totalCount.where('CommReleaseDate', '>', firstDay)
@@ -78,7 +79,7 @@ export const getCommissions = async (
     }
 }
 
-export const getTotalAgentCommissions = async (agentId: number, filters?: { month?: number }): QueryResult<number> => {
+export const getTotalAgentCommissions = async (agentId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
         let result = await db.selectFrom('Vw_CommissionReleaseDeductionReport')
             .select(({fn, val, ref}) => [
@@ -87,8 +88,8 @@ export const getTotalAgentCommissions = async (agentId: number, filters?: { mont
             .where('AgentID', '=', agentId)
 
         if(filters?.month){
-            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
+            const firstDay = new Date(filters.year || (new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date(filters.year || (new Date).getFullYear(), filters.month, 1)
             result = result.where('CommReleaseDate', '>', firstDay)
             result = result.where('CommReleaseDate', '<', lastDay)
         }
