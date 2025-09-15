@@ -45,7 +45,7 @@ export const getPersonalSales = async (agentId: number, filters?: { month?: numb
     }
 }
 
-export const getTotalPersonalSales = async (agentId: number, filters?: { month?: number}): QueryResult<number> => {
+export const getTotalPersonalSales = async (agentId: number, filters?: { month?: number, year?: number}): QueryResult<number> => {
     try {
         let result = await db.selectFrom('Vw_SalesTransactions')
             .select(({fn, val, ref}) => [
@@ -55,8 +55,8 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
             .where('SalesStatus', '<>', 'ARCHIVED')
 
         if(filters && filters.month){
-            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
+            const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
 
             result = result.where('DateFiled', '>', firstDay)
             result = result.where('DateFiled', '<', lastDay)

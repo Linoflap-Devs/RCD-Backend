@@ -70,7 +70,7 @@ export const getUserDivisionSalesService = async (userId: number, filters?: {mon
     }
 }
 
-export const getUserPersonalSalesService = async (userId: number, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
+export const getUserPersonalSalesService = async (userId: number, filters?: { month?: number, year?: number }, pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
     const agent = await findAgentDetailsByUserId(userId)
 
     if(!agent.data.AgentID){
@@ -96,7 +96,7 @@ export const getUserPersonalSalesService = async (userId: number, pagination?: {
     }
 
     logger('getUserDivisionSalesService', {userId: userId, agentId: agent.data.AgentID, divisionId: agent.data.DivisionID})
-    const result = await getDivisionSales(Number(agent.data.DivisionID), {agentId: agent.data.AgentID}, pagination);
+    const result = await getDivisionSales(Number(agent.data.DivisionID), {agentId: agent.data.AgentID, month: filters?.month, year: filters?.year}, pagination);
 
     if(!result.success){
         return {
@@ -121,7 +121,7 @@ export const getUserPersonalSalesService = async (userId: number, pagination?: {
         }
     })
 
-    const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID)
+    const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID, { month: filters?.month, year: filters?.year });
 
     const obj = {
         totalPages: result.data.totalPages,
