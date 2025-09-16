@@ -1,6 +1,7 @@
 import { TblProjects, VwProjects } from "../db/db-types";
 import { getProjectById, getProjectList } from "../repository/projects.repository";
 import { QueryResult } from "../types/global.types";
+import { logger } from "../utils/logger";
 
 export const getProjectListService = async (): QueryResult<any> => {
     const result = await getProjectList();
@@ -40,6 +41,8 @@ export const getProjectDetailsService = async (projectId: number): QueryResult<a
         }
     }
 
+    logger('getProjectDetailsService', {data: result.data})
+
     const formatted = {
         address: result.data.Address.trim(),
         contactNumber: result.data.ContactNumber.trim(),
@@ -54,7 +57,9 @@ export const getProjectDetailsService = async (projectId: number): QueryResult<a
         projectTypeName: result.data.ProjectTypeName?.trim() || 'N/A',
         sectorID: result.data.SectorID,
         sectorName: result.data.SectorName.trim(),
-        updateBy: result.data.UpdateBy
+        updateBy: result.data.UpdateBy,
+        developerCode: result.data.DeveloperCode,
+        developerCommissionRate: result.data.CommRate || 0
     }
 
     return {
