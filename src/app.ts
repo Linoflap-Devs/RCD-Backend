@@ -12,6 +12,7 @@ import salesRoutes from './routes/sales.routes'
 import divisionRoutes from './routes/division.routes'
 import agentRoutes from './routes/agents.routes'
 import commissionRoutes from './routes/commission.routes'
+import projectRoutes from './routes/projects.routes'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -35,11 +36,12 @@ app.use('/api/sales', salesRoutes)
 app.use('/api/division', divisionRoutes)
 app.use('/api/agents', agentRoutes)
 app.use('/api/commissions', commissionRoutes)
+app.use('/api/projects', projectRoutes)
 
 app.get('/', (async (req, res) => {
     res.send('Hello World!')
 }))
 
 app.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`)
+    console.log(`Server running on PORT ${port}`)
 })

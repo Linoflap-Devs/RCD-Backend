@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { addPendingSale, editPendingSalesDetails, getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -312,3 +312,26 @@ export const addPendingSalesService = async (
         data: result.data
     }
 }
+
+// export const editPendingSalesDetailsService = async (
+//     data: {
+//         pendingSalesDtlId: number,
+//         agentId: number,
+//         commissionRate: number,
+//     }[]
+// ): QueryResult<any> => {
+//     const result = await editPendingSalesDetails(data);
+
+//     if(!result.success){
+//         logger('editPendingSalesDetailsService', {data: data})
+//         logger('editPendingSalesDetailsService', {error: result.error})
+//         return {
+//             success: false,
+//             data: {},
+//             error: {
+//                 message: 'Editing sales failed.',
+//                 code: 400
+//             }
+//         }
+//     }
+// }

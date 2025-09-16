@@ -1,8 +1,9 @@
 import { format } from "date-fns";
 import { db } from "../db/db"
-import { TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
+import { AgentPendingSalesDetail } from "../types/sales.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -566,6 +567,109 @@ export const addPendingSale = async (
     }
 
     catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error;
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editPendingSalesDetails = async (data?: { pendingSalesDtlId: number, agentId: number, commissionRate: number }[]): QueryResult<any> => {
+
+    if(!data || !data.length) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: 'No data provided.'
+            }
+        }
+    };
+
+    const agentIds = data.map(d => d.agentId);
+
+    const agents = await db.selectFrom('Vw_Agents')
+        .selectAll()
+        .where('AgentID', 'in', agentIds)
+        .execute()
+
+    const trx = await db.startTransaction().execute();
+
+    try {
+
+        const uniqueAgentIds = [...new Set(data.map(d => d.agentId))];
+
+        const agentMap = new Map(agents.map(agent => [agent.AgentID, agent]));
+    
+        const missingAgentIds = uniqueAgentIds.filter(id => !agentMap.has(id));
+
+        if (missingAgentIds.length > 0) {
+            await trx.rollback().execute();
+            logger('Agents not found', { missingAgentIds });
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 404,
+                    message: `Agents not found: ${missingAgentIds.join(', ')}`
+                }
+            };
+        }
+
+        const updatePromises = data.map(async (item) => {
+            const currentAgent = agentMap.get(item.agentId)!; 
+        
+            return trx.updateTable('Tbl_AgentPendingSalesDtl')
+                .set({
+                    AgentID: item.agentId,
+                    AgentName: `${currentAgent.LastName}, ${currentAgent.FirstName} ${currentAgent.MiddleName ? currentAgent.MiddleName : ''}`,
+                    CommissionRate: item.commissionRate,
+                })
+                .where('AgentPendingSalesDtlID', '=', item.pendingSalesDtlId)
+                .outputAll('inserted') // Note: 'inserted' might need to be 'updated' depending on your DB
+                .executeTakeFirstOrThrow();
+        });
+
+        // for(const agent of data){
+
+        //     const currentAgent = agents.find(a => a.AgentID === agent.agentId);
+
+        //     if(!currentAgent){
+        //         logger('Agent not found.', {agentId: agent.agentId})
+        //         continue
+        //     }
+
+        //     const updateOperation = await trx.updateTable('Tbl_AgentPendingSalesDtl')
+        //                                     .set({
+        //                                         AgentID: agent.agentId,
+        //                                         AgentName: `${currentAgent.LastName}, ${currentAgent.FirstName} ${currentAgent.MiddleName ? currentAgent.MiddleName : ''}`,
+        //                                         CommissionRate: agent.commissionRate,
+        //                                     })
+        //                                     .where('AgentPendingSalesDtlID', '=', agent.pendingSalesDtlId)
+        //                                     .outputAll('inserted')
+        //                                     .executeTakeFirstOrThrow();
+
+        //     updatedArr.push(updateOperation);
+        // }
+
+        const resolvedPromises = await Promise.all(updatePromises);
+
+        await trx.commit().execute();
+
+        return {
+            success: true,
+            data: resolvedPromises
+        }
+    }
+
+    catch (err: unknown){
         await trx.rollback().execute();
         const error = err as Error;
         return {
