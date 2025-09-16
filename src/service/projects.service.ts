@@ -1,5 +1,5 @@
 import { TblProjects, VwProjects } from "../db/db-types";
-import { getProjectList } from "../repository/projects.repository";
+import { getProjectById, getProjectList } from "../repository/projects.repository";
 import { QueryResult } from "../types/global.types";
 
 export const getProjectListService = async (): QueryResult<any> => {
@@ -22,6 +22,40 @@ export const getProjectListService = async (): QueryResult<any> => {
             developer: project.DeveloperName?.trim() || 'N/A',
         }
     })
+
+    return {
+        success: true,
+        data: formatted
+    }
+}
+
+export const getProjectDetailsService = async (projectId: number): QueryResult<any> => {
+    const result = await getProjectById(projectId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as VwProjects,
+            error: result.error
+        }
+    }
+
+    const formatted = {
+        address: result.data.Address.trim(),
+        contactNumber: result.data.ContactNumber.trim(),
+        developerID: result.data.DeveloperID,
+        developerName: result.data.DeveloperName?.trim() || 'N/A',
+        isLeadProject: result.data.IsLeadProject,
+        lastUpdate: result.data.LastUpdate,
+        projectCode: result.data.ProjectCode.trim(),
+        projectID: result.data.ProjectID,
+        projectName: result.data.ProjectName.trim(),
+        projectTypeID: result.data.ProjectTypeID,
+        projectTypeName: result.data.ProjectTypeName?.trim() || 'N/A',
+        sectorID: result.data.SectorID,
+        sectorName: result.data.SectorName.trim(),
+        updateBy: result.data.UpdateBy
+    }
 
     return {
         success: true,
