@@ -130,8 +130,13 @@ export const getAgentCommissionDetails = async (agentId: number, date?: Date): Q
             .selectAll()
 
         if(date){
-            const dayStart = new TZDate(startOfDay(date), '+08:00')
-            const dayEnd = new TZDate(endOfDay(date), '+08:00')
+            const philippineDate = new TZDate(date, 'Asia/Manila')
+            
+            const philippineDayStart = startOfDay(philippineDate)
+            const philippineDayEnd = endOfDay(philippineDate)
+            
+            const dayStart = new Date(philippineDayStart.getTime())
+            const dayEnd = new Date(philippineDayEnd.getTime())
 
             logger('getAgentCommissionDetails dayStart dayEnd', { dayStart, dayEnd })
 
