@@ -379,6 +379,27 @@ export const getPendingSalesService = async (
     }
 }
 
+export const getPendingSalesDetailService = async (pendingSalesId: number): QueryResult<any> => {
+
+    const result = await getPendingSaleById(pendingSalesId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
     pendingSalesId: number,
