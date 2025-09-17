@@ -476,7 +476,21 @@ export const editPendingSalesDetailsService = async (
         }
     }
 
-    const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, data);
+    // validate objects
+    const validEdits: EditPendingSaleDetail[] = [];
+        for (const detail of data) {
+            if (!detail.pendingSalesDtlId) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
+            if (!detail.agentId) return { success: false, data: {}, error: { message: 'AgentID not found', code: 400 } };
+            if (!detail.commissionRate) return { success: false, data: {}, error: { message: 'Commission Rate not found', code: 400 } };
+    
+            validEdits.push({
+                pendingSalesDtlId: detail.pendingSalesDtlId,
+                agentId: detail.agentId,
+                commissionRate: detail.commissionRate,
+            });
+        }
+
+    const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, validEdits);
 
     if(!result.success){
         logger('editPendingSalesDetailsService', {data: data})
