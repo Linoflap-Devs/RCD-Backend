@@ -1,9 +1,10 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, editPendingSalesDetails, getDivisionSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { addPendingSale, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
+import { AgentPendingSale, EditPendingSaleDetail } from "../types/sales.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -313,25 +314,164 @@ export const addPendingSalesService = async (
     }
 }
 
-// export const editPendingSalesDetailsService = async (
-//     data: {
-//         pendingSalesDtlId: number,
-//         agentId: number,
-//         commissionRate: number,
-//     }[]
-// ): QueryResult<any> => {
-//     const result = await editPendingSalesDetails(data);
+export const getPendingSalesService = async (
+    agentUserId: number,
+    filters: {
+        month?: number,
+        year?: number,
+        developerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<any> => {
+    const agentData = await findAgentDetailsByUserId(agentUserId)
 
-//     if(!result.success){
-//         logger('editPendingSalesDetailsService', {data: data})
-//         logger('editPendingSalesDetailsService', {error: result.error})
-//         return {
-//             success: false,
-//             data: {},
-//             error: {
-//                 message: 'Editing sales failed.',
-//                 code: 400
-//             }
-//         }
-//     }
-// }
+    if(!agentData.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await getPendingSales(Number(agentData.data.DivisionID), { ...filters, agentId: Number(agentData.data.AgentID) }, pagination)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Getting pending sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    const obj = result.data.results.map((item: AgentPendingSale) => {
+        return {
+            AgentPendingSalesID: item.AgentPendingSalesID,
+            PendingSalesTransCode: item.PendingSalesTranCode,
+            SellerName: item.SellerName || 'N/A',
+            FinancingScheme: item.FinancingScheme,
+            ReservationDate: item.ReservationDate
+        }
+    })
+
+    return {
+        success: true,
+        data: obj
+    }
+}
+
+export const editPendingSalesDetailsService = async (
+    agentUserId: number,
+    pendingSalesId: number,
+    data: EditPendingSaleDetail[]
+): QueryResult<any> => {
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been rejected.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 2){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been approved by the Unit Manager.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 2){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been approved by the Sales Director.',
+                code: 400
+            }
+        }
+    }
+
+    const agentData = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, data);
+
+    if(!result.success){
+        logger('editPendingSalesDetailsService', {data: data})
+        logger('editPendingSalesDetailsService', {error: result.error})
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Editing sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}

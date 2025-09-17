@@ -3,7 +3,7 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSalesDetail } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail } from "../types/sales.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -374,6 +374,129 @@ export const getSalesSector = async (sectorId: number): QueryResult<TblSalesSect
     }
 }
 
+export const getPendingSales = async (
+    divisionId: number,
+    filters?: {
+        month?: number,
+        year?: number,
+        agentId?: number,
+        developerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+    try {
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        let result = await db.selectFrom('Tbl_AgentPendingSales')
+            .selectAll()
+            .where('DivisionID', '=', divisionId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .where('ApprovalStatus', 'not in', [0, 3])
+
+        let totalCountResult = await db
+            .selectFrom("Tbl_AgentPendingSales")
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+            .where('DivisionID', '=', divisionId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .where('ApprovalStatus', 'not in', [0, 3])
+
+
+        if(filters && filters.agentId){
+            result = result.where('CreatedBy', '=', filters.agentId)
+            totalCountResult = totalCountResult.where('CreatedBy', '=', filters.agentId)
+        }
+
+        if(filters && filters.month){
+            const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+            result = result.where('DateFiled', '>', firstDay)
+            result = result.where('DateFiled', '<', lastDay)
+            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
+            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
+        }
+
+        result = result.orderBy('DateFiled', 'desc')
+        
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
+        
+        const queryResult = await result.execute();
+        const countResult = await totalCountResult.execute();
+        if(!result){
+            throw new Error('No sales found.')
+        }
+
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+        console.log('totalPages', totalPages)
+        
+        let filteredResult = queryResult
+        
+        return {
+            success: true,
+            data: {
+                totalPages: totalPages,
+                results: filteredResult
+            }
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as {totalPages: number, results: AgentPendingSale[]},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getPendingSaleById = async (pendingSaleId: number): QueryResult<AgentPendingSalesWithDetails> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentPendingSales')
+            .selectAll()
+            .where('AgentPendingSalesID', '=', pendingSaleId)
+            .executeTakeFirstOrThrow()
+
+        const details = await db.selectFrom('Tbl_AgentPendingSalesDtl')
+            .selectAll()
+            .where('PendingSalesTranCode', '=', result.PendingSalesTranCode)
+            .execute()
+
+        const obj = {
+            ...result,
+            Details: details
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as AgentPendingSalesWithDetails,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const addPendingSale = async (
     userId: number,
     data: {
@@ -580,7 +703,7 @@ export const addPendingSale = async (
     }
 }
 
-export const editPendingSalesDetails = async (data?: { pendingSalesDtlId: number, agentId: number, commissionRate: number }[]): QueryResult<any> => {
+export const editPendingSalesDetails = async (agentId: number, pendingSalesId: number, data?: EditPendingSaleDetail[]): QueryResult<any> => {
 
     if(!data || !data.length) {
         return {
@@ -660,6 +783,17 @@ export const editPendingSalesDetails = async (data?: { pendingSalesDtlId: number
         // }
 
         const resolvedPromises = await Promise.all(updatePromises);
+
+        // update parent pending sale
+        const updatePendingSale = await trx.updateTable('Tbl_AgentPendingSales')
+            .set({
+                LastUpdate: new Date(),
+                LastUpdateby: agentId,
+                ApprovalStatus: 2,
+                SalesStatus: 'PENDING APPROVAL - SALES DIRECTOR'
+            })
+            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .executeTakeFirstOrThrow();
 
         await trx.commit().execute();
 

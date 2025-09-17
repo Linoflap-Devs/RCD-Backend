@@ -1,5 +1,6 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService } from "../service/sales.service";
+import { addPendingSalesService, editPendingSalesDetailsService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService } from "../service/sales.service";
+import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
     const session = req.session
@@ -72,6 +73,39 @@ export const getSalesTransactionDetailController = async (req: Request, res: Res
     }
 
     res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const getPendingSalesController = async (req: Request, res: Response) => {
+    logger('getPendingSalesController')
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { page, pageSize, month, year, agentId, developerId } = req.query
+
+    const result = await getPendingSalesService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get pending sales', data: {}})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Pending sales', data: result.data})
 }
 
 export const addPendingSaleController = async (req: Request, res: Response) => {
@@ -150,4 +184,30 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Sales added', data: result.data})
+}
+
+export const editPendingSalesController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+    const { edit = [] } = req.body
+
+    const result = await editPendingSalesDetailsService(session.userID, Number(pendingSalesId), edit)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
 }
