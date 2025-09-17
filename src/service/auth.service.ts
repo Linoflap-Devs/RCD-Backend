@@ -269,7 +269,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
             success: false,
             data: {} as {token: string, email: string},
             error: {
-                message: 'Failed to create session.',
+                message: result.error?.message || 'Failed to approve agent registration.',
                 code: 500
             }
         }

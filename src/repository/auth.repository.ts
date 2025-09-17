@@ -460,21 +460,16 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
     try {
 
         // get all relevant data
-        const [registration, agentUser] = await Promise.all([
+        const [registration] = await Promise.all([
             db.selectFrom('Tbl_AgentRegistration')
                 .where('AgentRegistrationID', '=', agentRegistrationId)
                 .where('IsVerified', '=', 0)
                 .selectAll()
                 .executeTakeFirstOrThrow(),
-            db.selectFrom('Tbl_AgentUser')
-                .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
-                .where('AgentRegistrationID', '=', agentRegistrationId)
-                .where('IsVerified', '=', 0)
-                .selectAll()
-                .executeTakeFirstOrThrow()
+            
         ]);
 
-        if(!registration || !agentUser) {
+        if(!registration) {
             logger(
                 'Failed to find agent registration or agent user account. Target registration may already be verified.', 
                 {
@@ -603,18 +598,22 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
                                             .set('IsVerified', 1)
                                             .set('AgentID', Number(insertAgent.AgentID))
+                                            .where('AgentRegistrationID', '=', agentRegistrationId)
                                             .executeTakeFirstOrThrow();
 
                 const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
                                                 .set('AgentID', Number(insertAgent.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
                 
                 const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
                                                 .set('AgentID', Number(insertAgent.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
                                                     .set('IsVerified', 1)
+                                                    .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
                 // assign new id
@@ -624,10 +623,11 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
             if(agentIdInserted > 0){
                 await trx.commit().execute()
 
-                const data = await db.selectFrom('Tbl_Agents')
+                const data = await db.selectFrom('Tbl_AgentUser')
+                                    .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
                                     .where('AgentID', '=', agentIdInserted)
                                     .selectAll()
-                                    .executeTakeFirstOrThrow();
+                                    .executeTakeFirst();
 
                 if(!data){
                     throw new Error('Unknown error.')
@@ -636,13 +636,13 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 return {
                     success: true,
                     data: {
-                        AgentID: agentUser.AgentID,
-                        AgentRegistrationID: agentUser.AgentRegistrationID,
-                        AgentUserID: agentUser.AgentUserID,
-                        Email: agentUser.Email,
-                        ImageID: agentUser.ImageID,
-                        IsVerified: agentUser.IsVerified,
-                        Position: agentUser.Position || ''
+                        AgentID: data.AgentID,
+                        AgentRegistrationID: data.AgentRegistrationID,
+                        AgentUserID: data.AgentUserID,
+                        Email: data.Email,
+                        ImageID: data.ImageID,
+                        IsVerified: data.IsVerified,
+                        Position: data.Position || ''
                     }
                 }
             }
