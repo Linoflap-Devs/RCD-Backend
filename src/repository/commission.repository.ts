@@ -132,6 +132,8 @@ export const getAgentCommissionDetails = async (agentId: number, date?: Date): Q
             const dayStart = startOfDay(date)
             const dayEnd = endOfDay(date)
 
+            logger('getAgentCommissionDetails dayStart dayEnd', { dayStart, dayEnd })
+
             query = query.where('CommReleaseDate', '>', dayStart)
             query = query.where('CommReleaseDate', '<', dayEnd)
         }
