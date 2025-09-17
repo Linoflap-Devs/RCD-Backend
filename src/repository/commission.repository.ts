@@ -2,6 +2,7 @@ import { endOfDay, setHours, startOfDay } from "date-fns"
 import { db } from "../db/db"
 import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
+import { logger } from "../utils/logger"
 
 export const getCommissions = async (
     filters?: { 
@@ -120,6 +121,7 @@ export const getTotalAgentCommissions = async (agentId: number, filters?: { mont
 }
 
 export const getAgentCommissionDetails = async (agentId: number, date?: Date): QueryResult<VwCommissionReleaseDeductionReport[]> => {
+    logger('getAgentCommissionDetails', { agentId, date })
     try {
 
         let query = await db.selectFrom('Vw_CommissionReleaseDeductionReport')
