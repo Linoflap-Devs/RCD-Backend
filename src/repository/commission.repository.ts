@@ -3,6 +3,7 @@ import { db } from "../db/db"
 import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
+import { TZDate } from '@date-fns/tz'
 
 export const getCommissions = async (
     filters?: { 
@@ -129,8 +130,8 @@ export const getAgentCommissionDetails = async (agentId: number, date?: Date): Q
             .selectAll()
 
         if(date){
-            const dayStart = startOfDay(date)
-            const dayEnd = endOfDay(date)
+            const dayStart = new TZDate(startOfDay(date), '+08:00')
+            const dayEnd = new TZDate(endOfDay(date), '+08:00')
 
             logger('getAgentCommissionDetails dayStart dayEnd', { dayStart, dayEnd })
 
