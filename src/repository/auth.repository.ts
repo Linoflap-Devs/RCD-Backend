@@ -517,18 +517,22 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
                                             .set('IsVerified', 1)
                                             .set('AgentID', Number(agentData.AgentID))
+                                            .where('AgentRegistrationID', '=', agentRegistrationId)
                                             .executeTakeFirstOrThrow();
 
                 const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
                                                 .set('AgentID', Number(agentData.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
                 
                 const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
                                                 .set('AgentID', Number(agentData.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
                                                     .set('IsVerified', 1)
+                                                    .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
                 // assign agent id
@@ -621,18 +625,19 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
             }
 
             if(agentIdInserted > 0){
-                await trx.commit().execute()
-
+                
                 const data = await db.selectFrom('Tbl_AgentUser')
-                                    .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
-                                    .where('AgentID', '=', agentIdInserted)
-                                    .selectAll()
-                                    .executeTakeFirst();
+                .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+                .where('AgentID', '=', agentIdInserted)
+                .selectAll()
+                .executeTakeFirst();
 
                 if(!data){
                     throw new Error('Unknown error.')
                 }
-
+                
+                await trx.commit().execute()
+                
                 return {
                     success: true,
                     data: {
