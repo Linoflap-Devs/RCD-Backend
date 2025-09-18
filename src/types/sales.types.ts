@@ -87,6 +87,11 @@ export interface AgentPendingSalesWithDetails {
     SalesSectorID: number;
     SalesStatus: string;
     SellerName: string;
+    DivisionName: string | null;
+    ProjectName: string | null;
+    SalesBranchName: string | null;
+    DeveloperName: string | null;
+    SalesSectorName: string | null;
     Details: {
         AgentID: number;
         AgentName: string | null;

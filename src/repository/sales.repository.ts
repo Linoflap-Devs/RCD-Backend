@@ -465,8 +465,56 @@ export const getPendingSales = async (
 export const getPendingSaleById = async (pendingSaleId: number): QueryResult<AgentPendingSalesWithDetails> => {
     try {
         const result = await db.selectFrom('Tbl_AgentPendingSales')
-            .selectAll()
-            .where('AgentPendingSalesID', '=', pendingSaleId)
+            .leftJoin('Tbl_Division', 'Tbl_AgentPendingSales.DivisionID', 'Tbl_Division.DivisionID')
+            .leftJoin('Tbl_Projects', 'Tbl_AgentPendingSales.ProjectID', 'Tbl_Projects.ProjectID')
+            .leftJoin('Tbl_SalesBranch', 'Tbl_AgentPendingSales.SalesBranchID', 'Tbl_SalesBranch.BranchID')
+            .leftJoin('Tbl_Developers', 'Tbl_AgentPendingSales.DeveloperID', 'Tbl_Developers.DeveloperID')
+            .leftJoin('Tbl_SalesSector', 'Tbl_AgentPendingSales.SalesSectorID', 'Tbl_SalesSector.SectorID')
+            .select([
+                'Tbl_AgentPendingSales.AgentPendingSalesID',
+                'Tbl_AgentPendingSales.ApprovalStatus',
+                'Tbl_AgentPendingSales.ApprovedSalesTranID',
+                'Tbl_AgentPendingSales.Block',
+                'Tbl_AgentPendingSales.BuyersAddress',
+                'Tbl_AgentPendingSales.BuyersContactNumber',
+                'Tbl_AgentPendingSales.BuyersName',
+                'Tbl_AgentPendingSales.BuyersOccupation',
+                'Tbl_AgentPendingSales.CommStatus',
+                'Tbl_AgentPendingSales.CreatedBy',
+                'Tbl_AgentPendingSales.DateFiled',
+                'Tbl_AgentPendingSales.DevCommType',
+                'Tbl_AgentPendingSales.DeveloperID',
+                'Tbl_AgentPendingSales.DivisionID',
+                'Tbl_AgentPendingSales.DownPayment',
+                'Tbl_AgentPendingSales.DPStartSchedule',
+                'Tbl_AgentPendingSales.DPTerms',
+                'Tbl_AgentPendingSales.FinancingScheme',
+                'Tbl_AgentPendingSales.FloorArea',
+                'Tbl_AgentPendingSales.LastUpdate',
+                'Tbl_AgentPendingSales.LastUpdateby',
+                'Tbl_AgentPendingSales.Lot',
+                'Tbl_AgentPendingSales.LotArea',
+                'Tbl_AgentPendingSales.MiscFee',
+                'Tbl_AgentPendingSales.MonthlyDP',
+                'Tbl_AgentPendingSales.NetTotalTCP',
+                'Tbl_AgentPendingSales.PendingSalesTranCode',
+                'Tbl_AgentPendingSales.Phase',
+                'Tbl_AgentPendingSales.ProjectID',
+                'Tbl_AgentPendingSales.ProjectLocationID',
+                'Tbl_AgentPendingSales.Remarks',
+                'Tbl_AgentPendingSales.ReservationDate',
+                'Tbl_AgentPendingSales.SalesBranchID',
+                'Tbl_AgentPendingSales.SalesSectorID',
+                'Tbl_AgentPendingSales.SalesStatus',
+                'Tbl_AgentPendingSales.SellerName',
+                // Add the names from joined tables
+                'Tbl_Division.Division as DivisionName',
+                'Tbl_Projects.ProjectName',
+                'Tbl_SalesBranch.BranchName as SalesBranchName',
+                'Tbl_Developers.DeveloperName',
+                'Tbl_SalesSector.SectorName as SalesSectorName'
+            ])
+            .where('Tbl_AgentPendingSales.AgentPendingSalesID', '=', pendingSaleId)
             .executeTakeFirstOrThrow()
 
         const details = await db.selectFrom('Tbl_AgentPendingSalesDtl')
@@ -476,6 +524,11 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
 
         const obj = {
             ...result,
+            DivisionName: result.DivisionName ? result.DivisionName.trim() : null,
+            ProjectName: result.ProjectName ? result.ProjectName.trim() : null,
+            SalesBranchName: result.SalesBranchName ? result.SalesBranchName.trim() : null,
+            DeveloperName: result.DeveloperName ? result.DeveloperName.trim() : null,
+            SalesSectorName: result.SalesSectorName ? result.SalesSectorName.trim() : null,
             Details: details
         }
 
