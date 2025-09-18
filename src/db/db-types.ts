@@ -699,7 +699,7 @@ export interface TblSalesTrans {
   SalesSectorID: number;
   SalesStatus: string;
   SalesTranCode: string;
-  SalesTranID: number;
+  SalesTranID: Generated<number>;
   SellerName: string;
 }
 
@@ -711,7 +711,7 @@ export interface TblSalesTransDtl {
   PositionID: number;
   PositionName: string;
   SalesTranCode: string;
-  SalesTransDtlID: number;
+  SalesTransDtlID: Generated<number>;
   VATRate: number;
   WTaxRate: number;
 }

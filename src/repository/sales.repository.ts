@@ -543,6 +543,7 @@ export const addPendingSale = async (
         const result = await trx.insertInto('Tbl_AgentPendingSales')
             .values({
                 ReservationDate: data.reservationDate,
+                DateFiled: new TZDate(new Date(), 'Asia/Manila'),
                 DivisionID: data.divisionID,
                 SalesBranchID: data.salesBranchID,
                 SalesSectorID: data.sectorID,
@@ -567,11 +568,12 @@ export const addPendingSale = async (
                 DownPayment: data.payment.downpayment,
                 DPTerms: data.payment.dpTerms.toString(),
                 MonthlyDP: data.payment.monthlyPayment,
+                DPStartSchedule: data.payment.dpStartDate,
                 CreatedBy: userId,
                 SellerName: data.payment.sellerName,
 
                 LastUpdateby: userId,
-                LastUpdate: new Date(),
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
 
                 PendingSalesTranCode: transactionNumber,
                 ApprovalStatus: 1,
@@ -827,6 +829,7 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number)
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: agentId
             })
+            .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
 
@@ -837,6 +840,114 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number)
     }
 
     catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const approvePendingSaleTransaction = async (agentId: number, pendingSalesId: number): QueryResult<any> => {
+
+    const trx = await db.startTransaction().execute()
+    try {
+        // update pending sale to approved
+        const updatedPendingSale = await trx.updateTable('Tbl_AgentPendingSales')
+            .set({
+                ApprovalStatus: 3,
+                SalesStatus: 'APPROVED',
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateby: agentId
+            })
+            .outputAll('inserted')
+            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .executeTakeFirstOrThrow()
+
+        // fetch pending sales details
+        const pendingSalesDetails = await trx.selectFrom('Tbl_AgentPendingSalesDtl')
+            .selectAll()
+            .where('PendingSalesTranCode', '=', updatedPendingSale.PendingSalesTranCode)
+            .execute()
+
+        // create new row in sales trans
+        const newSalesTrans = await trx.insertInto('Tbl_SalesTrans')
+            .values({
+                Block: updatedPendingSale.Block,
+                BuyersAddress: updatedPendingSale.BuyersAddress || '',
+                BuyersContactNumber: updatedPendingSale.BuyersContactNumber || '',
+                BuyersName: updatedPendingSale.BuyersName || '',
+                BuyersOccupation: updatedPendingSale.BuyersOccupation || '',
+                CommStatus: updatedPendingSale.CommStatus || '',
+                DateFiled: updatedPendingSale.DateFiled || null,
+                DevCommType: updatedPendingSale.DevCommType,
+                DeveloperID: updatedPendingSale.DeveloperID || null,
+                DivisionID: updatedPendingSale.DivisionID || null,
+                DownPayment: updatedPendingSale.DownPayment,
+                DPStartSchedule: updatedPendingSale.DPStartSchedule || null,
+                DPTerms: updatedPendingSale.DPTerms,
+                FinancingScheme: updatedPendingSale.FinancingScheme,
+                FloorArea: updatedPendingSale.FloorArea,
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateby: agentId,
+                Lot: updatedPendingSale.Lot,
+                LotArea: updatedPendingSale.LotArea,
+                MiscFee: updatedPendingSale.MiscFee,
+                MonthlyDP: updatedPendingSale.MonthlyDP,
+                NetTotalTCP: updatedPendingSale.NetTotalTCP,
+                Phase: updatedPendingSale.Phase,
+                ProjectID: updatedPendingSale.ProjectID || null,
+                ProjectLocationID: updatedPendingSale.ProjectLocationID || null,
+                ReservationDate: updatedPendingSale.ReservationDate,
+                SalesBranchID: updatedPendingSale.SalesBranchID || null,
+                SalesSectorID: updatedPendingSale.SalesSectorID,
+                SalesStatus: updatedPendingSale.SalesStatus,
+                SalesTranCode: updatedPendingSale.PendingSalesTranCode,
+                SellerName: updatedPendingSale.SellerName || '',
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        // transfer pending sales dtl to sales dtl
+        const insertSalesDtl = await trx.insertInto('Tbl_SalesTransDtl')
+            .values(pendingSalesDetails.map(dtl => ({
+                SalesTranCode: newSalesTrans.SalesTranCode,
+                AgentID: dtl.AgentID,
+                AgentName: dtl.AgentName,
+                Commission: dtl.Commission,
+                CommissionRate: dtl.CommissionRate,
+                PositionID: dtl.PositionID,
+                PositionName: dtl.PositionName,
+                VATRate: dtl.VATRate,
+                WTaxRate: dtl.WTaxRate
+            })))
+            .outputAll('inserted')
+            .execute()
+
+        // update pending sale link ID
+        const linkPendingSale = await trx.updateTable('Tbl_AgentPendingSales')
+            .set({
+                ApprovedSalesTranID: newSalesTrans.SalesTranID
+            })
+            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .executeTakeFirstOrThrow()
+        
+
+        await trx.commit().execute();
+
+        return {
+            success: true,
+            data: newSalesTrans
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute()
+
         const error = err as Error
         return {
             success: false,

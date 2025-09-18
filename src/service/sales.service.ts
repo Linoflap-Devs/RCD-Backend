@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -579,6 +579,109 @@ export const rejectPendingSaleService = async ( agentUserId: number, pendingSale
             data: {},
             error: {
                 message: 'Rejecting sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const approvePendingSaleService = async (agentUserId: number, pendingSalesId: number): QueryResult<any> => {
+
+    // validations
+    const agentData = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 3){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been approved.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 1){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale must be approved by the Unit Manager first.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been rejected.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.DivisionID != agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to your division.',
+                code: 403
+            }
+        }
+    }
+
+    const result = await approvePendingSaleTransaction(agentData.data.AgentID, pendingSalesId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Approving sales failed.',
                 code: 400
             }
         }
