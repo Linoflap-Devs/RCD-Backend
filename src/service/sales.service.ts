@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { addPendingSale, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -500,6 +500,85 @@ export const editPendingSalesDetailsService = async (
             data: {},
             error: {
                 message: 'Editing sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const rejectPendingSaleService = async ( agentUserId: number, pendingSalesId: number ): QueryResult<any> => {
+    const agentData = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been rejected.',
+                code: 400
+            }
+        }
+    }
+
+    if(agentData.data.Position == 'UNIT MANAGER' && pendingSale.data.ApprovalStatus == 2){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale can only be rejected by the Sales Director.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await rejectPendingSale(agentData.data.AgentID, pendingSalesId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Rejecting sales failed.',
                 code: 400
             }
         }

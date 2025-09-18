@@ -4,6 +4,7 @@ import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwSalesTransac
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail } from "../types/sales.types";
+import { TZDate } from "@date-fns/tz";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -806,6 +807,37 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
     catch (err: unknown){
         await trx.rollback().execute();
         const error = err as Error;
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const rejectPendingSale = async (agentId: number, pendingSalesId: number): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentPendingSales')
+            .set({
+                ApprovalStatus: 0,
+                SalesStatus: 'REJECTED',
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateby: agentId
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
         return {
             success: false,
             data: {},
