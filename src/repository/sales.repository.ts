@@ -772,25 +772,31 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
         }
     };
 
-    const agentIds = data.map(d => d.agentId);
+   const providedAgentIds: number[] = data
+        .map(d => d.agentId)
+        .filter((id): id is number => id !== undefined);
 
-    const agents = await db.selectFrom('Vw_Agents')
-        .selectAll()
-        .where('AgentID', 'in', agentIds)
-        .execute()
+    // Only fetch agents if we have agentIds to look up
+    let agentMap = new Map<number, any>();
 
-    const trx = await db.startTransaction().execute();
+    if (providedAgentIds.length > 0) {
+        const agents = await db.selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentID', 'in', providedAgentIds)
+            .execute();
 
-    try {
+        agentMap = new Map(
+            agents
+                .filter((agent): agent is typeof agent & { AgentID: number } => 
+                    agent.AgentID !== null && agent.AgentID !== undefined
+                )
+                .map(agent => [agent.AgentID, agent])
+        );
 
-        const uniqueAgentIds = [...new Set(data.map(d => d.agentId))];
-
-        const agentMap = new Map(agents.map(agent => [agent.AgentID, agent]));
-    
-        const missingAgentIds = uniqueAgentIds.filter(id => !agentMap.has(id));
+        // Check for missing agents only among the provided IDs
+        const missingAgentIds = providedAgentIds.filter(id => !agentMap.has(id));
 
         if (missingAgentIds.length > 0) {
-            await trx.rollback().execute();
             logger('Agents not found', { missingAgentIds });
             return {
                 success: false,
@@ -801,14 +807,25 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
                 }
             };
         }
+    }
 
+    const trx = await db.startTransaction().execute();
+
+    try {
         const updatePromises = data.map(async (item) => {
-            const currentAgent = agentMap.get(item.agentId)!; 
+            let agentName = ''
+            if(item.agentId){
+                const currentAgent = agentMap.get(item.agentId)!; 
+                agentName = `${currentAgent.LastName.trim()}, ${currentAgent.FirstName.trim()} ${currentAgent.MiddleName ? currentAgent.MiddleName.trim() : ''}`
+            }
+            else if (item.agentName) {
+                agentName = item.agentName
+            }
         
             return trx.updateTable('Tbl_AgentPendingSalesDtl')
                 .set({
-                    AgentID: item.agentId,
-                    AgentName: `${currentAgent.LastName}, ${currentAgent.FirstName} ${currentAgent.MiddleName ? currentAgent.MiddleName : ''}`,
+                    ...(item.agentId && { AgentID: item.agentId }),
+                    AgentName: agentName,
                     CommissionRate: item.commissionRate,
                 })
                 .where('AgentPendingSalesDtlID', '=', item.pendingSalesDtlId)

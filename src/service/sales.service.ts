@@ -350,9 +350,18 @@ export const getPendingSalesService = async (
         }
     }
 
-    const result = await getPendingSales(Number(agentData.data.DivisionID), { ...filters, agentId: Number(agentData.data.AgentID) }, pagination)
+    const result = await getPendingSales(
+        Number(agentData.data.DivisionID), 
+        { 
+            ...filters, 
+            agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined
+        }, 
+        pagination
+    )
+
 
     if(!result.success){
+        logger(result.error?.message || '', {data: filters})
         return {
             success: false,
             data: [],
@@ -442,7 +451,7 @@ export const editPendingSalesDetailsService = async (
         }
     }
 
-    if(pendingSale.data.ApprovalStatus == 2){
+    if(pendingSale.data.ApprovalStatus == 3){
         return {
             success: false,
             data: {},
@@ -481,12 +490,12 @@ export const editPendingSalesDetailsService = async (
     const validEdits: EditPendingSaleDetail[] = [];
         for (const detail of data) {
             if (!detail.pendingSalesDtlId) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
-            if (!detail.agentId) return { success: false, data: {}, error: { message: 'AgentID not found', code: 400 } };
             if (!detail.commissionRate) return { success: false, data: {}, error: { message: 'Commission Rate not found', code: 400 } };
     
             validEdits.push({
                 pendingSalesDtlId: detail.pendingSalesDtlId,
-                agentId: detail.agentId,
+                ...(detail.agentId && { agentId: detail.agentId }),
+                ...(detail.agentName && { agentName: detail.agentName }),
                 commissionRate: detail.commissionRate,
             });
         }

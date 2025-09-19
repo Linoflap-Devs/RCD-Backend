@@ -108,6 +108,7 @@ export interface AgentPendingSalesWithDetails {
 
 export interface EditPendingSaleDetail {
     pendingSalesDtlId: number,
-    agentId: number,
+    agentId?: number,
+    agentName?: string,
     commissionRate: number,
 }
