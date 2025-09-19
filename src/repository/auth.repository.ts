@@ -535,8 +535,10 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                                                     .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
+                                                    
                 // assign agent id
                 agentIdInserted = Number(agentData.AgentID);
+                console.log('Assigning agent id to existing row: ', agentIdInserted)
             }
             else {
                 // push registration details to agents table
@@ -622,21 +624,68 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
 
                 // assign new id
                 agentIdInserted = insertAgent.AgentID;
+                console.log('Assigning agentIdInserted from new row: ', agentIdInserted)
             }
 
             if(agentIdInserted > 0){
+
+                await trx.commit().execute()
+
+                console.log('agentIdInserted: ', agentIdInserted)
+
+                const checkData = await db.selectFrom('Tbl_AgentUser')
+                    .selectAll()
+                    .where('Tbl_AgentUser.AgentRegistrationID', '=', registration.AgentRegistrationID)
+                    .executeTakeFirst()
+
+                console.log(checkData)
                 
                 const data = await db.selectFrom('Tbl_AgentUser')
                 .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
-                .where('AgentID', '=', agentIdInserted)
-                .selectAll()
-                .executeTakeFirst();
-
-                if(!data){
-                    throw new Error('Unknown error.')
-                }
+                .where('Tbl_AgentUser.AgentID', '=', agentIdInserted)
+                .select([
+                    // From Tbl_AgentUser
+                    'Tbl_AgentUser.AgentUserID',
+                    'Tbl_AgentUser.Email',
+                    'Tbl_AgentUser.Password',
+                    'Tbl_AgentUser.ImageID',
+                    'Tbl_AgentUser.AgentID',
+                    'Tbl_AgentUser.AgentRegistrationID',
+                    'Tbl_AgentUser.IsVerified',
+                    
+                    // From Vw_Agents
+                    'Vw_Agents.AgentCode',
+                    'Vw_Agents.LastName',
+                    'Vw_Agents.FirstName',
+                    'Vw_Agents.MiddleName',
+                    'Vw_Agents.ContactNumber',
+                    'Vw_Agents.DivisionID',
+                    'Vw_Agents.AgentTaxRate',
+                    'Vw_Agents.CivilStatus',
+                    'Vw_Agents.Sex',
+                    'Vw_Agents.Address',
+                    'Vw_Agents.Birthdate',
+                    'Vw_Agents.PositionID',
+                    'Vw_Agents.ReferredByID',
+                    'Vw_Agents.UpdateBy',
+                    'Vw_Agents.LastUpdate',
+                    'Vw_Agents.PRCNumber',
+                    'Vw_Agents.DSHUDNumber',
+                    'Vw_Agents.IsActive',
+                    'Vw_Agents.ReferredCode',
+                    'Vw_Agents.PersonEmergency',
+                    'Vw_Agents.ContactEmergency',
+                    'Vw_Agents.AddressEmergency',
+                    'Vw_Agents.Division',
+                    'Vw_Agents.Position',
+                    'Vw_Agents.AgentTaxRateName',
+                    'Vw_Agents.AgentName',
+                    'Vw_Agents.ReferredName',
+                    'Vw_Agents.DivisionCode'
+                ])
+                .executeTakeFirstOrThrow();
                 
-                await trx.commit().execute()
+                
                 
                 return {
                     success: true,
