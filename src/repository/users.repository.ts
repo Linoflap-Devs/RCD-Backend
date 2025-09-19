@@ -1,5 +1,5 @@
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblImage, TblUsers, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -711,6 +711,31 @@ export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWor
                 code: 400,
                 message: error.message
             },
+        }
+    }
+}
+
+export const getBrokers = async (): QueryResult<TblBroker[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .selectAll()
+            .execute();
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as TblBroker[],
+            error: {
+                code: 500,
+                message: error.message
+            }
         }
     }
 }

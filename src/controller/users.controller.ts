@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
+import { QueryResult } from "../types/global.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
     const result = await getUsersService();
@@ -250,3 +251,22 @@ export const editAgentWorkExpController = async (req: Request, res: Response) =>
 
     return res.status(200).json({ success: true, data: result.data, message: 'User work exp edited' });
 };
+
+export const getBrokersController = async (req: Request, res: Response) => {
+    const result = await getBrokersService()
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get brokers.",
+            data: []
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Brokers.",
+        data: result.data
+    });
+}

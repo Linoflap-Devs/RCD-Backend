@@ -1,6 +1,6 @@
 import { format } from "date-fns";
-import { TblUsers } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getUsers } from "../repository/users.repository";
+import { TblBroker, TblUsers } from "../db/db-types";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -488,3 +488,13 @@ export const editAgentWorkExpService = async (
 
     return { success: true, data: result.data };
 };
+
+export const getBrokersService = async (): QueryResult<TblBroker[]> => {
+    const result = await getBrokers();
+
+    if (!result.success) {
+        return { success: false, data: [], error: result.error };
+    }
+
+    return { success: true, data: result.data };
+}
