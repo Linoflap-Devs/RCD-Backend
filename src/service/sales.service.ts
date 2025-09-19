@@ -369,7 +369,8 @@ export const getPendingSalesService = async (
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
             FinancingScheme: item.FinancingScheme,
-            ReservationDate: item.ReservationDate
+            ReservationDate: item.ReservationDate,
+            ApprovalStatus: item.ApprovalStatus
         }
     })
 
