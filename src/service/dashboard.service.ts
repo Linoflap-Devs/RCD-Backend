@@ -1,6 +1,7 @@
 import { VwSalesTransactions } from "../db/db-types";
 import { getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
-import { getDivisionSales, getPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -102,6 +103,35 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
             sales: salesInfo,
             commission: commissionInfo,
             divisionSales: divisionSalesData
+        }
+    }
+}
+
+export const getWebDashboardService = async (): QueryResult<any> => {
+
+    // KPI
+    // Active salesforce
+    // total active divisions
+    // total active agents
+    // total previous year sales
+    const kpi = await getWebKPIs()
+
+    const kpiInfo = {
+        totalDivisions: kpi.data.TotalDivisions || 0,
+        totalAgents: kpi.data.TotalActiveAgents || 0,
+        totalSalesPreviousYear: kpi.data.TotalSalesPreviousYear || 0,
+        totalSalesCurrentMonth: kpi.data.TotalSalesCurrentMonth || 0
+    }
+
+    // Division Sales
+
+    const divSales = await getDivisionSalesTotalsFn()
+
+    return {
+        success: true,
+        data: {
+            KPI: kpiInfo,
+            DivisionSales: divSales.data
         }
     }
 }

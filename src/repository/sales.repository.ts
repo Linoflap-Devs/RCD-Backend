@@ -3,8 +3,9 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail, FnDivisionSales } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
+import { sql } from "kysely";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -256,6 +257,32 @@ export const getDivisionSales = async (
         return {
             success: false,
             data: {} as {totalPages: number, results: VwSalesTransactions[]},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getDivisionSalesTotalsFn = async (): QueryResult<FnDivisionSales[]> => {
+    try {
+
+        const result = await sql`SELECT * FROM Fn_DivisionSales(getdate())`.execute(db)
+
+        const rows: FnDivisionSales[] = result.rows as FnDivisionSales[]
+
+        return {
+            success: true,
+            data: rows
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as FnDivisionSales[],
             error: {
                 code: 500,
                 message: error.message

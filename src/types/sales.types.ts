@@ -112,3 +112,14 @@ export interface EditPendingSaleDetail {
     agentName?: string,
     commissionRate: number,
 }
+
+export interface FnDivisionSales {
+    Division: string,	
+    CurrentMonth: number,	
+    LastMonth: number,	
+    CurrentMonthLastYear: number,	
+    CurrentQuarter: number,	
+    LastQuarter: number,	
+    LastYear: number,	
+    CurrentYear: number
+}

@@ -1359,6 +1359,14 @@ export interface VwUsers {
   UserName: string;
 }
 
+export interface VwWebKPIs {
+  TotalActiveAgents: number | null;
+  TotalDivisions: number | null;
+  TotalSalesCurrentMonth: number | null;
+  TotalSalesLastMonth: number | null;
+  TotalSalesPreviousYear: number | null;
+}
+
 export interface XTblClients {
   Address: string;
   Barangay: string;
@@ -1461,5 +1469,6 @@ export interface DB {
   Vw_SalesTransactions: VwSalesTransactions;
   vw_SalesTransAgentTaxRates: VwSalesTransAgentTaxRates;
   vw_Users: VwUsers;
+  vw_WebKPIs: VwWebKPIs;
   xTbl_Clients: XTblClients;
 }
