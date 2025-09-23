@@ -81,6 +81,7 @@ export interface IAgentRegister {
 }
 
 export interface IAgentRegistration {
+    AgentRegistrationID: number,
     FirstName: string,
     MiddleName?: string | null,
     LastName: string,

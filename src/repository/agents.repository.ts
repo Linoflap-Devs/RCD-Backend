@@ -292,6 +292,7 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
             }
 
             return {
+                AgentRegistrationID: agent.AgentRegistrationID,
                 FirstName: agent.FirstName,
                 MiddleName: agent.MiddleName,
                 LastName: agent.LastName,
