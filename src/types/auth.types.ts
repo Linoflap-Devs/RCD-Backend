@@ -82,6 +82,7 @@ export interface IAgentRegister {
 
 export interface IAgentRegistration {
     AgentRegistrationID: number,
+    IsVerified: number,
     FirstName: string,
     MiddleName?: string | null,
     LastName: string,
@@ -101,7 +102,6 @@ export interface IAgentRegistration {
     DshudNumber?: string | null,
     EmployeeIdNumber?: string | null,
     Email: string,
-    Password: string,
 
     ProfileImage?: IImageBase64 | null
 

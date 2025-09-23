@@ -58,8 +58,8 @@ export type VwAgentPicture = VwAgents & {
 }
 
 export type IAgentWorkExp = {
-    AgentID: number | null;
-    AgentRegistrationID: number | null;
+    AgentID?: number | null;
+    AgentRegistrationID?: number | null;
     AgentWorkExpID: number;
     Company: string;
     EndDate: Date;
@@ -83,8 +83,8 @@ export type NewWorkExp = {
 
 export type IAgentEducation = {
     AgentEducationID: number;
-    AgentID: number | null;
-    AgentRegistrationID: number | null;
+    AgentID?: number | null;
+    AgentRegistrationID?: number | null;
     Degree: string;
     EndDate: Date | null;
     School: string;

@@ -180,6 +180,7 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
             .leftJoin('Tbl_Image', 'Tbl_AgentUser.ImageID', 'Tbl_Image.ImageID')
             .select([
                 'Tbl_AgentRegistration.AgentRegistrationID',
+                'Tbl_AgentRegistration.IsVerified',
                 'Tbl_AgentRegistration.FirstName',
                 'Tbl_AgentRegistration.MiddleName', 
                 'Tbl_AgentRegistration.LastName',
@@ -253,8 +254,6 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
             }
             acc[edu.AgentRegistrationID!].push({
                 AgentEducationID: edu.AgentEducationID,
-                AgentID: edu.AgentID,
-                AgentRegistrationID: edu.AgentRegistrationID,
                 Degree: edu.Degree,
                 EndDate: edu.EndDate,
                 School: edu.School,
@@ -269,8 +268,6 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
             }
             acc[work.AgentRegistrationID!].push({
                 AgentWorkExpID: work.AgentWorkExpID,
-                AgentID: work.AgentID,
-                AgentRegistrationID: work.AgentRegistrationID,
                 Company: work.Company,
                 EndDate: work.EndDate,
                 JobTitle: work.JobTitle,
@@ -295,11 +292,11 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
 
             return {
                 AgentRegistrationID: agent.AgentRegistrationID,
+                IsVerified: agent.IsVerified,
                 FirstName: agent.FirstName,
                 MiddleName: agent.MiddleName,
                 LastName: agent.LastName,
                 Email: agent.Email,
-                Password: agent.Password,
                 Gender: agent.Sex as ('Male' | 'Female'),
                 CivilStatus: agent.CivilStatus as ('Single' | 'Married'),
                 Religion: agent.Religion || '',
