@@ -38,6 +38,5 @@ const dialect = new MssqlDialect({
 // Dialect is passed to Kysely's constructor, and from now on, Kysely knows how 
 // to communicate with your database.
 export const db = new Kysely<DB>({
-  dialect,
-  log: ['query', 'error']
+  dialect
 })

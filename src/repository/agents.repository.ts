@@ -377,3 +377,38 @@ export const getUnitManagerSalesTotalsFn = async (sorts?: SortOption[], take?: n
         }
     }
 }
+
+export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: number): QueryResult<FnAgentSales[]> => {
+    try {
+        const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        
+        const result = await sql`
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+            FROM Fn_SalesPersonSales(getdate())
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnAgentSales[] = result.rows as FnAgentSales[]
+        return {
+            success: true,
+            data: rows
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnAgentSales[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
