@@ -265,21 +265,38 @@ export const getDivisionSales = async (
     }
 }
 
-export const getDivisionSalesTotalsFn = async (): QueryResult<FnDivisionSales[]> => {
+type SortOption = {
+    field: 'name' | 'monthSales'
+    direction: 'asc' | 'desc'
+}
+
+export const getDivisionSalesTotalsFn = async (sorts?: SortOption[]): QueryResult<FnDivisionSales[]> => {
     try {
-
-        const result = await sql`SELECT * FROM Fn_DivisionSales(getdate())`.execute(db)
-
+        const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                if (sort.field === 'name') {
+                    orderParts.push(sql`Division ${sql.raw(sort.direction.toUpperCase())}`)
+                } else if (sort.field === 'monthSales') {
+                    orderParts.push(sql`CurrentMonth ${sql.raw(sort.direction.toUpperCase())}`)
+                }
+            })
+        }
+        
+        const result = await sql`
+            SELECT *
+            FROM Fn_DivisionSales(getdate())
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
         const rows: FnDivisionSales[] = result.rows as FnDivisionSales[]
-
         return {
             success: true,
             data: rows
         }
-    }
-
-    catch(err: unknown){
-        const error = err as Error;
+    } catch(err: unknown) {
+        const error = err as Error
         return {
             success: false,
             data: [] as FnDivisionSales[],

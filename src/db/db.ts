@@ -10,7 +10,7 @@ const dialect = new MssqlDialect({
     options: {
       min: 0,
       max: 10,
-      propagateCreateError: true
+      propagateCreateError: true,
     },
   },
   tedious: {
@@ -39,4 +39,5 @@ const dialect = new MssqlDialect({
 // to communicate with your database.
 export const db = new Kysely<DB>({
   dialect,
+  log: ['query', 'error']
 })

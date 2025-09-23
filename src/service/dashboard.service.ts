@@ -5,6 +5,7 @@ import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
+import { FnDivisionSales } from "../types/sales.types";
 
 export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
@@ -125,13 +126,28 @@ export const getWebDashboardService = async (): QueryResult<any> => {
 
     // Division Sales
 
-    const divSales = await getDivisionSalesTotalsFn()
+    const divSales = await getDivisionSalesTotalsFn(
+        [
+            { field: 'name', direction: 'asc' }
+        ]
+    )
+
+    // top 10 divs
+
+    const top10Divs = await getDivisionSalesTotalsFn(
+        [
+            { field: 'monthSales', direction: 'desc' },
+            { field: 'name', direction: 'asc' }
+        ]
+    )
+    const top10Format = top10Divs.data.map((division: FnDivisionSales) => ({Division: division.Division, CurrentMonth: division.CurrentMonth}))
 
     return {
         success: true,
         data: {
             KPI: kpiInfo,
-            DivisionSales: divSales.data
+            DivisionSales: divSales.data,
+            Top10Divisions: top10Format
         }
     }
 }
