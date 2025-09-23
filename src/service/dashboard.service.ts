@@ -6,6 +6,8 @@ import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { FnDivisionSales } from "../types/sales.types";
+import { getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { FnAgentSales } from "../types/agent.types";
 
 export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
@@ -128,26 +130,37 @@ export const getWebDashboardService = async (): QueryResult<any> => {
 
     const divSales = await getDivisionSalesTotalsFn(
         [
-            { field: 'name', direction: 'asc' }
-        ]
+            { field: 'Division', direction: 'asc' }
+        ],
     )
 
     // top 10 divs
 
     const top10Divs = await getDivisionSalesTotalsFn(
         [
-            { field: 'monthSales', direction: 'desc' },
-            { field: 'name', direction: 'asc' }
-        ]
+            { field: 'CurrentMonth', direction: 'desc' },
+            { field: 'Division', direction: 'asc' }
+        ],
+        10
     )
-    const top10Format = top10Divs.data.map((division: FnDivisionSales) => ({Division: division.Division, CurrentMonth: division.CurrentMonth}))
+    const top10DivsFormat = top10Divs.data.map((division: FnDivisionSales) => ({Division: division.Division, CurrentMonth: division.CurrentMonth}))
+
+    // top 10 unit managers
+    const top10Ums = await getUnitManagerSalesTotalsFn(
+        [ 
+            {field: 'CurrentMonth', direction: 'desc'} 
+        ],
+        10
+    )
+    const top10UmsFormat = top10Ums.data.map((um: FnAgentSales) => ({AgentName: um.AgentName, CurrentMonth: um.CurrentMonth}))
 
     return {
         success: true,
         data: {
             KPI: kpiInfo,
             DivisionSales: divSales.data,
-            Top10Divisions: top10Format
+            Top10Divisions: top10DivsFormat,
+            Top10UnitManagers: top10UmsFormat
         }
     }
 }

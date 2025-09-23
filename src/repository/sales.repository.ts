@@ -266,26 +266,23 @@ export const getDivisionSales = async (
 }
 
 type SortOption = {
-    field: 'name' | 'monthSales'
+    field: 'Division' | 'CurrentMonth'
     direction: 'asc' | 'desc'
 }
 
-export const getDivisionSalesTotalsFn = async (sorts?: SortOption[]): QueryResult<FnDivisionSales[]> => {
+export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: number): QueryResult<FnDivisionSales[]> => {
     try {
         const orderParts: any[] = []
         
         if (sorts && sorts.length > 0) {
             sorts.forEach(sort => {
-                if (sort.field === 'name') {
-                    orderParts.push(sql`Division ${sql.raw(sort.direction.toUpperCase())}`)
-                } else if (sort.field === 'monthSales') {
-                    orderParts.push(sql`CurrentMonth ${sql.raw(sort.direction.toUpperCase())}`)
-                }
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
             })
         }
         
         const result = await sql`
-            SELECT *
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
             FROM Fn_DivisionSales(getdate())
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
