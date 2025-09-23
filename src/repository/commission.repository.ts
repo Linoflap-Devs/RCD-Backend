@@ -4,6 +4,8 @@ import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { TZDate } from '@date-fns/tz'
+import { FnCommissionForecast } from "../types/commission.types"
+import { sql } from "kysely"
 
 export const getCommissions = async (
     filters?: { 
@@ -165,6 +167,46 @@ export const getAgentCommissionDetails = async (agentId: number, date?: Date): Q
                 code: 400,
                 message: error.message
             },
+        }
+    }
+}
+
+type SortOption = {
+    field: 'ReservationDate'
+    direction: 'asc' | 'desc'
+}
+
+export const getCommissionForecastFn = async (sorts?: SortOption[], take?: number, date?: Date): QueryResult<FnCommissionForecast[]> => {
+    try {
+        const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        
+        const result = await sql`
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+            FROM Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnCommissionForecast[] = result.rows as FnCommissionForecast[]
+        return {
+            success: true,
+            data: rows
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnCommissionForecast[],
+            error: {
+                code: 500,
+                message: error.message
+            }
         }
     }
 }

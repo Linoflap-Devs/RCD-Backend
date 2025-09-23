@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
+import { getCommissionForecastFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
@@ -165,6 +165,9 @@ export const getWebDashboardService = async (): QueryResult<any> => {
     )
     const top10SpsFormat = top10Sps.data.map((sp: FnAgentSales) => ({AgentName: sp.AgentName, CurrentMonth: sp.CurrentMonth}))
 
+    // commission forecast
+    const commForecast = await getCommissionForecastFn()
+    
     return {
         success: true,
         data: {
@@ -172,7 +175,8 @@ export const getWebDashboardService = async (): QueryResult<any> => {
             DivisionSales: divSales.data,
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,
-            Top10SalesPersons: top10SpsFormat
+            Top10SalesPersons: top10SpsFormat,
+            CommissionForecast: commForecast.data
         }
     }
 }
