@@ -1,9 +1,9 @@
 import { format } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 
@@ -337,6 +337,65 @@ export const getSalesTarget = async (sorts?: SalesTargetSortOption[], take?: num
         return {
             success: false,
             data: [] as VwDivisionSalesTarget[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+type DeveloperSalesSortOption = {
+    field: 'DivisionName' | 'NetTotalTCP'
+    direction: 'asc' | 'desc'
+}
+
+
+export const getSalesByDeveloperTotals = async (sorts?: DeveloperSalesSortOption[], take?: number, date?: Date): QueryResult<DeveloperSales[]> => {
+    try {
+       let base = await db.selectFrom('vw_SalesTrans')
+            .select([
+                'DeveloperName',
+                (eb) => eb.fn.sum('NetTotalTCP').as('NetTotalTCP')
+            ])
+            .groupBy('DeveloperName')
+
+        if(date){
+            const month = date.getMonth() + 1
+
+            base = base.where((eb) => eb.fn('MONTH', ['ReservationDate']), '=', month)
+        }
+
+        if(sorts && sorts.length > 0){
+            sorts.forEach(sort => {
+                base = base.orderBy(sql.ref(sort.field), sort.direction)
+            })
+        }
+
+        if(take){
+            base = base.limit(take)
+        }
+
+        const result = await base.execute()
+
+        const format = result.map(item => {
+            return {
+                DeveloperName: item.DeveloperName || '',
+                NetTotalTCP: item.NetTotalTCP ? Number(item.NetTotalTCP) : 0
+            }
+        })
+            
+        return {
+            success: true,
+            data: format
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as DeveloperSales[],
             error: {
                 code: 500,
                 message: error.message

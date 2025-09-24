@@ -1,6 +1,6 @@
 import { VwSalesTransactions } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
-import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesTarget, getTotalPersonalSales } from "../repository/sales.repository";
+import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -175,6 +175,16 @@ export const getWebDashboardService = async (): QueryResult<any> => {
     )
     const top10SpsFormat = top10Sps.data.map((sp: FnAgentSales) => ({AgentName: sp.AgentName, CurrentMonth: sp.CurrentMonth}))
 
+    // developer sales
+
+    const developerSales = await getSalesByDeveloperTotals(
+        [
+            { field: 'NetTotalTCP', direction: 'desc' }
+        ],
+        undefined,
+        new Date()
+    )
+
     // top 10 buyers forecast
     const top10ForecastBuyers = await getCommissionForecastTopBuyersFn(
         [
@@ -223,6 +233,7 @@ export const getWebDashboardService = async (): QueryResult<any> => {
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,
             Top10SalesPersons: top10SpsFormat,
+            DeveloperSales: developerSales.data,
             Top10ForecastBuyers: top10ForecastBuyers.data,
             CommissionForecastByYearMonth: commForecastByMonthFormat,
             CommissionForecast: commForecast.data

@@ -134,3 +134,8 @@ export interface FnSalesTarget {
     PercentYear: number	
     SalesYear: number
 }
+
+export interface DeveloperSales {
+    DeveloperName: string | null,
+    NetTotalTCP: number | null
+}
