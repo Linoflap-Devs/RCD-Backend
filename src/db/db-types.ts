@@ -1362,6 +1362,7 @@ export interface VwUsers {
 export interface VwWebKPIs {
   TotalActiveAgents: number | null;
   TotalDivisions: number | null;
+  TotalProjects: number | null;
   TotalSalesCurrentMonth: number | null;
   TotalSalesLastMonth: number | null;
   TotalSalesPreviousYear: number | null;

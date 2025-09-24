@@ -4,7 +4,7 @@ import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { TZDate } from '@date-fns/tz'
-import { FnCommissionForecast } from "../types/commission.types"
+import { FnCommissionForecast, FnCommissionForecastTopBuyer } from "../types/commission.types"
 import { sql } from "kysely"
 
 export const getCommissions = async (
@@ -203,6 +203,47 @@ export const getCommissionForecastFn = async (sorts?: SortOption[], take?: numbe
         return {
             success: false,
             data: [] as FnCommissionForecast[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+type TopBuyerSortOption = {
+    field: 'NetTotalTCP'
+    direction: 'asc' | 'desc'
+}
+
+export const getCommissionForecastTopBuyersFn = async (sorts?: TopBuyerSortOption[], take?: number, date?: Date): QueryResult<FnCommissionForecastTopBuyer[]> => {
+    try {
+        const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        
+        const result = await sql`
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} BuyersName, SUM(NetTotalTCP) AS NetTotalTCP
+            FROM Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            GROUP BY BuyersName
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnCommissionForecastTopBuyer[] = result.rows as FnCommissionForecastTopBuyer[]
+        return {
+            success: true,
+            data: rows
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnCommissionForecastTopBuyer[],
             error: {
                 code: 500,
                 message: error.message

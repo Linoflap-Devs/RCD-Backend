@@ -19,3 +19,8 @@ export interface FnCommissionForecast {
     ProjectName: string
     rowno: number
 }
+
+export interface FnCommissionForecastTopBuyer {
+    BuyersName: string	
+    NetTotalTCP: number
+}
