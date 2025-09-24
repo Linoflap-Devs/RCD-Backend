@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getCommissionForecastFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
+import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
@@ -8,6 +8,7 @@ import { logger } from "../utils/logger";
 import { FnDivisionSales } from "../types/sales.types";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
+import { FnCommissionForecastByMonth, FnCommissionForecastYear } from "../types/commission.types";
 
 export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
@@ -174,6 +175,34 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         10
     )
 
+    // commission forecast per month
+    const commForecastByMonth = await getCommissionForecastByMonthFn(
+        [   
+            { field: 'Year', direction: 'desc' },
+            { field: 'Month', direction: 'desc' }
+        ]
+    )
+
+    // format into year objects
+    const yearMap = new Map<number, {Month: number, NetTotalTCP: number}[]>()
+
+    commForecastByMonth.data.forEach(curr => {
+        if (!yearMap.has(curr.Year)) {
+            yearMap.set(curr.Year, [])
+        }
+        yearMap.get(curr.Year)!.push({
+            Month: curr.Month,
+            NetTotalTCP: curr.NetTotalTCP
+        })
+    })
+
+    const commForecastByMonthFormat: FnCommissionForecastYear[] = Array.from(yearMap.entries())
+        .map(([year, months]) => ({
+            Year: year,
+            Months: months.sort((a, b) => a.Month - b.Month)
+        }))
+        .sort((a, b) => b.Year - a.Year)
+
     // commission forecast
     const commForecast = await getCommissionForecastFn()
     
@@ -186,6 +215,7 @@ export const getWebDashboardService = async (): QueryResult<any> => {
             Top10UnitManagers: top10UmsFormat,
             Top10SalesPersons: top10SpsFormat,
             Top10ForecastBuyers: top10ForecastBuyers.data,
+            CommissionForecastByYearMonth: commForecastByMonthFormat,
             CommissionForecast: commForecast.data
         }
     }

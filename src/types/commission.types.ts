@@ -24,3 +24,17 @@ export interface FnCommissionForecastTopBuyer {
     BuyersName: string	
     NetTotalTCP: number
 }
+
+export interface FnCommissionForecastByMonth {
+    Month: number,	
+    Year: number
+    NetTotalTCP: number
+}
+
+export interface FnCommissionForecastYear {
+    Year: number,
+    Months: {
+        Month: number,
+        NetTotalTCP: number
+    }[]
+}

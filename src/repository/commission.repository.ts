@@ -4,7 +4,7 @@ import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { TZDate } from '@date-fns/tz'
-import { FnCommissionForecast, FnCommissionForecastTopBuyer } from "../types/commission.types"
+import { FnCommissionForecast, FnCommissionForecastByMonth, FnCommissionForecastTopBuyer } from "../types/commission.types"
 import { sql } from "kysely"
 
 export const getCommissions = async (
@@ -244,6 +244,53 @@ export const getCommissionForecastTopBuyersFn = async (sorts?: TopBuyerSortOptio
         return {
             success: false,
             data: [] as FnCommissionForecastTopBuyer[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+type ForecastByMonthSortOption = {
+    field: 'NetTotalTCP' | 'Month' | 'Year'
+    direction: 'asc' | 'desc'
+}
+
+export const getCommissionForecastByMonthFn = async (sorts?: ForecastByMonthSortOption[], take?: number, date?: Date, year: number = (new Date().getFullYear())): QueryResult<FnCommissionForecastByMonth[]> => {
+    try {
+        const orderParts: any[] = []
+        const whereParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        const result = await sql`
+            SELECT 
+                MONTH(CONVERT(DATE, ReservationDate, 101)) AS Month,
+                YEAR(CONVERT(DATE, ReservationDate, 101)) AS Year,
+                SUM(NetTotalTCP) AS NetTotalTCP
+            FROM 
+                Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            GROUP BY 
+                MONTH(CONVERT(DATE, ReservationDate, 101)),
+                YEAR(CONVERT(DATE, ReservationDate, 101))
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnCommissionForecastByMonth[] = result.rows as FnCommissionForecastByMonth[]
+        return {
+            success: true,
+            data: rows
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnCommissionForecastByMonth[],
             error: {
                 code: 500,
                 message: error.message
