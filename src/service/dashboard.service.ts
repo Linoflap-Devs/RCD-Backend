@@ -125,7 +125,8 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         totalAgents: kpi.data.TotalActiveAgents || 0,
         totalProjects: kpi.data.TotalProjects || 0,
         totalSalesPreviousYear: kpi.data.TotalSalesPreviousYear || 0,
-        totalSalesCurrentMonth: kpi.data.TotalSalesCurrentMonth || 0
+        totalSalesCurrentMonth: kpi.data.TotalSalesCurrentMonth || 0,
+        totalSalesLastMonth: kpi.data.TotalSalesLastMonth || 0
     }
 
     // Sales Target
