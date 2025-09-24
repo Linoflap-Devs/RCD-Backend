@@ -1,9 +1,9 @@
 import { format } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail, FnDivisionSales } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 
@@ -297,6 +297,46 @@ export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: numb
         return {
             success: false,
             data: [] as FnDivisionSales[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+type SalesTargetSortOption = {
+    field: 'DivisionName' | 'CurrentMonth'
+    direction: 'asc' | 'desc'
+}
+
+export const getSalesTarget = async (sorts?: SalesTargetSortOption[], take?: number, date?: Date): QueryResult<VwDivisionSalesTarget[]> => {
+    try {
+        let base = await db.selectFrom('vw_DivisionSalesTarget')
+            .selectAll()
+            .where('DivisionName', 'is not', null)
+
+        if(sorts && sorts.length > 0){
+            sorts.forEach(sort => {
+                base = base.orderBy(sql.ref(sort.field), sort.direction)
+            })
+        }
+
+        if(take){
+            base = base.limit(take)
+        }
+
+        const result = await base.execute() as VwDivisionSalesTarget[]
+
+        return {
+            success: true,
+            data: result
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as VwDivisionSalesTarget[],
             error: {
                 code: 500,
                 message: error.message

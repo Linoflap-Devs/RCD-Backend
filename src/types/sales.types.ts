@@ -123,3 +123,14 @@ export interface FnDivisionSales {
     LastYear: number,	
     CurrentYear: number
 }
+
+export interface FnSalesTarget {
+    DivisionName: string	
+    TargetMonth: number	
+    CurrentMonth: number	
+    PercentMonth: number	
+    TargetYear: number	
+    CurrentYear: number	
+    PercentYear: number	
+    SalesYear: number
+}
