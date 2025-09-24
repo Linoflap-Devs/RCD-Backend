@@ -38,3 +38,9 @@ export interface FnCommissionForecastYear {
         NetTotalTCP: number
     }[]
 }
+
+export interface FnCommissionForecastPercentage {
+    TotalForecast: number,
+    TotalPaid: number,
+    TotalPaidPercent: number
+}

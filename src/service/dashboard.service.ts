@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
+import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
@@ -186,6 +186,9 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         new Date()
     )
 
+    // downpayment percent
+    const downPaymentPercent = await getCommissionForecastPercentageFn()
+
     // top 10 buyers forecast
     const top10ForecastBuyers = await getCommissionForecastTopBuyersFn(
         [
@@ -235,6 +238,7 @@ export const getWebDashboardService = async (): QueryResult<any> => {
             Top10UnitManagers: top10UmsFormat,
             Top10SalesPersons: top10SpsFormat,
             DeveloperSales: developerSales.data,
+            DownpaymentPercent: downPaymentPercent.data,
             Top10ForecastBuyers: top10ForecastBuyers.data,
             CommissionForecastByYearMonth: commForecastByMonthFormat,
             CommissionForecast: commForecast.data

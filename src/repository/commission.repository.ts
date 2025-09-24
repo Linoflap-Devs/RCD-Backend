@@ -4,7 +4,7 @@ import { VwCommissionReleaseDeductionReport } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { TZDate } from '@date-fns/tz'
-import { FnCommissionForecast, FnCommissionForecastByMonth, FnCommissionForecastTopBuyer } from "../types/commission.types"
+import { FnCommissionForecast, FnCommissionForecastByMonth, FnCommissionForecastPercentage, FnCommissionForecastTopBuyer } from "../types/commission.types"
 import { sql } from "kysely"
 
 export const getCommissions = async (
@@ -291,6 +291,35 @@ export const getCommissionForecastByMonthFn = async (sorts?: ForecastByMonthSort
         return {
             success: false,
             data: [] as FnCommissionForecastByMonth[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getCommissionForecastPercentageFn = async (): QueryResult<FnCommissionForecastPercentage> => {
+    try {
+        
+        const result = await sql`
+            SELECT 
+                SUM(DownPayment) AS TotalForecast,
+                SUM(DPPaid) AS TotalPaid,
+                (SUM(DPPaid) / SUM(DownPayment)) * 100 AS TotalPaidPercent
+            FROM Fn_CommissionForecast(getdate())
+        `.execute(db)
+        
+        const rows: FnCommissionForecastPercentage[] = result.rows as FnCommissionForecastPercentage[]
+        return {
+            success: true,
+            data: rows[0]
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as FnCommissionForecastPercentage,
             error: {
                 code: 500,
                 message: error.message
