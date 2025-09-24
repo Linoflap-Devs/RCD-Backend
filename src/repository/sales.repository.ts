@@ -3,7 +3,7 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, SalesTargetTotals } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 
@@ -337,6 +337,46 @@ export const getSalesTarget = async (sorts?: SalesTargetSortOption[], take?: num
         return {
             success: false,
             data: [] as VwDivisionSalesTarget[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getSalesTargetTotals = async (sorts?: SalesTargetSortOption[], take?: number, date?: Date): QueryResult<SalesTargetTotals> => {
+    try {
+        let base = await db.selectFrom('vw_DivisionSalesTarget')
+            .select([
+                ((eb) => eb.fn.sum(eb.ref('TargetMonth')).as('TotalTargetMonth')),
+                ((eb) => eb.fn.sum(eb.ref('CurrentMonth')).as('TotalCurrentMonth')),
+                sql<number>`
+                    CASE 
+                        WHEN SUM(TargetYear) = 0 OR SUM(CurrentYear) = 0 THEN 0
+                        ELSE (SUM(CurrentYear) / SUM(TargetYear)) * 100 
+                    END
+                `.as('TotalReachPercent'),
+            ])
+            .where('DivisionName', 'is not', null)
+
+        const result = await base.executeTakeFirstOrThrow()
+
+        const obj = {
+            TotalTargetMonth: Number(result.TotalTargetMonth),
+            TotalCurrentMonth: Number(result.TotalCurrentMonth),
+            TotalReachPercent: Number(result.TotalReachPercent)
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as SalesTargetTotals,
             error: {
                 code: 500,
                 message: error.message

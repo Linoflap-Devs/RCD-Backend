@@ -1,6 +1,6 @@
 import { VwSalesTransactions } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
-import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getTotalPersonalSales } from "../repository/sales.repository";
+import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -136,6 +136,8 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         ]
     )
 
+    const salesTargetTotals = await getSalesTargetTotals()
+
 
     // Division Sales
 
@@ -232,7 +234,10 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         success: true,
         data: {
             KPI: kpiInfo,
-            SalesTarget: salesTarget.data,
+            SalesTarget: {
+                ...salesTargetTotals.data,
+                Divisions: salesTarget.data
+            },
             DivisionSales: divSales.data,
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,

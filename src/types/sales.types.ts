@@ -139,3 +139,9 @@ export interface DeveloperSales {
     DeveloperName: string | null,
     NetTotalTCP: number | null
 }
+
+export interface SalesTargetTotals {
+    TotalTargetMonth: number
+    TotalCurrentMonth: number
+    TotalReachPercent: number
+}
