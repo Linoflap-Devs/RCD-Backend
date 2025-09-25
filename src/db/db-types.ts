@@ -1186,6 +1186,53 @@ export interface VwMonthlySalesComparisonDivision {
   mno: number | null;
 }
 
+export interface VwPendingSalesTransactions {
+  AgentID: number | null;
+  AgentName: string | null;
+  AgentPendingSalesDtlID: number | null;
+  AgentPendingSalesID: number;
+  ApprovalStatus: number;
+  ApprovedSalesTranID: number | null;
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommissionRate: number | null;
+  CreatedBy: number;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DeveloperName: string | null;
+  Division: string | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  Expr1: number | null;
+  FinancingScheme: string;
+  FloorArea: number;
+  LastUpdate: Date;
+  LastUpdateby: number;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  PendingSalesTranCode: string;
+  Phase: string;
+  PositionName: string | null;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  ProjectName: string | null;
+  Remarks: string | null;
+  ReservationDate: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SellerName: string;
+}
+
 export interface VwProjects {
   Address: string;
   ContactNumber: string;
@@ -1461,6 +1508,7 @@ export interface DB {
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;
   vw_MonthlySalesComparisonDivision: VwMonthlySalesComparisonDivision;
+  Vw_PendingSalesTransactions: VwPendingSalesTransactions;
   vw_Projects: VwProjects;
   vw_ReferredBy: VwReferredBy;
   vw_ReportPaidUp: VwReportPaidUp;

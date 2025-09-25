@@ -12,6 +12,9 @@ export interface AgentPendingSalesDetail {
 }
 
 export interface AgentPendingSale {
+    AgentID: number | null;
+    AgentName: string | null;
+    AgentPendingSalesDtlID: number | null;
     AgentPendingSalesID: number;
     ApprovalStatus: number;
     ApprovedSalesTranID: number | null;
@@ -20,15 +23,18 @@ export interface AgentPendingSale {
     BuyersContactNumber: string | null;
     BuyersName: string | null;
     BuyersOccupation: string | null;
-    CommStatus: string | null;
+    CommissionRate: number | null;
     CreatedBy: number;
     DateFiled: Date | null;
     DevCommType: string;
     DeveloperID: number | null;
+    DeveloperName: string | null;
+    Division: string | null;
     DivisionID: number | null;
     DownPayment: number;
     DPStartSchedule: Date | null;
     DPTerms: string;
+    Expr1: number | null;
     FinancingScheme: string;
     FloorArea: number;
     LastUpdate: Date;
@@ -40,8 +46,10 @@ export interface AgentPendingSale {
     NetTotalTCP: number;
     PendingSalesTranCode: string;
     Phase: string;
+    PositionName: string | null;
     ProjectID: number | null;
     ProjectLocationID: number | null;
+    ProjectName: string | null;
     Remarks: string | null;
     ReservationDate: Date;
     SalesBranchID: number | null;

@@ -34,10 +34,27 @@ async function generateUniqueTranCode(): Promise<string> {
     return tranCode;
 }
 
-export const getPersonalSales = async (agentId: number, filters?: { month?: number }): QueryResult<VwSalesTransactions[]> => {
+export const getPersonalSales = async (
+    agentId: number, 
+    filters?: { month?: number }, 
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, results: VwSalesTransactions[]}> => {
     try {
+
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
         let result = await db.selectFrom('Vw_SalesTransactions')
             .selectAll()
+            .where('AgentID', '=', agentId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        let totalCountResult = await db.selectFrom('Vw_SalesTransactions')
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
             .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
 
@@ -47,19 +64,35 @@ export const getPersonalSales = async (agentId: number, filters?: { month?: numb
 
             result = result.where('DateFiled', '>', firstDay)
             result = result.where('DateFiled', '<', lastDay)
+
+            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
+            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
         }
 
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+            totalCountResult = totalCountResult.offset(offset).fetch(pagination.pageSize)
+        }
             
         const queryResult = await result.execute()
+        const countResult = await totalCountResult.execute()
+
         
         if(!queryResult){
             throw new Error('No sales found.')
         }
 
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+
     
         return {
             success: true,
-            data: queryResult
+            data: {
+                totalPages: totalPages,
+                results: queryResult
+            }
         }
     }
 
@@ -67,7 +100,7 @@ export const getPersonalSales = async (agentId: number, filters?: { month?: numb
         const error = err as Error;
         return {
             success: false,
-            data: [] as VwSalesTransactions[],
+            data: {} as {totalPages: number, results: VwSalesTransactions[]},
             error: {
                 code: 500,
                 message: error.message
@@ -556,12 +589,14 @@ export const getSalesSector = async (sectorId: number): QueryResult<TblSalesSect
 }
 
 export const getPendingSales = async (
-    divisionId: number,
+    divisionId?: number,
     filters?: {
         month?: number,
         year?: number,
         agentId?: number,
-        developerId?: number
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean
     },
     pagination?: {
         page?: number, 
@@ -573,18 +608,21 @@ export const getPendingSales = async (
         const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
         const offset = pageSize ? (page - 1) * pageSize : 0;
 
-        let result = await db.selectFrom('Tbl_AgentPendingSales')
+        let result = await db.selectFrom('Vw_PendingSalesTransactions')
             .selectAll()
-            .where('DivisionID', '=', divisionId)
             .where('SalesStatus', '<>', 'ARCHIVED')
             .where('ApprovalStatus', 'not in', [0, 3])
 
         let totalCountResult = await db
-            .selectFrom("Tbl_AgentPendingSales")
+            .selectFrom("Vw_PendingSalesTransactions")
             .select(({ fn }) => [fn.countAll<number>().as("count")])
-            .where('DivisionID', '=', divisionId)
             .where('SalesStatus', '<>', 'ARCHIVED')
             .where('ApprovalStatus', 'not in', [0, 3])
+
+        if(filters && filters.developerId){
+            result = result.where('DeveloperID', '=', filters.developerId)
+            totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+        }
 
 
         if(filters && filters.agentId){
@@ -613,12 +651,26 @@ export const getPendingSales = async (
             throw new Error('No sales found.')
         }
 
+        
+
         const totalCount = countResult ? Number(countResult[0].count) : 0;
         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
 
         console.log('totalPages', totalPages)
         
         let filteredResult = queryResult
+
+        // Filter to get unique ProjectName records (keeps first occurrence)
+        if(filters && filters.isUnique  && filters.isUnique === true){
+            const uniqueProjects = new Map();
+            filteredResult = queryResult.filter(record => {
+                if (!uniqueProjects.has(record.PendingSalesTranCode)) {
+                    uniqueProjects.set(record.PendingSalesTranCode, true);
+                    return true;
+                }
+                return false;
+            })
+        }
         
         return {
             success: true,

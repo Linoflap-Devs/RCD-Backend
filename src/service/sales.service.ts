@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -409,6 +409,131 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         data: result.data
     }
 }
+
+export const getCombinedPersonalSalesService = async (
+    userId: number, 
+    filters?: { month?: number, year?: number }, 
+    pagination?: { page?: number, pageSize?: number }
+): QueryResult<any> => {
+    try {
+        const agent = await findAgentDetailsByUserId(userId);
+        
+        if (!agent.data.AgentID) {
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 500,
+                    message: 'No agent found.'
+                }
+            };
+        }
+
+        if (!agent.data.DivisionID) {
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 500,
+                    message: 'No division found.'
+                }
+            };
+        }
+
+        // Get both approved and pending sales
+        const [approvedSalesResult, pendingSalesResult] = await Promise.all([
+            // Get approved sales using existing function or create similar one
+            getPersonalSales(agent.data.AgentID, filters, pagination),
+            // Get pending sales
+            getPendingSales(
+                undefined,
+                {
+                    ...filters,
+                    agentId: agent.data.AgentID,
+                    isUnique: true
+                },
+                pagination
+            )
+        ]);
+
+        let combinedSales: any[] = [];
+
+        // Process approved sales
+        if (approvedSalesResult.success) {
+            const approvedSales = approvedSalesResult.data.results.map((sale: VwSalesTransactions) => ({
+                salesId: sale.SalesTranID,
+                salesTransDtlId: sale.SalesTransDtlID,
+                pendingSalesId: null,
+                pendingSalesDtlId: null,
+                projectName: sale.ProjectName?.trim() || '',
+                projectCode: sale.SalesTranCode?.trim() || '',
+                agentName: sale.AgentName || '',
+                reservationDate: sale.ReservationDate,
+                dateFiled: sale.DateFiled,
+                approvalStatus: null,
+            }));
+            combinedSales.push(...approvedSales);
+        }
+
+        // Process pending sales
+        console.log(pendingSalesResult.data)
+        if (pendingSalesResult.success) {
+            const pendingSales = pendingSalesResult.data.results.map((sale: AgentPendingSale) => ({
+                salesId: null,
+                salesTransDtlId: null,
+                pendingSalesId: sale.AgentPendingSalesID,
+                pendingSalesDtlId: null,
+                projectName: sale.ProjectName?.trim() || '',
+                projectCode: sale.PendingSalesTranCode?.trim() || '',
+                agentName: sale.AgentName || '',
+                reservationDate: sale.ReservationDate,
+                dateFiled: sale.DateFiled,
+                approvalStatus: sale.ApprovalStatus,
+            }));
+            combinedSales.push(...pendingSales);
+        }
+
+        // Sort by dateFiled descending
+        combinedSales.sort((a, b) => new Date(b.dateFiled ? b.dateFiled : b.reservationDate).getTime() - new Date(a.dateFiled ? a.dateFiled : a.reservationDate).getTime());
+
+        // Apply pagination if needed
+        let paginatedSales = combinedSales;
+        let totalPages = 1;
+
+        if (pagination?.page && pagination?.pageSize) {
+            const startIndex = (pagination.page - 1) * pagination.pageSize;
+            const endIndex = startIndex + pagination.pageSize;
+            paginatedSales = combinedSales.slice(startIndex, endIndex);
+            totalPages = Math.ceil(combinedSales.length / pagination.pageSize);
+        }
+
+        // Calculate total sales amount
+        const totalSalesAmount = combinedSales
+            .filter(sale => sale.status === null)
+            .reduce((sum, sale) => sum + (sale.netTotalTCP || 0), 0);
+
+        const result = {
+            totalPages: totalPages,
+            totalSalesAmount: totalSalesAmount,
+            sales: paginatedSales
+        };
+
+        return {
+            success: true,
+            data: result
+        };
+
+    } catch (error: any) {
+        return {
+            success: false,
+            data: [],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        };
+    }
+};
 
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
