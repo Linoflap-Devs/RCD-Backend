@@ -1,5 +1,5 @@
 import express from 'express';
-import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokersController, getUsersController } from '../controller/users.controller';
+import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokersController, getTop10UMsController, getUsersController } from '../controller/users.controller';
 import { validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -17,7 +17,10 @@ router.route('/user-education').patch([validateSession], editAgentEducationContr
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 router.route('/brokers').get([validateSession], getBrokersController);
 
+router.route('/top-10-um').get([validateSession], getTop10UMsController);
+
 router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
+
 
 
 export default router;

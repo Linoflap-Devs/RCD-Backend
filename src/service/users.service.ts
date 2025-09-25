@@ -6,6 +6,8 @@ import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditCo
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
+import { getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { FnAgentSales } from "../types/agent.types";
 
 export const getUsersService = async (): QueryResult<TblUsers[]> => {
     const result = await getUsers();
@@ -497,4 +499,32 @@ export const getBrokersService = async (): QueryResult<TblBroker[]> => {
     }
 
     return { success: true, data: result.data };
+}
+
+export const top10UMsService = async (date?: Date): QueryResult<any> => {
+    // top 10 unit managers
+    const top10Ums = await getUnitManagerSalesTotalsFn(
+        [ 
+            { field: 'CurrentMonth', direction: 'desc' },
+            { field: 'AgentName', direction: 'asc' }
+        ],
+        10,
+        date ? new Date(date) : undefined
+    )
+    
+    if(!top10Ums.success){
+        return {
+            success: false,
+            data: [],
+            error: top10Ums.error
+        }
+    }
+
+    const top10UmsFormat = top10Ums.data.map((um: FnAgentSales) => ({AgentName: um.AgentName, CurrentMonth: um.CurrentMonth}))
+
+    return {
+        success: true,
+        data: top10UmsFormat
+    }
+
 }
