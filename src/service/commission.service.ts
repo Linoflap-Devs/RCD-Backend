@@ -1,5 +1,5 @@
 import { VwCommissionReleaseDeductionReport } from "../db/db-types";
-import { getAgentCommissionDetails, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
+import { getAgentCommissionDetails, getCommissionForecastFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { findAgentDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 
@@ -132,5 +132,23 @@ export const getAgentCommissionDetailsService = async (userId: number, date?: Da
     return {
         success: true,
         data: obj
+    }
+}
+
+
+export const getCommissionForecastService = async (date?: Date): QueryResult<any> => {
+    const commForecast = await getCommissionForecastFn(undefined, undefined, date ? new Date(date) : undefined)
+
+    if(!commForecast.success){
+        return {
+            success: false,
+            data: [] as any[],
+            error: commForecast.error
+        }
+    }
+
+    return {
+        success: true,
+        data: commForecast.data
     }
 }

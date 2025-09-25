@@ -1,11 +1,12 @@
 import express from 'express';
 import { validateSession } from '../middleware/auth';
-import { getAgentCommissionController, getAgentCommissionDetailsController } from '../controller/commission.controller';
+import { getAgentCommissionController, getAgentCommissionDetailsController, getCommissionForecastController } from '../controller/commission.controller';
 
 const router = express.Router();
 
 
 router.route('/').get([validateSession], getAgentCommissionController);
+router.route('/forecast').get([validateSession], getCommissionForecastController);
 router.route('/:date').get([validateSession], getAgentCommissionDetailsController)
 
 
