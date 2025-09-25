@@ -1,6 +1,7 @@
 import { QueryResult } from "../types/global.types"
 import { findAgentDetailsByUserId } from "../repository/users.repository"
 import { getDivisionAgents } from "../repository/division.repository"
+import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
 
 export const getDivisionHierarchyService = async (agentUserId: number): QueryResult<any> => {
     const result = await findAgentDetailsByUserId(agentUserId)
@@ -75,5 +76,29 @@ export const getDivisionHierarchyService = async (agentUserId: number): QueryRes
     return {
         success: true,
         data: agentMap
+    }
+}
+
+export const getTop10DivisionService = async (date?: Date): QueryResult<any> => {
+    const result = await getDivisionSalesTotalsFn(
+        [
+            { field: 'CurrentMonth', direction: 'desc' },
+            { field: 'Division', direction: 'asc' }
+        ], 
+        10, 
+        date ? new Date(date) : undefined
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

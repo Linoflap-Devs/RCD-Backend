@@ -303,7 +303,7 @@ type SortOption = {
     direction: 'asc' | 'desc'
 }
 
-export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: number): QueryResult<FnDivisionSales[]> => {
+export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: number, date?: Date): QueryResult<FnDivisionSales[]> => {
     try {
         const orderParts: any[] = []
         
@@ -316,7 +316,7 @@ export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: numb
         
         const result = await sql`
             SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
-            FROM Fn_DivisionSales(getdate())
+            FROM Fn_DivisionSales(${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
         
