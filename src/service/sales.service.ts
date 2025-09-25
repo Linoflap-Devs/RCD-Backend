@@ -443,7 +443,7 @@ export const getCombinedPersonalSalesService = async (
         // Get both approved and pending sales
         const [approvedSalesResult, pendingSalesResult] = await Promise.all([
             // Get approved sales using existing function or create similar one
-            getPersonalSales(agent.data.AgentID, filters, pagination),
+            getPersonalSales(agent.data.AgentID, filters),
             // Get pending sales
             getPendingSales(
                 undefined,
@@ -451,10 +451,11 @@ export const getCombinedPersonalSalesService = async (
                     ...filters,
                     agentId: agent.data.AgentID,
                     isUnique: true
-                },
-                pagination
+                }
             )
         ]);
+
+        
 
         let combinedSales: any[] = [];
 
@@ -508,13 +509,12 @@ export const getCombinedPersonalSalesService = async (
         }
 
         // Calculate total sales amount
-        const totalSalesAmount = combinedSales
-            .filter(sale => sale.status === null)
-            .reduce((sum, sale) => sum + (sale.netTotalTCP || 0), 0);
+
+        const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID, { month: filters?.month, year: filters?.year });
 
         const result = {
             totalPages: totalPages,
-            totalSalesAmount: totalSalesAmount,
+            totalSalesAmount: totalSalesAmount.data,
             sales: paginatedSales
         };
 

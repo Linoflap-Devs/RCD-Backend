@@ -138,6 +138,7 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
     }
 
     const { page, pageSize, month, year, } = req.query
+    console.log(req.query)
 
     const result = await getCombinedPersonalSalesService(
         session.userID, 
@@ -146,7 +147,7 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
             year: year ? Number(year) : undefined
         },
         {
-            page: page ? Number(page) : undefined, 
+            page: page ? Number(page) : 1, 
             pageSize:  pageSize ? Number(pageSize) : undefined
         }
     )
