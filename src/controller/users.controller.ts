@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 
@@ -297,6 +297,36 @@ export const getTop10UMsController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true,
         message: "Top 10 UMs.",
+        data: result.data
+    });
+}
+
+export const getTop10SPsController = async (req: Request, res: Response) => {
+    const { date } = req.query
+
+    let query = undefined
+    if(date){
+        const convert = new Date(date.toString())
+
+        if(convert){
+            query = convert
+        }
+    }
+
+    const result = await top10SPsService(query)
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get top 10 SPs.",
+            data: []
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Top 10 SPs.",
         data: result.data
     });
 }

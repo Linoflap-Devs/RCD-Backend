@@ -375,7 +375,7 @@ export const getUnitManagerSalesTotalsFn = async (sorts?: SortOption[], take?: n
     }
 }
 
-export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: number): QueryResult<FnAgentSales[]> => {
+export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: number, date?: Date): QueryResult<FnAgentSales[]> => {
     try {
         const orderParts: any[] = []
         
@@ -388,7 +388,7 @@ export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: n
         
         const result = await sql`
             SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
-            FROM Fn_SalesPersonSales(getdate())
+            FROM Fn_SalesPersonSales(${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
         

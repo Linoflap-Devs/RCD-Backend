@@ -6,7 +6,7 @@ import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditCo
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 
 export const getUsersService = async (): QueryResult<TblUsers[]> => {
@@ -528,3 +528,31 @@ export const top10UMsService = async (date?: Date): QueryResult<any> => {
     }
 
 }
+
+export const top10SPsService = async (date?: Date): QueryResult<any> => {
+    // top 10 unit managers
+    const top10Sps = await getSalesPersonSalesTotalsFn(
+        [
+            { field: 'CurrentMonth', direction: 'desc' },
+            { field: 'AgentName', direction: 'asc' }
+        ],
+        10,
+        date ? new Date(date) : undefined
+    )
+    
+    if(!top10Sps.success){
+        return {
+            success: false,
+            data: [],
+            error: top10Sps.error
+        }
+    }
+    const top10SpsFormat = top10Sps.data.map((sp: FnAgentSales) => ({AgentName: sp.AgentName, CurrentMonth: sp.CurrentMonth}))
+
+    return {
+        success: true,
+        data: top10SpsFormat
+    }
+
+}
+
