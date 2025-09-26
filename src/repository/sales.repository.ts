@@ -611,13 +611,13 @@ export const getPendingSales = async (
         let result = await db.selectFrom('Vw_PendingSalesTransactions')
             .selectAll()
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .where('ApprovalStatus', 'not in', [0, 3])
+            .where('ApprovalStatus', 'not in', [3])
 
         let totalCountResult = await db
             .selectFrom("Vw_PendingSalesTransactions")
             .select(({ fn }) => [fn.countAll<number>().as("count")])
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .where('ApprovalStatus', 'not in', [0, 3])
+            .where('ApprovalStatus', 'not in', [3])
 
         if(filters && filters.developerId){
             result = result.where('DeveloperID', '=', filters.developerId)
