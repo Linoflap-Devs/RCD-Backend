@@ -10,7 +10,7 @@ const router = express.Router();
 router.route('/division').get([validateSession], getDivisionSalesController);
 router.route('/personal').get([validateSession], getPersonalSalesController);
 
-router.route('/pending').get([validateSession], getPendingSalesController);
+router.route('/pending').get([validateSession, validateRole(['UM', 'SD'])], getPendingSalesController);
 router.route('/pending/:pendingSalesId').get([validateSession], getPendingSalesDetailsController);
 router.route('/pending').post([validateSession, validate(addPendingSaleSchema)], addPendingSaleController);
 router.route('/pending/:pendingSalesId').patch([validateSession, validateRole(['UM'])], editPendingSalesController);
