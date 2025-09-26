@@ -354,7 +354,8 @@ export const getPendingSalesService = async (
         Number(agentData.data.DivisionID), 
         { 
             ...filters, 
-            agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined
+            agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined,
+            isUnique: true
         }, 
         pagination
     )
