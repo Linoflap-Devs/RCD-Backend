@@ -619,6 +619,11 @@ export const getPendingSales = async (
             .where('SalesStatus', '<>', 'ARCHIVED')
             .where('ApprovalStatus', 'not in', [3])
 
+        if(divisionId) {
+            result = result.where('DivisionID', '=', divisionId)
+            totalCountResult = totalCountResult.where('DivisionID', '=', divisionId)
+        }
+
         if(filters && filters.developerId){
             result = result.where('DeveloperID', '=', filters.developerId)
             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)

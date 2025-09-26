@@ -350,6 +350,17 @@ export const getPendingSalesService = async (
         }
     }
 
+    if(!agentData.data.DivisionID){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No division found',
+                code: 403
+            }
+        }
+    }
+
     const result = await getPendingSales(
         Number(agentData.data.DivisionID), 
         { 
