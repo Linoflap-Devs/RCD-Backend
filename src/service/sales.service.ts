@@ -391,7 +391,8 @@ export const getPendingSalesService = async (
             SellerName: item.SellerName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
-            ApprovalStatus: item.ApprovalStatus
+            ApprovalStatus: item.ApprovalStatus,
+            CreatedBy: item.CreatedBy
         }
     })
 
