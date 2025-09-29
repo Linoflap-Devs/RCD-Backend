@@ -8,7 +8,7 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
         let result = await db.selectFrom('Vw_Agents')
             .selectAll()
             .where('DivisionID', '=', divisionId.toString())
-            .where('AgentID', '<>', agentId)
+            // .where('AgentID', '<>', agentId)
             .where('IsActive', '=', 1)
             .orderBy('LastName', 'asc')
             
