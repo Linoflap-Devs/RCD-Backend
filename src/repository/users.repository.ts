@@ -331,7 +331,7 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
         
         const account = await db.selectFrom('Tbl_AgentUser')
             .where('AgentID', '=', agentId)
-            .select(['AgentUserID', 'ImageID'])
+            .select(['AgentUserID', 'ImageID', 'Email'])
             .executeTakeFirst();
 
         let pictureDetails: TblImageWithId | undefined = undefined
@@ -352,12 +352,14 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
         }
 
         let obj: VwAgentPicture = {
+            Email: account?.Email || null,
             ...agent
         }
 
         if(pictureDetails){
             obj = {
                 ...agent,
+                Email: account?.Email || null,
                 Image: {
                     ContentType: pictureDetails.ContentType,
                     CreatedAt: pictureDetails.CreatedAt,

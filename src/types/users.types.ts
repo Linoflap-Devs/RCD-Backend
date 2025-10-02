@@ -46,6 +46,7 @@ export type IAgentPicture = IAgent & {
 }
 
 export type VwAgentPicture = VwAgents & {
+    Email?: string | null;
     Image?: {
         ContentType: string;
         CreatedAt: Date;

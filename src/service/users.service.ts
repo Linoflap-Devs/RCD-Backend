@@ -195,6 +195,7 @@ export const getUserDetailsWithValidationService = async (agentUserId: number, t
         middleName: targetAgentDetails.data.MiddleName?.trim() ?? '',
         division: targetAgentDetails.data.Division?.trim() || '',
         position: targetAgentDetails.data.Position?.trim() || '',
+        email: targetAgentDetails.data.Email?.trim() || '',
         profileImage: targetAgentDetails.data.Image ? agentUserDetails.data.Image : null,
     }
 
