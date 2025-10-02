@@ -5,6 +5,15 @@ export const loginAgentSchema = z.object({
     password: z.string()
 })
 
+export const registerEmployeeSchema = z.object({
+    branchID: z.coerce.number(),
+    empName: z.string(),
+    password: z.string().min(8, 'Password must be at least 8 characters long'),
+    role: z.enum(['ADMIN', 'SALES ADMIN', 'ACCOUNTING STAFF', 'MANAGEMENT LEVEL', 'BRANCH SALES STAFF', 'HO SALES STAFF']),
+    userCode: z.string(),
+    userName: z.string(),
+})
+
 export const loginEmployeeSchema = z.object({
     username: z.string(),
     password: z.string()

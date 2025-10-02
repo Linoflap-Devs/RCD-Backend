@@ -1,9 +1,9 @@
-import { IAgentRegister } from "../types/auth.types";
+import { IAgentRegister, IEmployeeRegister } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -12,6 +12,7 @@ import { sendMail } from "../utils/email";
 import { emailChangePasswordTemplate, emailOTPTemplate } from "../assets/email/email.template";
 import 'dotenv/config'
 import { verifyDESPassword } from "../utils/utils";
+import { getSalesBranch } from "../repository/sales.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -93,7 +94,6 @@ export const validateEmployeeSessionToken = async (token: string) => {
 }
 
 export const registerAgentService = async (data: IAgentRegister, image?: Express.Multer.File): QueryResult<any> => {
-    console.log(data, image)
     const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
 
     let metadata: IImage | undefined = undefined
@@ -203,6 +203,54 @@ export const loginAgentService = async (email: string, password: string): QueryR
             email: email,
             position: agentDetails.data.Position || ''
         }
+    }
+}
+
+export const registerEmployeeService = async (data: IEmployeeRegister): QueryResult<any> => {
+
+    const branchName = await getSalesBranch(data.BranchID)
+
+    if(!branchName.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: branchName.error?.message || 'Invalid branch.',
+                code: branchName.error?.code || 400
+
+            }
+        }
+    }
+
+    if(!branchName.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Invalid branch.',
+                code: 400
+            }
+        }
+    }
+
+    data.BranchName = branchName.data?.BranchName || ''
+
+    const result = await registerEmployee(data)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register employee.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

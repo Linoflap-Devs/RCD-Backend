@@ -778,7 +778,7 @@ export interface TblUsersWeb {
   Role: string;
   UserCode: string;
   UserName: string;
-  UserWebID: number;
+  UserWebID: Generated<number>;
 }
 
 export interface TblUserWebSession {

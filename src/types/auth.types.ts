@@ -126,3 +126,24 @@ export interface Token {
     UserID: number;
     ValidUntil: Date;
 }
+
+export interface IEmployeeRegister {
+    UserCode: string,
+    UserName: string,
+    EmpName: string,
+    Password: string,
+    Role: string,
+    BranchName?: string,
+    BranchID: number,
+}
+
+export interface ITblUsersWeb {
+    BranchID: number;
+    BranchName: string;
+    EmpName: string;
+    Password: string;
+    Role: string;
+    UserCode: string;
+    UserName: string;
+    UserWebID: number;
+}

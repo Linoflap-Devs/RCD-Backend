@@ -8,8 +8,9 @@ import path from "path";
 import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
+import { ITblUsersWeb } from "../types/auth.types";
 
-export const getUsersService = async (): QueryResult<TblUsersWeb[]> => {
+export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
     return result;
 };

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerEmployeeService, verifyOTPService } from "../service/auth.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -77,6 +77,42 @@ export const registerAgentController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerEmployeeController = async (req: Request, res: Response) => {
+    const {
+        branchID,
+        empName,
+        password,
+        role,
+        userCode,
+        userName
+    } = req.body
+
+    const result = await registerEmployeeService({
+        BranchID: Number(branchID),
+        EmpName: empName,
+        Password: password,
+        Role: role,
+        UserCode: userCode,
+        UserName: userName
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register employee.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee registered successfully.",
+        data: result.data
+    })
+}
 
 export const loginAgentController = async (req: Request, res: Response) => {
     const {

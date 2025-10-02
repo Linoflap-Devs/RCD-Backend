@@ -1,12 +1,13 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
+import { ITblUsersWeb } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
 import { mapToEditAgent, mapToEditEducation, mapToEditWorkExp, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
-export const getUsers = async (): QueryResult<TblUsersWeb[]> => {
+export const getUsers = async (): QueryResult<ITblUsersWeb[]> => {
     try {
         const users = await db.selectFrom('Tbl_UsersWeb').selectAll().execute();
         return {

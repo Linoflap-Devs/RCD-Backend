@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgents, TblAgentSession } from "../db/db-types";
+import { TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeSession, IEmployeeUserSession, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
@@ -832,6 +832,41 @@ export const deleteOTP = async (token: string): QueryResult<null> => {
         return {
             success: false,
             data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const registerEmployee = async (data: IEmployeeRegister): QueryResult<ITblUsersWeb> => {
+    try {
+
+        const hash = await hashPassword(data.Password)
+        const result = await db.insertInto('Tbl_UsersWeb').values({
+            UserCode: data.UserCode,
+            UserName: data.UserName,
+            Password: hash,
+            EmpName: data.EmpName,
+            Role: data.Role,
+            BranchName: data.BranchName || '',
+            BranchID: data.BranchID
+        })
+        .outputAll('inserted')
+        .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
             error: {
                 code: 500,
                 message: error.message

@@ -1,9 +1,9 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, getCurrentAgentController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, getCurrentAgentController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerEmployeeController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
-import { approveRegistrationSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, verifyOTPSchema } from '../schema/auth.schema';
+import { approveRegistrationSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
 import { validateRole } from '../middleware/roles';
 
@@ -13,6 +13,7 @@ router.route('/register-agent').post([multerUpload.fields([{name: 'profileImage'
 router.route('/login-agent').post(validate(loginAgentSchema), loginAgentController);
 router.route('/logout-agent').delete(validateSession, logoutAgentSessionController);
 
+router.route('/register-employee').post(validate(registerEmployeeSchema), registerEmployeeController)
 router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmployeeController)
 router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSessionController);
 
