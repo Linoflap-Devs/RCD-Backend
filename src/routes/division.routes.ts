@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.route('/agents').get([validateSession], getAgentHierarchyController);
 
-router.route('/top-10').get([validateSession], getTop10DivisionsController);
+router.route('/top-10').get(getTop10DivisionsController);
 
 export default router;

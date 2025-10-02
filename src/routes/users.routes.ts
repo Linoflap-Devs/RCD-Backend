@@ -17,8 +17,8 @@ router.route('/user-education').patch([validateSession], editAgentEducationContr
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 router.route('/brokers').get([validateSession], getBrokersController);
 
-router.route('/top-10-um').get([validateSession], getTop10UMsController);
-router.route('/top-10-sp').get([validateSession], getTop10SPsController);
+router.route('/top-10-um').get(getTop10UMsController);
+router.route('/top-10-sp').get(getTop10SPsController);
 
 router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
 

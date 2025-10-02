@@ -6,7 +6,7 @@ const router = express.Router();
 
 
 router.route('/').get([validateSession], getAgentCommissionController);
-router.route('/forecast').get([validateSession], getCommissionForecastController);
+router.route('/forecast').get(getCommissionForecastController);
 router.route('/:date').get([validateSession], getAgentCommissionDetailsController)
 
 
