@@ -1200,6 +1200,7 @@ export interface VwPendingSalesTransactions {
   BuyersOccupation: string | null;
   CommissionRate: number | null;
   CreatedBy: number;
+  CreatedByName: string | null;
   DateFiled: Date | null;
   DevCommType: string;
   DeveloperID: number | null;

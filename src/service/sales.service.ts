@@ -499,7 +499,7 @@ export const getCombinedPersonalSalesService = async (
                 pendingSalesDtlId: null,
                 projectName: sale.ProjectName?.trim() || '',
                 projectCode: sale.PendingSalesTranCode?.trim() || '',
-                agentName: sale.AgentName || '',
+                agentName: sale.AgentName || sale.CreatedByName || '',
                 reservationDate: sale.ReservationDate,
                 dateFiled: sale.DateFiled,
                 approvalStatus: sale.ApprovalStatus,
