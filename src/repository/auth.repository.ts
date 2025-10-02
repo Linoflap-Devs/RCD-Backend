@@ -191,7 +191,7 @@ export const extendSessionExpiry = async (sessionId: number, expiry: Date): Quer
 
 export const insertEmployeeSession =  async (sessionString: string, userId: number): QueryResult<IEmployeeSession> => {
     try {
-        const result = await db.insertInto('Tbl_UserSession').values({
+        const result = await db.insertInto('Tbl_UserWebSession').values({
             SessionString: sessionString,
             UserID: userId,
             ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
@@ -206,7 +206,7 @@ export const insertEmployeeSession =  async (sessionString: string, userId: numb
             }
         }
 
-        const find = await db.selectFrom('Tbl_UserSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
+        const find = await db.selectFrom('Tbl_UserWebSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
 
         if(!find) return {
             success: false,
@@ -244,8 +244,8 @@ export const findEmployeeSession = async (sessionString: string): QueryResult<IE
     try {
 
         const result = await db.
-            selectFrom('Tbl_UserSession').
-            innerJoin('Tbl_Users', 'Tbl_Users.UserID', 'Tbl_UserSession.UserID').
+            selectFrom('Tbl_UserWebSession').
+            innerJoin('Tbl_UsersWeb', 'Tbl_UsersWeb.UserWebID', 'Tbl_UserWebSession.UserID').
             where('SessionString', '=', sessionString).
             selectAll().
             executeTakeFirst();
@@ -294,7 +294,7 @@ export const findEmployeeSession = async (sessionString: string): QueryResult<IE
 export const deleteEmployeeSession = async (sessionId: number): QueryResult<null> => {
     try {
 
-        const result = await db.deleteFrom('Tbl_UserSession').where('SessionID', '=', sessionId).executeTakeFirst();
+        const result = await db.deleteFrom('Tbl_UserWebSession').where('SessionID', '=', sessionId).executeTakeFirst();
 
         return {
             success: true,
@@ -317,7 +317,7 @@ export const deleteEmployeeSession = async (sessionId: number): QueryResult<null
 export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
     try {
 
-        const result = await db.updateTable('Tbl_UserSession').set({ ExpiresAt: expiry }).where('SessionID', '=', sessionId).executeTakeFirstOrThrow();
+        const result = await db.updateTable('Tbl_UserWebSession').set({ ExpiresAt: expiry }).where('SessionID', '=', sessionId).executeTakeFirstOrThrow();
 
         return {
             success: true,

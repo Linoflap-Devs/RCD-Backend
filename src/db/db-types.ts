@@ -770,6 +770,24 @@ export interface TblUserSession {
   UserID: number;
 }
 
+export interface TblUsersWeb {
+  BranchID: number;
+  BranchName: string;
+  EmpName: string;
+  Password: string;
+  Role: string;
+  UserCode: string;
+  UserName: string;
+  UserWebID: number;
+}
+
+export interface TblUserWebSession {
+  ExpiresAt: Date;
+  SessionID: Generated<number>;
+  SessionString: string;
+  UserID: number;
+}
+
 export interface VwAgentCommisionReleaseSMS {
   AgentName: string;
   CA: number;
@@ -1490,6 +1508,8 @@ export interface DB {
   Tbl_Training: TblTraining;
   Tbl_Users: TblUsers;
   Tbl_UserSession: TblUserSession;
+  Tbl_UsersWeb: TblUsersWeb;
+  Tbl_UserWebSession: TblUserWebSession;
   vw_AgentCommisionReleaseSMS: VwAgentCommisionReleaseSMS;
   vw_AgentCommissionLedger: VwAgentCommissionLedger;
   vw_AgentCommissionLedgerReport: VwAgentCommissionLedgerReport;

@@ -1,14 +1,14 @@
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
 import { mapToEditAgent, mapToEditEducation, mapToEditWorkExp, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
-export const getUsers = async (): QueryResult<TblUsers[]> => {
+export const getUsers = async (): QueryResult<TblUsersWeb[]> => {
     try {
-        const users = await db.selectFrom('Tbl_Users').selectAll().execute();
+        const users = await db.selectFrom('Tbl_UsersWeb').selectAll().execute();
         return {
             success: true,
             data: users
@@ -160,7 +160,7 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
 
 export const findEmployeeUserByUsername = async (username: string): QueryResult<{userId: number, username: string, branch: string, role: string, password: string}> => {
     try {
-        const user = await db.selectFrom('Tbl_Users')
+        const user = await db.selectFrom('Tbl_UsersWeb')
             .where('UserName', '=', username)
             .selectAll()
             .executeTakeFirstOrThrow()
@@ -172,7 +172,7 @@ export const findEmployeeUserByUsername = async (username: string): QueryResult<
         return {    
             success: true,
             data: { 
-                userId: user.UserID, 
+                userId: user.UserWebID, 
                 username: user.UserName, 
                 branch: user.BranchName,
                 role: user.Role, 

@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { TblBroker, TblUsers } from "../db/db-types";
+import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
@@ -9,7 +9,7 @@ import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 
-export const getUsersService = async (): QueryResult<TblUsers[]> => {
+export const getUsersService = async (): QueryResult<TblUsersWeb[]> => {
     const result = await getUsers();
     return result;
 };
