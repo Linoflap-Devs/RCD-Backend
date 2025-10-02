@@ -270,7 +270,9 @@ export const loginEmployeeService = async (username: string, password: string): 
     }
 
     // compare passwords
-    const checkPw = await verifyDESPassword(password, user.data.password, DES_KEY)
+    // const checkPw = await verifyDESPassword(password, user.data.password, DES_KEY)
+
+    const checkPw = await verifyPassword(password, user.data.password)
 
     if(!checkPw){
         logger(('Password does not match.'), {username: username})
