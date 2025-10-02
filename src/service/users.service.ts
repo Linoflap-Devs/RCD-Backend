@@ -386,9 +386,19 @@ export const editAgentEducationService = async (
     // Validate and format creates
     const validCreates: IAgentEducation[] = [];
     for (const edu of createInputs) {
+        function isValidDate(dateString: string | Date) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        }
+        
         if (!edu.School) return { success: false, data: {}, error: { message: 'School not found', code: 400 } };
         if (!edu.Degree) return { success: false, data: {}, error: { message: 'Degree not found', code: 400 } };
         if (!edu.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        if (!isValidDate(edu.StartDate)) return { success: false, data: {}, error: { message: 'Invalid start date', code: 400 } };
+        if (edu.EndDate && !isValidDate(edu.EndDate)) return { success: false, data: {}, error: { message: 'Invalid end date', code: 400 } };
+
 
         validCreates.push({
             AgentID: agentDetails.data.AgentID,
@@ -450,9 +460,19 @@ export const editAgentWorkExpService = async (
     // Validate and format creates
     const validCreates: IAgentWorkExp[] = [];
     for (const work of createInputs) {
+        function isValidDate(dateString: string | Date) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        }
+
         if (!work.Company) return { success: false, data: {}, error: { message: 'Company not found', code: 400 } };
         if (!work.JobTitle) return { success: false, data: {}, error: { message: 'Job Title not found', code: 400 } };
         if (!work.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        if (!isValidDate(work.StartDate)) return { success: false, data: {}, error: { message: 'Invalid start date', code: 400 } };
+        if (work.EndDate && !isValidDate(work.EndDate)) return { success: false, data: {}, error: { message: 'Invalid end date', code: 400 } };
+
 
         validCreates.push({
             AgentID: agentDetails.data.AgentID,
