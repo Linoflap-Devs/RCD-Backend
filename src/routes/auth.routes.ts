@@ -17,7 +17,7 @@ router.route('/register-employee').post(validate(registerEmployeeSchema), regist
 router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmployeeController)
 router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSessionController);
 
-router.route('/approve-registration').post([validate(approveRegistrationSchema)], approveAgentRegistrationController);
+router.route('/approve-registration').post([validateEmployeeSession, validate(approveRegistrationSchema)], approveAgentRegistrationController);
 
 router.route('/current-user').get(validateSession, getCurrentAgentController);
 

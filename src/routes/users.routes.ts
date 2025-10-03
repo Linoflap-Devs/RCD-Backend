@@ -1,6 +1,6 @@
 import express from 'express';
 import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokersController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
-import { validateSession } from '../middleware/auth';
+import { validateEmployeeSession, validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
@@ -17,8 +17,8 @@ router.route('/user-education').patch([validateSession], editAgentEducationContr
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 router.route('/brokers').get([validateSession], getBrokersController);
 
-router.route('/top-10-um').get(getTop10UMsController);
-router.route('/top-10-sp').get(getTop10SPsController);
+router.route('/top-10-um').get([validateEmployeeSession], getTop10UMsController);
+router.route('/top-10-sp').get([validateEmployeeSession], getTop10SPsController);
 
 router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
 
