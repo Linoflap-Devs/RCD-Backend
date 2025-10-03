@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, getCurrentAgentController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerEmployeeController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerEmployeeController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveRegistrationSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
@@ -20,6 +20,7 @@ router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSess
 router.route('/approve-registration').post([validateEmployeeSession, validate(approveRegistrationSchema)], approveAgentRegistrationController);
 
 router.route('/current-user').get(validateSession, getCurrentAgentController);
+router.route('/web/current-user').get(validateEmployeeSession, getCurrentEmployeeController);
 
 router.route('/send-otp').post(sendOTPController)
 router.route('/verify-otp').post(validate(verifyOTPSchema), verifyOTPController)

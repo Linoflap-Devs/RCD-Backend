@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
 import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerEmployeeService, verifyOTPService } from "../service/auth.service";
+import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
@@ -224,6 +225,39 @@ export const getCurrentAgentController = async (req: Request, res: Response) => 
     return res.status(200).json({
         success: true, 
         message: "Current agent.", 
+        data: result.data
+    });
+}
+
+export const getCurrentEmployeeController = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    console.log('Current employee', session)
+    const result = await getUserDetailsWebService(session.userID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to get current employee.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Current employee.", 
         data: result.data
     });
 }

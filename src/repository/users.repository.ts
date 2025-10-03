@@ -159,6 +159,32 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
     }
 }
 
+export const findEmployeeUserById = async (userWebId: number): QueryResult<ITblUsersWeb> => {
+    try {
+        const result = await db.selectFrom('Tbl_UsersWeb')
+            .where('UserWebID', '=', userWebId)
+            .selectAll()
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findEmployeeUserByUsername = async (username: string): QueryResult<{userId: number, username: string, branch: string, role: string, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_UsersWeb')

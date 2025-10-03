@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -124,6 +124,30 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         data: obj
     }
 };
+
+export const getUserDetailsWebService = async (userWebId: number): QueryResult<any> => {
+    const userDetails = await findEmployeeUserById(userWebId)
+
+    if(!userDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    const userInfo = {
+        userName: userDetails.data.UserName?.trim() || '',
+        branch: userDetails.data.BranchName?.trim() || '',
+        position: userDetails.data.Role?.trim() || '',
+    }
+
+    return {
+        success: true,
+        data: userInfo
+    }
+}
 
 export const getUserDetailsWithValidationService = async (agentUserId: number, targetAgentId: number): QueryResult<any> => {
     const agentUserDetails = await findAgentDetailsByUserId(agentUserId)
