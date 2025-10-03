@@ -21,7 +21,7 @@ app.set('port', port)
 
 app.use(helmet())
 app.use(cors({
-    origin: '*',
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true
 }))
 app.use(morgan('dev'))
