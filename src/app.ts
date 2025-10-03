@@ -1,5 +1,4 @@
 import express from 'express'
-import { db } from './db/db'
 import helmet from 'helmet'
 import cors from 'cors'
 import cookieParser from "cookie-parser";

@@ -30,7 +30,7 @@ export const validateSession = async (req: Request, res: Response, next: NextFun
 }
 
 export const validateEmployeeSession = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const token = req.cookies?._rcd_agent_cookie;
+    const token = req.cookies?._rcd_employee_cookie;
     if (!token) {
         logger('No token found', {token: token})
         res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
