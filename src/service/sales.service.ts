@@ -168,6 +168,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             branch: branchName || '',
             sector: '',
             division: result.data.Division,
+            agentName: result.data.AgentName,
+            agentCommission: result.data.CommissionRate
         },
         propertyInfo: {
             projectName: result.data.ProjectName?.trim() || '',
@@ -178,7 +180,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             lotArea: result.data.LotArea,
             floorArea: result.data.FloorArea,
             developer: result.data.DeveloperName,
-            commission: result.data.CommissionRate,
+            commission: result.data.DevCommType,
             dasAmount: '',
             miscFee: result.data.MiscFee,
             financingScheme: result.data.FinancingScheme
