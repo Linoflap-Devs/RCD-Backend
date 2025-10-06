@@ -17,11 +17,11 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
         }
 
         if(role == 'UNIT MANAGER'){
-            result = result.where('Position', 'in', ['UNIT MANAGER', 'SALES PERSON'])
+            result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
         }
 
         if(role == 'SALES PERSON'){
-            result = result.where('Position', 'in', ['SALES PERSON'])
+            result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
         }
 
         const queryResult = await result.execute();
