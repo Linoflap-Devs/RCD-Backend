@@ -264,7 +264,7 @@ export const loginEmployeeService = async (username: string, password: string): 
             data: {} as {token: string, username: string},
             error: {
                 message: 'Invalid credentials.',
-                code: 400
+                code: 401
             }
         }
     }
@@ -281,7 +281,7 @@ export const loginEmployeeService = async (username: string, password: string): 
             data: {} as {token: string, username: string},
             error: {
                 message: 'Invalid credentials.',
-                code: 400
+                code: 401
             }
         }
     }
