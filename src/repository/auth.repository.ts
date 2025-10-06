@@ -629,9 +629,8 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
 
             if(agentIdInserted > 0){
 
-                await trx.commit().execute()
-
                 console.log('agentIdInserted: ', agentIdInserted)
+                await trx.commit().execute()
 
                 const checkData = await db.selectFrom('Tbl_AgentUser')
                     .selectAll()
@@ -684,9 +683,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     'Vw_Agents.DivisionCode'
                 ])
                 .executeTakeFirstOrThrow();
-                
-                
-                
+
                 return {
                     success: true,
                     data: {
@@ -699,6 +696,10 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                         Position: data.Position || ''
                     }
                 }
+            }
+
+            else {
+                throw new Error('AgentID not assigned properly.');
             }
         }
 
