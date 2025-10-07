@@ -8,7 +8,7 @@ import { FnAgentSales } from "../types/agent.types";
 
 export const getAgents = async (filters?: { showInactive?: boolean, division?: number }): QueryResult<IAgent[]> => {
     try {
-        let result = await db.selectFrom('Tbl_Agents')
+        let result = await db.selectFrom('Vw_UniqueActiveAgents')
             .selectAll()
 
         if(filters && filters.division){
