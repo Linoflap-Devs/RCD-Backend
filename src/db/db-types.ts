@@ -1392,10 +1392,12 @@ export interface VwSalesTransactions {
   ProjectName: string | null;
   ReservationDate: Date | null;
   SalesBranchID: number | null;
+  SalesSectorID: number | null;
   SalesStatus: string | null;
   SalesTranCode: string | null;
   SalesTranID: number | null;
   SalesTransDtlID: number | null;
+  SectorName: string | null;
 }
 
 export interface VwSalesTransAgentTaxRates {

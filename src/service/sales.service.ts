@@ -166,7 +166,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             fileDate: result.data.DateFiled,
             reservationDate: result.data.ReservationDate,
             branch: branchName || '',
-            sector: '',
+            sector: result.data.SectorName || '',
             division: result.data.Division,
             agentName: result.data.AgentName,
             agentCommission: result.data.CommissionRate
