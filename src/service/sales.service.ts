@@ -181,7 +181,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             floorArea: result.data.FloorArea,
             developer: result.data.DeveloperName,
             commission: result.data.DevCommType,
-            dasAmount: '',
+            dasAmount: result.data.NetTotalTCP,
             miscFee: result.data.MiscFee,
             financingScheme: result.data.FinancingScheme
         },
