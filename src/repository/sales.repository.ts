@@ -704,6 +704,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
         const result = await db.selectFrom('Tbl_AgentPendingSales')
             .leftJoin('Tbl_Division', 'Tbl_AgentPendingSales.DivisionID', 'Tbl_Division.DivisionID')
             .leftJoin('Tbl_Projects', 'Tbl_AgentPendingSales.ProjectID', 'Tbl_Projects.ProjectID')
+            .leftJoin('Tbl_ProjectType', 'Tbl_Projects.ProjectTypeID', 'Tbl_ProjectType.ProjectTypeID')
             .leftJoin('Tbl_SalesBranch', 'Tbl_AgentPendingSales.SalesBranchID', 'Tbl_SalesBranch.BranchID')
             .leftJoin('Tbl_Developers', 'Tbl_AgentPendingSales.DeveloperID', 'Tbl_Developers.DeveloperID')
             .leftJoin('Tbl_SalesSector', 'Tbl_AgentPendingSales.SalesSectorID', 'Tbl_SalesSector.SectorID')
@@ -749,7 +750,8 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_Projects.ProjectName',
                 'Tbl_SalesBranch.BranchName as SalesBranchName',
                 'Tbl_Developers.DeveloperName',
-                'Tbl_SalesSector.SectorName as SalesSectorName'
+                'Tbl_SalesSector.SectorName as SalesSectorName',
+                'Tbl_ProjectType.ProjectTypeName'
             ])
             .where('Tbl_AgentPendingSales.AgentPendingSalesID', '=', pendingSaleId)
             .executeTakeFirstOrThrow()
@@ -766,6 +768,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
             SalesBranchName: result.SalesBranchName ? result.SalesBranchName.trim() : null,
             DeveloperName: result.DeveloperName ? result.DeveloperName.trim() : null,
             SalesSectorName: result.SalesSectorName ? result.SalesSectorName.trim() : null,
+            ProjectTypeName: result.ProjectTypeName ? result.ProjectTypeName.trim() : null,
             Details: details
         }
 

@@ -51,6 +51,7 @@ export interface AgentPendingSale {
     ProjectID: number | null;
     ProjectLocationID: number | null;
     ProjectName: string | null;
+    ProjectTypeName: string | null;
     Remarks: string | null;
     ReservationDate: Date;
     SalesBranchID: number | null;
@@ -101,6 +102,7 @@ export interface AgentPendingSalesWithDetails {
     SalesBranchName: string | null;
     DeveloperName: string | null;
     SalesSectorName: string | null;
+    ProjectTypeName: string | null;
     Details: {
         AgentID: number;
         AgentName: string | null;

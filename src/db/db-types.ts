@@ -1244,6 +1244,7 @@ export interface VwPendingSalesTransactions {
   ProjectID: number | null;
   ProjectLocationID: number | null;
   ProjectName: string | null;
+  ProjectTypeName: string | null;
   Remarks: string | null;
   ReservationDate: Date;
   SalesBranchID: number | null;
