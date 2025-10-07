@@ -119,7 +119,7 @@ export const getAgentCommissionDetailsService = async (userId: number, date?: Da
             netCommission: item.NetCommision,
         },
         buyer: {
-            srDate: '',
+            srDate: item.ReservationDate ? new Date(item.ReservationDate) : '',
             buyer: item.BuyersName,
             property: item.Property,
             dasAmount: item.NetTotalTCP,
