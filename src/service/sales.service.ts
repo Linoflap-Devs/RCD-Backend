@@ -173,7 +173,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         },
         propertyInfo: {
             projectName: result.data.ProjectName?.trim() || '',
-            projectType: '',
+            projectType: result.data.ProjectTypeName ? result.data.ProjectTypeName.trim() : '',
             phase: result.data.Phase || '',
             block: result.data.Block || '',
             lot: result.data.Lot || '',

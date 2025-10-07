@@ -1390,6 +1390,7 @@ export interface VwSalesTransactions {
   ProjectID: number | null;
   ProjectLocationID: number | null;
   ProjectName: string | null;
+  ProjectTypeName: string | null;
   ReservationDate: Date | null;
   SalesBranchID: number | null;
   SalesSectorID: number | null;
