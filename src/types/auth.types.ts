@@ -1,4 +1,4 @@
-import { IImage, IImageBase64 } from "./image.types"
+import { IImage, IImageBase64, ITypedImageBase64 } from "./image.types"
 
 export interface IAgentSession {
     AgentUserID: number
@@ -103,7 +103,7 @@ export interface IAgentRegistration {
     EmployeeIdNumber?: string | null,
     Email: string,
 
-    ProfileImage?: IImageBase64 | null
+    Images?: ITypedImageBase64[] | null
 
     Education: {
         School: string,

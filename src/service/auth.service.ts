@@ -93,8 +93,15 @@ export const validateEmployeeSessionToken = async (token: string) => {
     return { session: null, user: null }
 }
 
-export const registerAgentService = async (data: IAgentRegister, image?: Express.Multer.File): QueryResult<any> => {
+export const registerAgentService = async (
+    data: IAgentRegister, 
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File
+): QueryResult<any> => {
     const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
 
     let metadata: IImage | undefined = undefined
 
@@ -108,7 +115,38 @@ export const registerAgentService = async (data: IAgentRegister, image?: Express
         }
     )
 
-    const result = await registerAgentTransaction(data, metadata)
+    let govIdMetadata: IImage | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: govIdImage.buffer
+        }
+    )
+    
+    let selfieMetadata: IImage | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: selfieImage.buffer
+        }
+    )
+
+    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata)
+
+    // const result = {
+    //     success: true,
+    //     data: {},
+    //     error: {
+    //         message: 'Registration is disabled for now.',
+    //         code: 403
+    //     }
+    // }
 
     if(!result.success) {
         return {

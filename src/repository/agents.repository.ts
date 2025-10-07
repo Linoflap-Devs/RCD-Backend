@@ -2,7 +2,7 @@ import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
 import { IAgentRegister, IAgentRegistration } from "../types/auth.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
 import { sql } from "kysely";
 import { FnAgentSales } from "../types/agent.types";
 
@@ -174,10 +174,15 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
 
 export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]> => {
     try {
-        // 1. Get base agent registration data with user info and images
+        // 1. Get base agent registration data with user info and all three images
         const baseAgentData = await db.selectFrom('Tbl_AgentRegistration')
             .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
-            .leftJoin('Tbl_Image', 'Tbl_AgentUser.ImageID', 'Tbl_Image.ImageID')
+            // Join for profile image
+            .leftJoin('Tbl_Image as ProfileImage', 'Tbl_AgentUser.ImageID', 'ProfileImage.ImageID')
+            // Join for government ID image
+            .leftJoin('Tbl_Image as GovImage', 'Tbl_AgentRegistration.GovImageID', 'GovImage.ImageID')
+            // Join for selfie image
+            .leftJoin('Tbl_Image as SelfieImage', 'Tbl_AgentRegistration.SelfieImageID', 'SelfieImage.ImageID')
             .select([
                 'Tbl_AgentRegistration.AgentRegistrationID',
                 'Tbl_AgentRegistration.IsVerified',
@@ -202,11 +207,24 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
                 'Tbl_AgentUser.Email',
                 'Tbl_AgentUser.Password',
                 'Tbl_AgentUser.AgentID',
-                'Tbl_Image.Filename',
-                'Tbl_Image.ContentType',
-                'Tbl_Image.FileExtension',
-                'Tbl_Image.FileSize',
-                'Tbl_Image.FileContent'
+                // Profile image fields
+                'ProfileImage.Filename as ProfileFilename',
+                'ProfileImage.ContentType as ProfileContentType',
+                'ProfileImage.FileExtension as ProfileFileExtension',
+                'ProfileImage.FileSize as ProfileFileSize',
+                'ProfileImage.FileContent as ProfileFileContent',
+                // Government ID image fields
+                'GovImage.Filename as GovFilename',
+                'GovImage.ContentType as GovContentType',
+                'GovImage.FileExtension as GovFileExtension',
+                'GovImage.FileSize as GovFileSize',
+                'GovImage.FileContent as GovFileContent',
+                // Selfie image fields
+                'SelfieImage.Filename as SelfieFilename',
+                'SelfieImage.ContentType as SelfieContentType',
+                'SelfieImage.FileExtension as SelfieFileExtension',
+                'SelfieImage.FileSize as SelfieFileSize',
+                'SelfieImage.FileContent as SelfieFileContent'
             ])
             .execute();
 
@@ -278,16 +296,43 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
 
         // 5. Build the final result array
         const result: IAgentRegistration[] = baseAgentData.map(agent => {
-            // Format image if exists
-            let imgObj: IImageBase64 | null = null;
-            if (agent.FileContent) {
-                imgObj = {
-                    FileName: agent.Filename || '',
-                    ContentType: agent.ContentType || '',
-                    FileExt: agent.FileExtension || '',
-                    FileSize: agent.FileSize || 0,
-                    FileContent: agent.FileContent.toString('base64')
-                };
+            // Build images array
+            const images: ITypedImageBase64[] = [];
+
+            // Add profile image
+            if (agent.ProfileFileContent) {
+                images.push({
+                    FileName: agent.ProfileFilename || '',
+                    ContentType: agent.ProfileContentType || '',
+                    FileExt: agent.ProfileFileExtension || '',
+                    FileSize: agent.ProfileFileSize || 0,
+                    FileContent: agent.ProfileFileContent.toString('base64'),
+                    ImageType: 'profile'
+                });
+            }
+
+            // Add government ID image
+            if (agent.GovFileContent) {
+                images.push({
+                    FileName: agent.GovFilename || '',
+                    ContentType: agent.GovContentType || '',
+                    FileExt: agent.GovFileExtension || '',
+                    FileSize: agent.GovFileSize || 0,
+                    FileContent: agent.GovFileContent.toString('base64'),
+                    ImageType: 'govid'
+                });
+            }
+
+            // Add selfie image
+            if (agent.SelfieFileContent) {
+                images.push({
+                    FileName: agent.SelfieFilename || '',
+                    ContentType: agent.SelfieContentType || '',
+                    FileExt: agent.SelfieFileExtension || '',
+                    FileSize: agent.SelfieFileSize || 0,
+                    FileContent: agent.SelfieFileContent.toString('base64'),
+                    ImageType: 'selfie'
+                });
             }
 
             return {
@@ -312,7 +357,7 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
                 PrcNumber: agent.PRCNumber,
                 DshudNumber: agent.DSHUDNumber,
                 EmployeeIdNumber: agent.EmployeeIDNumber,
-                ProfileImage: imgObj,
+                Images: images,
                 Experience: workExpByAgentId[agent.AgentRegistrationID] || [],
                 Education: educationByAgentId[agent.AgentRegistrationID] || []
             };

@@ -159,6 +159,7 @@ export interface TblAgentRegistration {
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
   FirstName: string;
+  GovImageID: number | null;
   IsVerified: Generated<number>;
   LastName: string;
   LastUpdate: Generated<Date>;
@@ -171,6 +172,7 @@ export interface TblAgentRegistration {
   ReferredByID: number | null;
   ReferredCode: string | null;
   Religion: string | null;
+  SelfieImageID: number | null;
   Sex: string;
   SSSNumber: string | null;
   TelephoneNumber: string | null;

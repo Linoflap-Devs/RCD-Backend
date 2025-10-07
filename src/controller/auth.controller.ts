@@ -6,6 +6,7 @@ import { getUserDetailsWebService } from "../service/users.service";
 export const registerAgentController = async (req: Request, res: Response) => {
 
     const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
     console.log(profileImage)
 
     const {
@@ -59,7 +60,7 @@ export const registerAgentController = async (req: Request, res: Response) => {
         experience
     }
 
-    const result = await registerAgentService(obj, profileImage?.profileImage[0]);
+    const result = await registerAgentService(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
 
     console.log(result)
     if(!result.success){

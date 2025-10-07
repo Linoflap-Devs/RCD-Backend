@@ -339,11 +339,60 @@ export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Dat
 }
 
 
-export const registerAgentTransaction = async(data: IAgentRegister, imageMetadata?: IImage): QueryResult<any> => {
+export const registerAgentTransaction = async(
+    data: IAgentRegister, 
+    profileImageMetadata?: IImage, 
+    govIdImageMetadata?: IImage,
+    selfieImageMetadata?: IImage
+): QueryResult<any> => {
 
     const registerTransaction = await db.startTransaction().execute();
 
     try {
+
+        // insert into image
+        let imageId = -1;
+        if(profileImageMetadata){
+            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: profileImageMetadata.FileName,
+                ContentType: profileImageMetadata.ContentType,
+                FileExtension: profileImageMetadata.FileExt,
+                FileSize: profileImageMetadata.FileSize,
+                FileContent: profileImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            imageId = agentImage.ImageID
+        }
+
+        let govImageId = -1
+        if(govIdImageMetadata){
+            const govImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: govIdImageMetadata.FileName,
+                ContentType: govIdImageMetadata.ContentType,
+                FileExtension: govIdImageMetadata.FileExt,
+                FileSize: govIdImageMetadata.FileSize,
+                FileContent: govIdImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            govImageId = govImage.ImageID
+        }
+
+        let selfieImageId = -1
+        if(selfieImageMetadata){
+            const selfieImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: selfieImageMetadata.FileName,
+                ContentType: selfieImageMetadata.ContentType,
+                FileExtension: selfieImageMetadata.FileExt,
+                FileSize: selfieImageMetadata.FileSize,
+                FileContent: selfieImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            selfieImageId = selfieImage.ImageID
+        }
+
         // insert into agent registration
         const agentRegistration = await registerTransaction.insertInto('Tbl_AgentRegistration').values({
             AgentCode: '',
@@ -369,6 +418,8 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
             ContactEmergency: '',
             AddressEmergency: '',
             AffiliationDate: new Date(),
+            GovImageID: govImageId > 0 ? govImageId : null,
+            SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
@@ -397,21 +448,7 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
             ).execute()
         }
 
-        // insert into image
-        let imageId = -1;
-        if(imageMetadata){
-            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
-                Filename: imageMetadata.FileName,
-                ContentType: imageMetadata.ContentType,
-                FileExtension: imageMetadata.FileExt,
-                FileSize: imageMetadata.FileSize,
-                FileContent: imageMetadata.FileContent,
-                CreatedAt: new Date()
-            }).output('inserted.ImageID').executeTakeFirstOrThrow();
-
-            imageId = agentImage.ImageID
-        }
-
+        
         // insert into Agent User
 
         const hash = await hashPassword(data.password);

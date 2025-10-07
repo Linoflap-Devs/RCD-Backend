@@ -9,7 +9,7 @@ import { validateRole } from '../middleware/roles';
 
 const router = express.Router();
 
-router.route('/register-agent').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}]),validate(registerAgentSchema)], registerAgentController);
+router.route('/register-agent').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]), validate(registerAgentSchema)], registerAgentController);
 router.route('/login-agent').post(validate(loginAgentSchema), loginAgentController);
 router.route('/logout-agent').delete(validateSession, logoutAgentSessionController);
 

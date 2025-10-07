@@ -14,6 +14,15 @@ export interface IImageBase64 {
     FileContent: string
 }
 
+export interface ITypedImageBase64 {
+    FileName: string,
+    ContentType: string,
+    FileExt: string,
+    FileSize: number,
+    FileContent: string,
+    ImageType: 'profile' | 'govid' | 'selfie'
+}
+
 export interface TblImageWithId {
     ContentType: string;
     CreatedAt: Date;
