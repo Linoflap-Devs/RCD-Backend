@@ -123,10 +123,12 @@ export const getWebDashboardService = async (): QueryResult<any> => {
     const kpiInfo = {
         totalDivisions: kpi.data.TotalDivisions || 0,
         totalAgents: kpi.data.TotalActiveAgents || 0,
+        totalDevelopers: kpi.data.TotalActiveDevelopers || 0,
         totalProjects: kpi.data.TotalProjects || 0,
         totalSalesPreviousYear: kpi.data.TotalSalesPreviousYear || 0,
         totalSalesCurrentMonth: kpi.data.TotalSalesCurrentMonth || 0,
-        totalSalesLastMonth: kpi.data.TotalSalesLastMonth || 0
+        totalSalesLastMonth: kpi.data.TotalSalesLastMonth || 0,
+        totalSalesCurrentYear: kpi.data.TotalCurrentYear || 0,
     }
 
     // Sales Target

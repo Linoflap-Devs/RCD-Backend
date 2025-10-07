@@ -5,7 +5,7 @@ import { VwWebKPIs } from "../db/db-types";
 export const getWebKPIs = async (): QueryResult<VwWebKPIs> => {
     try {
         const result = await db.selectFrom('vw_WebKPIs').selectAll().executeTakeFirstOrThrow();
-
+        
         return {
             success: true,
             data: result
