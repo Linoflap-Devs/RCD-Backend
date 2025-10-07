@@ -4,6 +4,7 @@ import { QueryResult } from '../types/global.types';
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    port: 587,
     auth: {
         user: process.env.GMAIL_USER,
         pass: process.env.GMAIL_PW
