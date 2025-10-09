@@ -20,7 +20,7 @@ app.set('port', port)
 
 app.use(helmet())
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:3001'],
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://rcd-web-staging.netlify.app'],
     credentials: true
 }))
 app.use(morgan('dev'))
