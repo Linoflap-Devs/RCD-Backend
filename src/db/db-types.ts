@@ -273,7 +273,7 @@ export interface TblAgentWorkExp {
   AgentRegistrationID: number | null;
   AgentWorkExpID: Generated<number>;
   Company: string;
-  EndDate: Date;
+  EndDate: Date | null;
   JobTitle: string;
   StartDate: Date;
 }

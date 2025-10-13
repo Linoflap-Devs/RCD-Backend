@@ -288,7 +288,7 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
             acc[work.AgentRegistrationID!].push({
                 AgentWorkExpID: work.AgentWorkExpID,
                 Company: work.Company,
-                EndDate: work.EndDate,
+                EndDate: work.EndDate || null,
                 JobTitle: work.JobTitle,
                 StartDate: work.StartDate
             });
