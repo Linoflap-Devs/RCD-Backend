@@ -10,8 +10,8 @@ export const registerAgentSchema = z.object({
     birthdate: z.coerce.date(),
     birthplace: z.string().max(50),
     address: z.string().max(255),
-    telephoneNumber: z.string().max(20),
-    contactNumber: z.coerce.string().max(20),
+    telephoneNumber: z.coerce.string().max(20).optional(),
+    contactNumber: z.coerce.string().max(20).optional(),
     sssNumber: z.string().max(20).optional(),
     philhealthNumber: z.string().max(20).optional(),
     pagibigNumber: z.string().max(20).optional(),
@@ -40,4 +40,18 @@ export const registerAgentSchema = z.object({
             endDate: z.coerce.date().optional(),
         })
     ).optional(),
+})
+
+export const editAgentSchema = z.object({
+    firstName: z.string().max(150).optional(),
+    middleName: z.string().max(50).optional(),
+    lastName: z.string().max(50).optional(),
+    gender: z.enum(['Male', 'Female']).optional(),
+    civilStatus: z.enum(['Single', 'Married']).optional(),
+    religion: z.string().max(50).optional(),
+    birthdate: z.coerce.date().optional(),
+    birthplace: z.string().max(50).optional(),
+    address: z.string().max(255).optional(),
+    telephoneNumber: z.coerce.string().max(20).optional(),
+    contactNumber: z.coerce.string().max(20).optional(), 
 })

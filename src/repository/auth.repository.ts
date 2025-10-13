@@ -1,12 +1,14 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgents, TblAgentSession } from "../db/db-types";
+import { TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
+
+// Agent Sessions
 
 export const insertSession =  async (sessionString: string, agentUserId: number): QueryResult<IAgentSession> => {
     try {
@@ -66,6 +68,7 @@ export const findSession = async (sessionString: string): QueryResult<IAgentUser
             selectFrom('Tbl_AgentSession').
             where('SessionString', '=', sessionString).
             innerJoin('Tbl_AgentUser', 'Tbl_AgentSession.AgentUserID', 'Tbl_AgentUser.AgentUserID').
+            innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID').
             selectAll().
             executeTakeFirst();
 
@@ -93,7 +96,8 @@ export const findSession = async (sessionString: string): QueryResult<IAgentUser
                     AgentUserID: result.AgentUserID,
                     Email: result.Email,
                     ImageID: result.ImageID,
-                    IsVerified: result.IsVerified
+                    IsVerified: result.IsVerified,
+                    Position: result.Position || ''
                 }
             }
         }
@@ -183,11 +187,212 @@ export const extendSessionExpiry = async (sessionId: number, expiry: Date): Quer
     }
 }
 
-export const registerAgentTransaction = async(data: IAgentRegister, imageMetadata?: IImage): QueryResult<any> => {
+// Employee Sessions
+
+export const insertEmployeeSession =  async (sessionString: string, userId: number): QueryResult<IEmployeeSession> => {
+    try {
+        const result = await db.insertInto('Tbl_UserWebSession').values({
+            SessionString: sessionString,
+            UserID: userId,
+            ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        if(!result) return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: 'Failed to insert session.',
+                code: 500
+            }
+        }
+
+        const find = await db.selectFrom('Tbl_UserWebSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
+
+        if(!find) return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                SessionID: find.SessionID,
+                SessionString: find.SessionString,
+                UserID: find.UserID,
+                ExpiresAt: find.ExpiresAt
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IEmployeeSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const findEmployeeSession = async (sessionString: string): QueryResult<IEmployeeUserSession> => {
+    try {
+
+        const result = await db.
+            selectFrom('Tbl_UserWebSession').
+            innerJoin('Tbl_UsersWeb', 'Tbl_UsersWeb.UserWebID', 'Tbl_UserWebSession.UserID').
+            where('SessionString', '=', sessionString).
+            selectAll().
+            executeTakeFirst();
+
+        if(!result) return {
+            success: false,
+            data: {} as IEmployeeUserSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                EmployeeSession: {
+                    SessionID: result.SessionID,
+                    SessionString: result.SessionString,
+                    UserID: result.UserID,
+                    ExpiresAt: result.ExpiresAt
+                },
+                EmployeeUser: {
+                    UserID: result.UserID,
+                    UserName: result.UserName,
+                    EmpName: result.EmpName,
+                    Role: result.Role,
+                    BranchName: result.BranchName
+                }
+            }
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IEmployeeUserSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const deleteEmployeeSession = async (sessionId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_UserWebSession').where('SessionID', '=', sessionId).executeTakeFirst();
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
+    try {
+
+        const result = await db.updateTable('Tbl_UserWebSession').set({ ExpiresAt: expiry }).where('SessionID', '=', sessionId).executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+
+export const registerAgentTransaction = async(
+    data: IAgentRegister, 
+    profileImageMetadata?: IImage, 
+    govIdImageMetadata?: IImage,
+    selfieImageMetadata?: IImage
+): QueryResult<any> => {
 
     const registerTransaction = await db.startTransaction().execute();
 
     try {
+
+        // insert into image
+        let imageId = -1;
+        if(profileImageMetadata){
+            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: profileImageMetadata.FileName,
+                ContentType: profileImageMetadata.ContentType,
+                FileExtension: profileImageMetadata.FileExt,
+                FileSize: profileImageMetadata.FileSize,
+                FileContent: profileImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            imageId = agentImage.ImageID
+        }
+
+        let govImageId = -1
+        if(govIdImageMetadata){
+            const govImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: govIdImageMetadata.FileName,
+                ContentType: govIdImageMetadata.ContentType,
+                FileExtension: govIdImageMetadata.FileExt,
+                FileSize: govIdImageMetadata.FileSize,
+                FileContent: govIdImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            govImageId = govImage.ImageID
+        }
+
+        let selfieImageId = -1
+        if(selfieImageMetadata){
+            const selfieImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: selfieImageMetadata.FileName,
+                ContentType: selfieImageMetadata.ContentType,
+                FileExtension: selfieImageMetadata.FileExt,
+                FileSize: selfieImageMetadata.FileSize,
+                FileContent: selfieImageMetadata.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            selfieImageId = selfieImage.ImageID
+        }
+
         // insert into agent registration
         const agentRegistration = await registerTransaction.insertInto('Tbl_AgentRegistration').values({
             AgentCode: '',
@@ -213,6 +418,8 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
             ContactEmergency: '',
             AddressEmergency: '',
             AffiliationDate: new Date(),
+            GovImageID: govImageId > 0 ? govImageId : null,
+            SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
@@ -241,21 +448,7 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
             ).execute()
         }
 
-        // insert into image
-        let imageId = -1;
-        if(imageMetadata){
-            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
-                Filename: imageMetadata.FileName,
-                ContentType: imageMetadata.ContentType,
-                FileExtension: imageMetadata.FileExt,
-                FileSize: imageMetadata.FileSize,
-                FileContent: imageMetadata.FileContent,
-                CreatedAt: new Date()
-            }).output('inserted.ImageID').executeTakeFirstOrThrow();
-
-            imageId = agentImage.ImageID
-        }
-
+        
         // insert into Agent User
 
         const hash = await hashPassword(data.password);
@@ -277,14 +470,24 @@ export const registerAgentTransaction = async(data: IAgentRegister, imageMetadat
     catch (err: unknown) {
 
         await registerTransaction.rollback().execute();
-
         const error = err as Error;
+
+        let message = error.message
+        let code = 500
+        console.log(error.message)
+        console.log(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser'))
+        if(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser')){
+            message = 'Email already exists.'
+            code = 401
+        }
+
+
         return {
             success: false,
             data: null,
             error: {
-                code: 500,
-                message: error.message
+                code: code,
+                message: message
             }
         }
     }
@@ -294,20 +497,16 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
     try {
 
         // get all relevant data
-        const [registration, agentUser] = await Promise.all([
+        const [registration] = await Promise.all([
             db.selectFrom('Tbl_AgentRegistration')
                 .where('AgentRegistrationID', '=', agentRegistrationId)
                 .where('IsVerified', '=', 0)
                 .selectAll()
                 .executeTakeFirstOrThrow(),
-            db.selectFrom('Tbl_AgentUser')
-                .where('AgentRegistrationID', '=', agentRegistrationId)
-                .where('IsVerified', '=', 0)
-                .selectAll()
-                .executeTakeFirstOrThrow()
+            
         ]);
 
-        if(!registration || !agentUser) {
+        if(!registration) {
             logger(
                 'Failed to find agent registration or agent user account. Target registration may already be verified.', 
                 {
@@ -355,22 +554,28 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
                                             .set('IsVerified', 1)
                                             .set('AgentID', Number(agentData.AgentID))
+                                            .where('AgentRegistrationID', '=', agentRegistrationId)
                                             .executeTakeFirstOrThrow();
 
                 const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
                                                 .set('AgentID', Number(agentData.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
                 
                 const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
                                                 .set('AgentID', Number(agentData.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
                                                     .set('IsVerified', 1)
+                                                    .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
+                                                    
                 // assign agent id
                 agentIdInserted = Number(agentData.AgentID);
+                console.log('Assigning agent id to existing row: ', agentIdInserted)
             }
             else {
                 // push registration details to agents table
@@ -436,40 +641,102 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
                                             .set('IsVerified', 1)
                                             .set('AgentID', Number(insertAgent.AgentID))
+                                            .where('AgentRegistrationID', '=', agentRegistrationId)
                                             .executeTakeFirstOrThrow();
 
                 const updateAgentEducation = await trx.updateTable('Tbl_AgentEducation')
                                                 .set('AgentID', Number(insertAgent.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
                 
                 const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
                                                 .set('AgentID', Number(insertAgent.AgentID))
+                                                .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
                                                     .set('IsVerified', 1)
+                                                    .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
                 // assign new id
                 agentIdInserted = insertAgent.AgentID;
+                console.log('Assigning agentIdInserted from new row: ', agentIdInserted)
             }
 
             if(agentIdInserted > 0){
+
+                console.log('agentIdInserted: ', agentIdInserted)
                 await trx.commit().execute()
 
-                const data = await db.selectFrom('Tbl_Agents')
-                                    .where('AgentID', '=', agentIdInserted)
-                                    .selectAll()
-                                    .executeTakeFirstOrThrow();
+                const checkData = await db.selectFrom('Tbl_AgentUser')
+                    .selectAll()
+                    .where('Tbl_AgentUser.AgentRegistrationID', '=', registration.AgentRegistrationID)
+                    .executeTakeFirst()
 
-                if(!data){
-                    throw new Error('Unknown error.')
-                }
+                console.log(checkData)
+                
+                const data = await db.selectFrom('Tbl_AgentUser')
+                .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+                .where('Tbl_AgentUser.AgentID', '=', agentIdInserted)
+                .select([
+                    // From Tbl_AgentUser
+                    'Tbl_AgentUser.AgentUserID',
+                    'Tbl_AgentUser.Email',
+                    'Tbl_AgentUser.Password',
+                    'Tbl_AgentUser.ImageID',
+                    'Tbl_AgentUser.AgentID',
+                    'Tbl_AgentUser.AgentRegistrationID',
+                    'Tbl_AgentUser.IsVerified',
+                    
+                    // From Vw_Agents
+                    'Vw_Agents.AgentCode',
+                    'Vw_Agents.LastName',
+                    'Vw_Agents.FirstName',
+                    'Vw_Agents.MiddleName',
+                    'Vw_Agents.ContactNumber',
+                    'Vw_Agents.DivisionID',
+                    'Vw_Agents.AgentTaxRate',
+                    'Vw_Agents.CivilStatus',
+                    'Vw_Agents.Sex',
+                    'Vw_Agents.Address',
+                    'Vw_Agents.Birthdate',
+                    'Vw_Agents.PositionID',
+                    'Vw_Agents.ReferredByID',
+                    'Vw_Agents.UpdateBy',
+                    'Vw_Agents.LastUpdate',
+                    'Vw_Agents.PRCNumber',
+                    'Vw_Agents.DSHUDNumber',
+                    'Vw_Agents.IsActive',
+                    'Vw_Agents.ReferredCode',
+                    'Vw_Agents.PersonEmergency',
+                    'Vw_Agents.ContactEmergency',
+                    'Vw_Agents.AddressEmergency',
+                    'Vw_Agents.Division',
+                    'Vw_Agents.Position',
+                    'Vw_Agents.AgentTaxRateName',
+                    'Vw_Agents.AgentName',
+                    'Vw_Agents.ReferredName',
+                    'Vw_Agents.DivisionCode'
+                ])
+                .executeTakeFirstOrThrow();
 
                 return {
                     success: true,
-                    data: agentUser
+                    data: {
+                        AgentID: data.AgentID,
+                        AgentRegistrationID: data.AgentRegistrationID,
+                        AgentUserID: data.AgentUserID,
+                        Email: data.Email,
+                        ImageID: data.ImageID,
+                        IsVerified: data.IsVerified,
+                        Position: data.Position || ''
+                    }
                 }
+            }
+
+            else {
+                throw new Error('AgentID not assigned properly.');
             }
         }
 
@@ -497,6 +764,363 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         return {
             success: false,
             data: {} as IAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findUserOTP = async (userId: number, token: string): QueryResult<boolean> => {
+    try {
+        const result = await db.selectFrom('Tbl_Tokens')
+            .where('Token', '=', token)
+            .where('UserID', '=', userId)
+            .selectAll()
+            .executeTakeFirst()
+        
+        if(!result){
+            return {
+                success: false,
+                data: false,
+                error: {
+                    code: 404,
+                    message: 'Token not found.'
+                }
+            }
+        }
+
+        if(result.ValidUntil){
+            if(result.ValidUntil < new Date()){
+                return {
+                    success: false,
+                    data: false,
+                    error: {
+                        code: 400,
+                        message: 'Token is expired.'
+                    }
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: true
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: false,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const insertOTP = async (userId: number, token: string, expiry: Date): QueryResult<Token> => {
+    try {
+        const result = await db.insertInto('Tbl_Tokens')
+            .values({
+                Token: token,
+                UserID: userId,
+                ValidUntil: expiry
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as Token,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteOTP = async (token: string): QueryResult<null> => {
+    try {
+        const result = await db.deleteFrom('Tbl_Tokens')
+            .where('Token', '=', token)
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const registerEmployee = async (data: IEmployeeRegister): QueryResult<ITblUsersWeb> => {
+    try {
+
+        const hash = await hashPassword(data.Password)
+        const result = await db.insertInto('Tbl_UsersWeb').values({
+            UserCode: data.UserCode,
+            UserName: data.UserName,
+            Password: hash,
+            EmpName: data.EmpName,
+            Role: data.Role,
+            BranchName: data.BranchName || '',
+            BranchID: data.BranchID
+        })
+        .outputAll('inserted')
+        .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findAgentEmail = async (email: string): QueryResult<IAgentUser> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentUser')
+            .innerJoin('Vw_Agents', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .where('Email', '=', email)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: {
+                AgentID: result.AgentID,
+                AgentRegistrationID: result.AgentRegistrationID,
+                AgentUserID: result.AgentUserID,
+                Email: result.Email,
+                ImageID: result.ImageID,
+                IsVerified: result.IsVerified,
+                Position: result.Position || ''
+            }
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const insertResetPasswordToken = async (userId: number, token: string, validUntil: Date): QueryResult<{UserID: number, Token: string, ValidUntil: Date}> => {
+    try {
+        const result = await db.insertInto('Tbl_ResetPasswordToken')
+            .values({
+                UserID: userId,
+                Token: token,
+                ValidUntil: validUntil
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                UserID: userId,
+                Token: token,
+                ValidUntil: validUntil
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {UserID: number, Token: string, ValidUntil: Date},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const updateResetPasswordToken = async (userId: number, token: string, validUntil: Date): QueryResult<{UserID: number, Token: string, ValidUntil: Date}> => {
+    try {
+        const result = await db.updateTable('Tbl_ResetPasswordToken')
+            .set({ ValidUntil: validUntil })
+            .set({ Token: token })
+            .where('UserID', '=', userId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                UserID: result.UserID,
+                Token: result.Token,
+                ValidUntil: result.ValidUntil
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {UserID: number, Token: string, ValidUntil: Date},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findResetPasswordToken = async (userId: number, token: string): QueryResult<any> => {
+    try {
+        const result = await db.selectFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .where('Token', '=', token)
+            .where('ValidUntil', '>', new Date())
+            .selectAll()
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}
+
+export const findResetPasswordTokenByUserId = async (userId: number): QueryResult<boolean> => {
+    try {
+        const result = await db.selectFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        if(result) {
+            return {
+                success: true,
+                data: true
+            }
+        }
+
+        else {
+            return {
+                success: true,
+                data: false
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: false,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}
+
+export const deleteResetPasswordToken = async (userId: number, token: string): QueryResult<any> => {
+    try {
+        const result = await db.deleteFrom('Tbl_ResetPasswordToken')
+            .where('UserID', '=', userId)
+            .where('Token', '=', token)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }   
+    }
+}
+
+export const changePassword = async (userId: number, password: string): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentUser')
+            .set({ Password: password })
+            .where('AgentUserID', '=', userId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
             error: {
                 code: 500,
                 message: error.message

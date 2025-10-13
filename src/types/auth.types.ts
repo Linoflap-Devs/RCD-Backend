@@ -1,3 +1,5 @@
+import { IImage, IImageBase64, ITypedImageBase64 } from "./image.types"
+
 export interface IAgentSession {
     AgentUserID: number
     ExpiresAt: Date
@@ -11,12 +13,33 @@ export interface IAgentUser {
     AgentUserID: number
     Email: string
     ImageID: number | null,
-    IsVerified: number
+    IsVerified: number,
+    Position: string
 }
 
 export interface IAgentUserSession {
     AgentSession: IAgentSession
     AgentUser: IAgentUser
+}
+
+export interface IEmployeeSession {
+    UserID: number
+    ExpiresAt: Date
+    SessionID: number
+    SessionString: string
+}
+
+export interface IEmployeeUser {
+    UserID: number | null
+    UserName: string,
+    EmpName: string,
+    Role: string,
+    BranchName: string
+}
+
+export interface IEmployeeUserSession {
+    EmployeeSession: IEmployeeSession
+    EmployeeUser: IEmployeeUser
 }
 
 export interface IAgentRegister {
@@ -55,4 +78,72 @@ export interface IAgentRegister {
         startDate: Date,
         endDate?: Date | null
     }[]
+}
+
+export interface IAgentRegistration {
+    AgentRegistrationID: number,
+    IsVerified: number,
+    FirstName: string,
+    MiddleName?: string | null,
+    LastName: string,
+    Gender: 'Male' | 'Female',
+    CivilStatus: 'Single' | 'Married',
+    Religion: string,
+    Birthdate: Date,
+    Birthplace: string,
+    Address: string,
+    TelephoneNumber: string,
+    ContactNumber: string,
+    SssNumber?: string | null,
+    PhilhealthNumber?: string | null,
+    PagibigNumber?: string | null,
+    TinNumber?: string | null,
+    PrcNumber?: string | null,
+    DshudNumber?: string | null,
+    EmployeeIdNumber?: string | null,
+    Email: string,
+
+    Images?: ITypedImageBase64[] | null
+
+    Education: {
+        School: string,
+        Degree: string,
+        StartDate: Date,
+        EndDate?: Date | null
+    }[],
+    Experience: {
+        JobTitle: string,
+        Company: string,
+        StartDate: Date,
+        EndDate?: Date | null
+    }[]
+}
+
+export interface Token {
+    CreatedAt: Date;
+    Token: string;
+    TokenID: number;
+    UserID: number;
+    ValidUntil: Date;
+}
+
+export interface IEmployeeRegister {
+    UserCode: string,
+    UserName: string,
+    EmpName: string,
+    Password: string,
+    Role: string,
+    BranchName?: string,
+    BranchID: number,
+}
+
+export interface ITblUsersWeb {
+    BranchID: number;
+    BranchName: string;
+    EmpName: string;
+    Password: string;
+    Role: string;
+    UserCode: string;
+    UserName: string;
+    UserWebID: number;
 }

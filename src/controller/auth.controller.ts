@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, getCurrentAgentService, loginAgentService, logoutAgentSessionService, registerAgentService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerEmployeeService, verifyOTPService } from "../service/auth.service";
+import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
 
     const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
     console.log(profileImage)
 
     const {
@@ -58,9 +60,7 @@ export const registerAgentController = async (req: Request, res: Response) => {
         experience
     }
 
-    
-
-    const result = await registerAgentService(obj, profileImage?.profileImage[0]);
+    const result = await registerAgentService(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
 
     console.log(result)
     if(!result.success){
@@ -79,6 +79,42 @@ export const registerAgentController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerEmployeeController = async (req: Request, res: Response) => {
+    const {
+        branchID,
+        empName,
+        password,
+        role,
+        userCode,
+        userName
+    } = req.body
+
+    const result = await registerEmployeeService({
+        BranchID: Number(branchID),
+        EmpName: empName,
+        Password: password,
+        Role: role,
+        UserCode: userCode,
+        UserName: userName
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register employee.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee registered successfully.",
+        data: result.data
+    })
+}
 
 export const loginAgentController = async (req: Request, res: Response) => {
     const {
@@ -103,6 +139,33 @@ export const loginAgentController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true, 
         message: "Agent logged in successfully.", 
+        data: result.data
+    });
+}
+
+export const loginEmployeeController = async (req: Request, res: Response) => {
+    const {
+        username,
+        password
+    } = req.body
+
+    const result = await loginEmployeeService(username, password)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to login employee.", 
+            data: {}
+        });
+
+        return
+    }
+
+    res.cookie('_rcd_employee_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee logged in successfully.", 
         data: result.data
     });
 }
@@ -146,6 +209,8 @@ export const getCurrentAgentController = async (req: Request, res: Response) => 
         return;
     }
 
+    console.log('Current agent', session)
+
     const result = await getCurrentAgentService(session.userID)
 
     if(!result.success) {
@@ -161,6 +226,39 @@ export const getCurrentAgentController = async (req: Request, res: Response) => 
     return res.status(200).json({
         success: true, 
         message: "Current agent.", 
+        data: result.data
+    });
+}
+
+export const getCurrentEmployeeController = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    console.log('Current employee', session)
+    const result = await getUserDetailsWebService(session.userID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to get current employee.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Current employee.", 
         data: result.data
     });
 }
@@ -188,6 +286,130 @@ export const logoutAgentSessionController = async (req: Request, res: Response) 
     return res.status(200).json({
         success: true, 
         message: "Agent session logged out successfully.", 
+        data: result.data
+    });
+}
+
+export const logoutEmployeeSessionConroller = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    const result = await logoutEmployeeSessionService(session.sessionID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to logout employee session.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee session logged out successfully.", 
+        data: result.data
+    });
+}
+
+export const sendOTPController = async (req: Request, res: Response) => {
+
+    const {
+        email
+    } = req.body
+
+    const result = await findEmailSendOTP(email)
+
+    return res.status(200).json({
+        success: true, 
+        message: "Check your email.", 
+        data: result.data
+    });
+}
+
+export const verifyOTPController = async (req: Request, res: Response) => {
+
+    const {
+        email,
+        otp,
+    } = req.body
+
+    const result = await verifyOTPService(email, otp)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to verify otp.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "OTP verified successfully.", 
+        data: result.data
+    });
+
+}
+
+export const updateAgentPasswordController = async (req: Request, res: Response) => {
+
+    const {
+        email,
+        resetToken,
+        oldPassword,
+        newPassword
+    } = req.body
+
+    const result = await changePasswordService(email, resetToken, oldPassword, newPassword)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
+        data: result.data
+    });
+
+}
+
+export const updateForgottenPasswordController = async (req: Request, res: Response) => {
+    const {
+        email,
+        resetToken,
+        newPassword
+    } = req.body
+
+    const result = await changePasswordService(email, resetToken, '', newPassword, true)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
         data: result.data
     });
 }

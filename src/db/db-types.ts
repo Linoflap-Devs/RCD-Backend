@@ -78,9 +78,61 @@ export interface TblAgentEducation {
   AgentID: number | null;
   AgentRegistrationID: number | null;
   Degree: string;
-  EndDate: Date;
+  EndDate: Date | null;
   School: string;
   StartDate: Date;
+}
+
+export interface TblAgentPendingSales {
+  AgentPendingSalesID: Generated<number>;
+  ApprovalStatus: Generated<number>;
+  ApprovedSalesTranID: number | null;
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommStatus: string | null;
+  CreatedBy: number;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  FinancingScheme: string;
+  FloorArea: number;
+  LastUpdate: Date;
+  LastUpdateby: number;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  PendingSalesTranCode: string;
+  Phase: string;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  Remarks: string | null;
+  ReservationDate: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SellerName: string;
+}
+
+export interface TblAgentPendingSalesDtl {
+  AgentID: number;
+  AgentName: string | null;
+  AgentPendingSalesDtlID: Generated<number>;
+  Commission: number;
+  CommissionRate: number;
+  PendingSalesTranCode: string;
+  PositionID: number;
+  PositionName: string;
+  VATRate: number;
+  WTaxRate: number;
 }
 
 export interface TblAgentReferral {
@@ -107,6 +159,7 @@ export interface TblAgentRegistration {
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
   FirstName: string;
+  GovImageID: number | null;
   IsVerified: Generated<number>;
   LastName: string;
   LastUpdate: Generated<Date>;
@@ -119,6 +172,7 @@ export interface TblAgentRegistration {
   ReferredByID: number | null;
   ReferredCode: string | null;
   Religion: string | null;
+  SelfieImageID: number | null;
   Sex: string;
   SSSNumber: string | null;
   TelephoneNumber: string | null;
@@ -219,7 +273,7 @@ export interface TblAgentWorkExp {
   AgentRegistrationID: number | null;
   AgentWorkExpID: Generated<number>;
   Company: string;
-  EndDate: Date;
+  EndDate: Date | null;
   JobTitle: string;
   StartDate: Date;
 }
@@ -288,13 +342,13 @@ export interface TblCommCollection {
   CollectionAmount: number;
   CollectionDate: Date;
   CollectionRefNumber: string;
-  CommCollectionID: number;
+  CommCollectionID: Generated<number>;
   DeveloperCV: string;
   DeveloperCVDate: Date;
   DeveloperID: number;
-  LastUpdate: Date;
+  LastUpdate: Generated<Date>;
   NetCollectionAmount: number;
-  UpdateBy: number;
+  UpdateBy: Generated<number>;
   WtaxDeduction: number;
 }
 
@@ -303,8 +357,8 @@ export interface TblCommCollectionDtl {
   AdvanceCommission: number;
   BuyerName: string;
   CollectionRefNumber: string;
-  CommCollectionDtlID: number;
-  CommRelRefNo: string;
+  CommCollectionDtlID: Generated<number>;
+  CommRelRefNo: Generated<string>;
   ContractPrice: number;
   GrossAmount: number;
   Incentive: number;
@@ -321,7 +375,7 @@ export interface TblCommCollectionDtl {
 
 export interface TblCommDeductionDetail {
   BuyersName: string;
-  CommDedDetailID: number;
+  CommDedDetailID: Generated<number>;
   CommReleaseDate: Date;
   CommReleaseNo: string;
   DeductionNumber: string | null;
@@ -339,15 +393,15 @@ export interface TblCommDeductionSummary {
   AgentID: number;
   AgentName: string;
   CA: number;
-  CommDedHeaderID: number;
+  CommDedHeaderID: Generated<number>;
   CommDeductionDate: Date;
-  CommissionRefNumber: string;
-  CommissionStatus: string;
+  CommissionRefNumber: Generated<string>;
+  CommissionStatus: Generated<string>;
   CPD: number;
   DeductionNumber: string;
   DeductionType: number;
   GrossCommission: number;
-  IsDeleted: number;
+  IsDeleted: Generated<number>;
   Loan: number;
   NetCommision: number;
   RCDF: number;
@@ -377,59 +431,59 @@ export interface TblCommissionMatrixDtl {
 }
 
 export interface TblCommissionRelease {
-  AdvanceCom: number;
-  CollectionRefNumber: string;
-  CommAmtVATEx: number;
-  CommCollectionDtlID: number;
-  CommissionStatus: string;
+  AdvanceCom: Generated<number>;
+  CollectionRefNumber: Generated<string>;
+  CommAmtVATEx: Generated<number>;
+  CommCollectionDtlID: Generated<number>;
+  CommissionStatus: Generated<string>;
   CommRate: number;
   CommReleaseDate: Date;
   CommReleaseNo: string;
   CommReleaseType: string;
   CommRelStatus: string;
-  ComReleaseID: number;
-  DeductionNumber: string;
+  ComReleaseID: Generated<number>;
+  DeductionNumber: Generated<string>;
   DeveloperTaxAmount: number;
   DeveloperTaxRate: number;
-  InputVATAmt: number;
-  InputVATRate: number;
-  IsActive: number;
-  LastUpdate: Date;
-  LastUpdateBy: number;
+  InputVATAmt: Generated<number>;
+  InputVATRate: Generated<number>;
+  IsActive: Generated<number>;
+  LastUpdate: Generated<Date>;
+  LastUpdateBy: Generated<number>;
   NetCommission: number;
   PercentReleased: number;
-  PreviousReleasedAmt: number;
+  PreviousReleasedAmt: Generated<number>;
   ReleasedAmount: number;
   SalesTransCode: string;
 }
 
 export interface TblCommissionReleaseDtl {
-  AdvCommission: number;
-  AgentID: number | null;
-  AgentName: string;
-  CADeduction: number;
-  CommissionBase: number;
-  CommissionDue: number;
-  CommissionRate: number;
-  CommissionStatus: string;
-  ComReleaseDtlID: number;
-  ComReleaseNo: string;
-  DeductionNumber: string;
-  DevInputVat: number;
-  DevWtax: number;
-  GrossComm: number;
-  Incentive: number;
-  InputVat: number;
-  LoanDeduction: number;
-  NetCommission: number;
-  OtherDeduction: number;
-  PositionCode: string;
-  PositionID: number | null;
-  PrevReleaseAmt: number;
-  VATExComm: number;
-  VatRate: number;
-  WtaxAmount: number;
-  WtaxRate: number;
+  AdvCommission: Generated<number>;
+  AgentID: Generated<number | null>;
+  AgentName: Generated<string>;
+  CADeduction: Generated<number>;
+  CommissionBase: Generated<number>;
+  CommissionDue: Generated<number>;
+  CommissionRate: Generated<number>;
+  CommissionStatus: Generated<string>;
+  ComReleaseDtlID: Generated<number>;
+  ComReleaseNo: Generated<string>;
+  DeductionNumber: Generated<string>;
+  DevInputVat: Generated<number>;
+  DevWtax: Generated<number>;
+  GrossComm: Generated<number>;
+  Incentive: Generated<number>;
+  InputVat: Generated<number>;
+  LoanDeduction: Generated<number>;
+  NetCommission: Generated<number>;
+  OtherDeduction: Generated<number>;
+  PositionCode: Generated<string>;
+  PositionID: Generated<number | null>;
+  PrevReleaseAmt: Generated<number>;
+  VATExComm: Generated<number>;
+  VatRate: Generated<number>;
+  WtaxAmount: Generated<number>;
+  WtaxRate: Generated<number>;
 }
 
 export interface TblCommReleaseSchedule {
@@ -560,6 +614,14 @@ export interface TblProjectType {
   UpdateBy: number;
 }
 
+export interface TblResetPasswordToken {
+  CreatedAt: Generated<Date>;
+  ResetPasswordTokenID: Generated<number>;
+  Token: string;
+  UserID: number;
+  ValidUntil: Date;
+}
+
 export interface TblSalesBranch {
   BranchCode: string;
   BranchID: number;
@@ -639,7 +701,7 @@ export interface TblSalesTrans {
   SalesSectorID: number;
   SalesStatus: string;
   SalesTranCode: string;
-  SalesTranID: number;
+  SalesTranID: Generated<number>;
   SellerName: string;
 }
 
@@ -651,7 +713,7 @@ export interface TblSalesTransDtl {
   PositionID: number;
   PositionName: string;
   SalesTranCode: string;
-  SalesTransDtlID: number;
+  SalesTransDtlID: Generated<number>;
   VATRate: number;
   WTaxRate: number;
 }
@@ -675,6 +737,14 @@ export interface TblSMSTemplate {
   UpdateBy: number;
 }
 
+export interface TblTokens {
+  CreatedAt: Generated<Date>;
+  Token: string;
+  TokenID: Generated<number>;
+  UserID: number;
+  ValidUntil: Date;
+}
+
 export interface TblTraining {
   IsActive: number;
   LastUpdate: Date;
@@ -693,6 +763,31 @@ export interface TblUsers {
   UserCode: string;
   UserID: number;
   UserName: string;
+}
+
+export interface TblUserSession {
+  ExpiresAt: Date;
+  SessionID: Generated<number>;
+  SessionString: string;
+  UserID: number;
+}
+
+export interface TblUsersWeb {
+  BranchID: number;
+  BranchName: string;
+  EmpName: string;
+  Password: string;
+  Role: string;
+  UserCode: string;
+  UserName: string;
+  UserWebID: Generated<number>;
+}
+
+export interface TblUserWebSession {
+  ExpiresAt: Date;
+  SessionID: Generated<number>;
+  SessionString: string;
+  UserID: number;
 }
 
 export interface VwAgentCommisionReleaseSMS {
@@ -906,23 +1001,33 @@ export interface VwCommissionReleaseDeductionReport {
   AgentName: string | null;
   Block: string;
   BuyersName: string | null;
+  CA: number | null;
   CommAmtVATEx: number;
+  CommDeductionDate: Date | null;
   CommissionRate: number | null;
+  CommissionStatus: string | null;
   CommRate: number;
   CommReleaseDate: Date;
   CommReleaseNo: string;
   CommReleaseType: string;
   ComReleaseID: number;
+  CPD: number | null;
+  DeductionNumber: string | null;
+  DeductionType: number | null;
   DevCommission: number;
   DeveloperName: string | null;
   DeveloperTaxAmount: number;
   DeveloperTaxRate: number | null;
   DevTaxAmount: number;
+  Expr1: number | null;
+  GrossCommission: number | null;
   Incentive: number | null;
   InputVat: number | null;
   InputVATAmt: number;
+  Loan: number | null;
   LoanDeduction: number | null;
   Lot: string;
+  NetCommision: number | null;
   NetCommission: number;
   NetTotalTCP: number;
   OtherDeduction: number | null;
@@ -935,10 +1040,12 @@ export interface VwCommissionReleaseDeductionReport {
   PrevReleaseAmt: number | null;
   ProjectName: string | null;
   Property: string | null;
+  RCDF: number | null;
   ReleasedAmount: number;
   ReservationDate: string | null;
   SalesTransCode: string;
-  VATRate: number | null;
+  TaxAmount: number | null;
+  VatRate: number | null;
   WtaxAmount: number | null;
   WtaxRate: number | null;
 }
@@ -1099,6 +1206,55 @@ export interface VwMonthlySalesComparisonDivision {
   mno: number | null;
 }
 
+export interface VwPendingSalesTransactions {
+  AgentID: number | null;
+  AgentName: string | null;
+  AgentPendingSalesDtlID: number | null;
+  AgentPendingSalesID: number;
+  ApprovalStatus: number;
+  ApprovedSalesTranID: number | null;
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommissionRate: number | null;
+  CreatedBy: number;
+  CreatedByName: string | null;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DeveloperName: string | null;
+  Division: string | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  Expr1: number | null;
+  FinancingScheme: string;
+  FloorArea: number;
+  LastUpdate: Date;
+  LastUpdateby: number;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  PendingSalesTranCode: string;
+  Phase: string;
+  PositionName: string | null;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  ProjectName: string | null;
+  ProjectTypeName: string | null;
+  Remarks: string | null;
+  ReservationDate: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SellerName: string;
+}
+
 export interface VwProjects {
   Address: string;
   ContactNumber: string;
@@ -1237,12 +1393,15 @@ export interface VwSalesTransactions {
   ProjectID: number | null;
   ProjectLocationID: number | null;
   ProjectName: string | null;
+  ProjectTypeName: string | null;
   ReservationDate: Date | null;
   SalesBranchID: number | null;
+  SalesSectorID: number | null;
   SalesStatus: string | null;
   SalesTranCode: string | null;
   SalesTranID: number | null;
   SalesTransDtlID: number | null;
+  SectorName: string | null;
 }
 
 export interface VwSalesTransAgentTaxRates {
@@ -1260,6 +1419,41 @@ export interface VwSalesTransAgentTaxRates {
   WtaxRate: number;
 }
 
+export interface VwUniqueActiveAgents {
+  Address: string;
+  AddressEmergency: string;
+  AffiliationDate: Date;
+  AgentCode: string;
+  AgentID: number;
+  AgentTaxRate: number;
+  Birthdate: Date;
+  Birthplace: string | null;
+  CivilStatus: string;
+  ContactEmergency: string;
+  ContactNumber: string;
+  DivisionID: string | null;
+  DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
+  FirstName: string;
+  IsActive: number;
+  LastName: string;
+  LastUpdate: Date;
+  MiddleName: string;
+  PagIbigNumber: string | null;
+  PersonEmergency: string;
+  PhilhealthNumber: string | null;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number | null;
+  ReferredCode: string | null;
+  Religion: string | null;
+  Sex: string;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
+  UpdateBy: number;
+}
+
 export interface VwUsers {
   BranchID: number;
   BranchName: string | null;
@@ -1270,6 +1464,17 @@ export interface VwUsers {
   UserCode: string;
   UserID: number;
   UserName: string;
+}
+
+export interface VwWebKPIs {
+  TotalActiveAgents: number | null;
+  TotalActiveDevelopers: number | null;
+  TotalCurrentYear: number | null;
+  TotalDivisions: number | null;
+  TotalProjects: number | null;
+  TotalSalesCurrentMonth: number | null;
+  TotalSalesLastMonth: number | null;
+  TotalSalesPreviousYear: number | null;
 }
 
 export interface XTblClients {
@@ -1295,6 +1500,8 @@ export interface DB {
   database_firewall_rules: DatabaseFirewallRules;
   SalesTransTemp: SalesTransTemp;
   Tbl_AgentEducation: TblAgentEducation;
+  Tbl_AgentPendingSales: TblAgentPendingSales;
+  Tbl_AgentPendingSalesDtl: TblAgentPendingSalesDtl;
   Tbl_AgentReferral: TblAgentReferral;
   Tbl_AgentRegistration: TblAgentRegistration;
   Tbl_Agents: TblAgents;
@@ -1329,6 +1536,7 @@ export interface DB {
   Tbl_Position: TblPosition;
   Tbl_Projects: TblProjects;
   Tbl_ProjectType: TblProjectType;
+  Tbl_ResetPasswordToken: TblResetPasswordToken;
   Tbl_SalesBranch: TblSalesBranch;
   tbl_SalesDistribution: TblSalesDistribution;
   Tbl_SalesParameterDetail: TblSalesParameterDetail;
@@ -1339,8 +1547,12 @@ export interface DB {
   Tbl_SalesTransDtl: TblSalesTransDtl;
   tbl_SMSOut: TblSMSOut;
   Tbl_SMSTemplate: TblSMSTemplate;
+  Tbl_Tokens: TblTokens;
   Tbl_Training: TblTraining;
   Tbl_Users: TblUsers;
+  Tbl_UserSession: TblUserSession;
+  Tbl_UsersWeb: TblUsersWeb;
+  Tbl_UserWebSession: TblUserWebSession;
   vw_AgentCommisionReleaseSMS: VwAgentCommisionReleaseSMS;
   vw_AgentCommissionLedger: VwAgentCommissionLedger;
   vw_AgentCommissionLedgerReport: VwAgentCommissionLedgerReport;
@@ -1360,6 +1572,7 @@ export interface DB {
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;
   vw_MonthlySalesComparisonDivision: VwMonthlySalesComparisonDivision;
+  Vw_PendingSalesTransactions: VwPendingSalesTransactions;
   vw_Projects: VwProjects;
   vw_ReferredBy: VwReferredBy;
   vw_ReportPaidUp: VwReportPaidUp;
@@ -1368,6 +1581,8 @@ export interface DB {
   vw_SalesTrans: VwSalesTrans;
   Vw_SalesTransactions: VwSalesTransactions;
   vw_SalesTransAgentTaxRates: VwSalesTransAgentTaxRates;
+  Vw_UniqueActiveAgents: VwUniqueActiveAgents;
   vw_Users: VwUsers;
+  vw_WebKPIs: VwWebKPIs;
   xTbl_Clients: XTblClients;
 }
