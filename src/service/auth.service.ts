@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -371,7 +371,56 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
         }
     }
 
-}   
+}
+
+export const rejectAgentRegistrationService = async (agentRegistrationId: number) => {
+
+    // validations
+    const agentRegistration = await findAgentRegistrationById(agentRegistrationId)
+
+    if(!agentRegistration.success){
+        logger((agentRegistration.error?.message || 'Failed to find agent registration.'), {agentRegistrationId: agentRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: agentRegistration.error?.message || 'Failed to find agent registration.',
+                code: 404
+            }
+        }
+    }
+
+    if(agentRegistration.data.IsVerified !== 0){
+        logger(('Agent registration is already processed.'), {agentRegistrationId: agentRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: 'Agent registration is already processed.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await rejectAgentRegistration(agentRegistrationId)
+
+    if(!result.success){
+        logger((result.error?.message || 'Failed to reject agent registration.'), {agentRegistrationId: agentRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: result.error?.message || 'Failed to reject agent registration.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
 
 export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, email: string, isVerified: boolean}> => {
     const result = await findAgentUserById(Number(userId));

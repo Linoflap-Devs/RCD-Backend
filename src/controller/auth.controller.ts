@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerEmployeeService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -192,6 +192,31 @@ export const approveAgentRegistrationController = async (req: Request, res: Resp
     return res.status(200).json({
         success: true, 
         message: "Agent registration approved successfully.", 
+        data: result.data
+    });
+}
+
+export const rejectAgentRegistrationController = async (req: Request, res: Response) => {
+
+    const {
+        agentRegistrationId,
+    } = req.body
+
+    const result = await rejectAgentRegistrationService(agentRegistrationId);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to reject agent registration.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Agent registration rejected successfully.", 
         data: result.data
     });
 }
