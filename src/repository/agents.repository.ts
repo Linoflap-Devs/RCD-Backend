@@ -227,6 +227,7 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
                 'SelfieImage.FileContent as SelfieFileContent'
             ])
             .where('Tbl_AgentRegistration.IsVerified', '=', 0)
+            .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
             .execute();
 
         if (baseAgentData.length === 0) {

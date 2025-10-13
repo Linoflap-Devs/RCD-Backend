@@ -1,10 +1,11 @@
 import express from 'express';
-import { validateSession } from '../middleware/auth';
+import { validateEmployeeSession, validateSession } from '../middleware/auth';
 import { getAgentRegistrationsController, getAgentsController } from '../controller/agent.controller';
+import { validate } from '../middleware/zod';
 
 const router = express.Router();
 
-router.route('/').get([], getAgentsController);
-router.route('/registrations').get([], getAgentRegistrationsController);
+router.route('/').get([validateEmployeeSession], getAgentsController);
+router.route('/registrations').get([validateEmployeeSession], getAgentRegistrationsController);
 
 export default router;
