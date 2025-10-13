@@ -24,6 +24,10 @@ export const approveRegistrationSchema = z.object({
     agentId: z.coerce.number().optional()
 })
 
+export const rejectRegistrationSchema = z.object({
+    agentRegistrationId: z.coerce.number(),
+})
+
 export const verifyOTPSchema = z.object({
     email: z.email(),
     otp: z.string()

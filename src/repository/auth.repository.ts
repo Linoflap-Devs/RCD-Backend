@@ -1,5 +1,5 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
+import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
 import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
@@ -7,6 +7,7 @@ import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
+import { IAgentRegistration } from "../types/agent.types";
 
 // Agent Sessions
 
@@ -493,6 +494,33 @@ export const registerAgentTransaction = async(
     }
 }
 
+export const findAgentRegistrationById = async(agentRegistrationId: number): QueryResult<IAgentRegistration> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentRegistration')
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .selectAll()
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IAgentRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number): QueryResult<IAgentUser> => {
     try {
 
@@ -764,6 +792,32 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         return {
             success: false,
             data: {} as IAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const rejectAgentRegistration = async (agentRegistrationId: number): QueryResult<null> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentRegistration')
+            .set('IsVerified', 2)
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
             error: {
                 code: 500,
                 message: error.message
