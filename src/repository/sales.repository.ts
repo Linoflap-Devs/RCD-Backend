@@ -122,8 +122,8 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
             const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
             const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
 
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
         }
 
         const queryResult = await result.execute()
