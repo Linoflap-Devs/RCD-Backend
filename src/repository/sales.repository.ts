@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
@@ -59,14 +59,23 @@ export const getPersonalSales = async (
             .where('SalesStatus', '<>', 'ARCHIVED')
 
         if(filters && filters.month){
-            const firstDay = new Date((new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date((new Date).getFullYear(), filters.month, 1)
-
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
-
-            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
-            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
+            const year = new Date().getFullYear();
+            const firstDayLocal = new Date(year, filters.month - 1, 1);
+            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
+            
+            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
+            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
+            
+            const monthStart = startOfDay(philippineFirstDay);
+            const monthEnd = endOfDay(philippineLastDay);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+            
+            result = result.where('ReservationDate', '>=', firstDay)
+            result = result.where('ReservationDate', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
         }
 
         if(pagination && pagination.page && pagination.pageSize){
@@ -119,8 +128,22 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
             .where('SalesStatus', '<>', 'ARCHIVED')
 
         if(filters && filters.month){
-            const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
+
+            const year = new Date().getFullYear();
+            const firstDayLocal = new Date(year, filters.month - 1, 1);
+            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
+            
+            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
+            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
+            
+            const monthStart = startOfDay(philippineFirstDay);
+            const monthEnd = endOfDay(philippineLastDay);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
 
             result = result.where('ReservationDate', '>', firstDay)
             result = result.where('ReservationDate', '<', lastDay)
@@ -161,8 +184,22 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
                 .where('SalesStatus', '<>', 'ARCHIVED')
 
         if(filters && filters.month){
-            const firstDay = new Date( filters.year || (new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date( filters.year || (new Date).getFullYear(), filters.month, 1)
+
+            const year = new Date().getFullYear();
+            const firstDayLocal = new Date(year, filters.month - 1, 1);
+            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
+            
+            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
+            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
+            
+            const monthStart = startOfDay(philippineFirstDay);
+            const monthEnd = endOfDay(philippineLastDay);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date( filters.year || (new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date( filters.year || (new Date).getFullYear(), filters.month, 1)
 
              result = result
                 .where(
@@ -239,8 +276,22 @@ export const getDivisionSales = async (
         }
 
         if(filters && filters.month){
-            const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+
+            const year = new Date().getFullYear();
+            const firstDayLocal = new Date(year, filters.month - 1, 1);
+            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
+            
+            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
+            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
+            
+            const monthStart = startOfDay(philippineFirstDay);
+            const monthEnd = endOfDay(philippineLastDay);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
             logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
             result = result.where('DateFiled', '>', firstDay)
             result = result.where('DateFiled', '<', lastDay)
@@ -645,15 +696,28 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.month){
-            const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
-            const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
-            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
-            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
+            const year = new Date().getFullYear();
+            const firstDayLocal = new Date(year, filters.month - 1, 1);
+            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
+            
+            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
+            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
+            
+            const monthStart = startOfDay(philippineFirstDay);
+            const monthEnd = endOfDay(philippineLastDay);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
         }
 
-        result = result.orderBy('DateFiled', 'desc')
+        result = result.orderBy('ReservationDate', 'desc')
         
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)

@@ -13,6 +13,7 @@ export interface IAgent {
     ContactEmergency: string;
     ContactNumber: string;
     DivisionID: string | null;
+    DivisionName?: string | null;
     DSHUDNumber: string | null;
     EmployeeIDNumber: string | null;
     FirstName: string;
