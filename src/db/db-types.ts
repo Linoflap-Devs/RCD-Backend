@@ -1431,6 +1431,7 @@ export interface VwUniqueActiveAgents {
   CivilStatus: string;
   ContactEmergency: string;
   ContactNumber: string;
+  Division: string;
   DivisionID: string | null;
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
