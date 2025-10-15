@@ -122,8 +122,8 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
             const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
             const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
 
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
         }
 
         const queryResult = await result.execute()
@@ -153,7 +153,7 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
 
 export const getTotalDivisionSales = async (divisionId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
-        let result = await db.selectFrom('Vw_SalesTransactions')
+        let result = await db.selectFrom('vw_SalesTrans')
                 .select(({fn, val, ref}) => [
                     fn.sum(ref('NetTotalTCP')).as('TotalSales')
                 ])
@@ -164,8 +164,17 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
             const firstDay = new Date( filters.year || (new Date).getFullYear(), filters.month - 1, 1)
             const lastDay = new Date( filters.year || (new Date).getFullYear(), filters.month, 1)
 
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
+             result = result
+                .where(
+                    sql`TRY_CONVERT(date, ${sql.ref('ReservationDate')}, 101)`,
+                    '>=',
+                    firstDay
+                )
+                .where(
+                    sql`TRY_CONVERT(date, ${sql.ref('ReservationDate')}, 101)`,
+                    '<',
+                    lastDay
+                )     
         }
 
         const queryResult = await result.execute()
