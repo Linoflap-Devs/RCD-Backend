@@ -60,15 +60,13 @@ export const getPersonalSales = async (
 
         if(filters && filters.month){
             const year = new Date().getFullYear();
-            const firstDayLocal = new Date(year, filters.month - 1, 1);
-            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
-            
-            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
-            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
-            
-            const monthStart = startOfDay(philippineFirstDay);
-            const monthEnd = endOfDay(philippineLastDay);
-            
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
+                    
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
             
@@ -130,14 +128,12 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
         if(filters && filters.month){
 
             const year = new Date().getFullYear();
-            const firstDayLocal = new Date(year, filters.month - 1, 1);
-            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
-            
-            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
-            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
-            
-            const monthStart = startOfDay(philippineFirstDay);
-            const monthEnd = endOfDay(philippineLastDay);
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
             
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
@@ -186,14 +182,12 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
         if(filters && filters.month){
 
             const year = new Date().getFullYear();
-            const firstDayLocal = new Date(year, filters.month - 1, 1);
-            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
-            
-            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
-            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
-            
-            const monthStart = startOfDay(philippineFirstDay);
-            const monthEnd = endOfDay(philippineLastDay);
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
             
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
@@ -278,14 +272,12 @@ export const getDivisionSales = async (
         if(filters && filters.month){
 
             const year = new Date().getFullYear();
-            const firstDayLocal = new Date(year, filters.month - 1, 1);
-            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
-            
-            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
-            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
-            
-            const monthStart = startOfDay(philippineFirstDay);
-            const monthEnd = endOfDay(philippineLastDay);
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
             
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
@@ -697,14 +689,12 @@ export const getPendingSales = async (
 
         if(filters && filters.month){
             const year = new Date().getFullYear();
-            const firstDayLocal = new Date(year, filters.month - 1, 1);
-            const lastDayLocal = new Date(year, filters.month, 0, 23, 59, 59, 999); // Last day of the month
-            
-            const philippineFirstDay = new TZDate(firstDayLocal, 'Asia/Manila');
-            const philippineLastDay = new TZDate(lastDayLocal, 'Asia/Manila');
-            
-            const monthStart = startOfDay(philippineFirstDay);
-            const monthEnd = endOfDay(philippineLastDay);
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
             
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
