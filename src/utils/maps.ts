@@ -35,10 +35,10 @@ export const mapToImageEdit = (data: IImage): Partial<TblImage> => {
 export const mapToEditEducation = (data: IAgentEducationEdit): Partial<IAgentEducation> => {
     const dbData: Partial<IAgentEducation> = {}
 
-    if(data.Degree) dbData.Degree = data.Degree
-    if(data.EndDate) dbData.EndDate = data.EndDate
-    if(data.School) dbData.School = data.School
-    if(data.StartDate) dbData.StartDate = data.StartDate
+    if(data.Degree !== undefined) dbData.Degree = data.Degree
+    if(data.EndDate !== undefined) dbData.EndDate = data.EndDate || null
+    if(data.School !== undefined) dbData.School = data.School
+    if(data.StartDate !== undefined) dbData.StartDate = data.StartDate
 
     return dbData
 }
@@ -46,10 +46,10 @@ export const mapToEditEducation = (data: IAgentEducationEdit): Partial<IAgentEdu
 export const mapToEditWorkExp = (data: IAgentWorkExpEdit): Partial<IAgentWorkExp> => {
     const dbData: Partial<IAgentWorkExp> = {}
 
-    if(data.Company) dbData.Company = data.Company
-    if(data.EndDate) dbData.EndDate = data.EndDate
-    if(data.JobTitle) dbData.JobTitle = data.JobTitle
-    if(data.StartDate) dbData.StartDate = data.StartDate
+    if(data.Company !== undefined) dbData.Company = data.Company
+    if(data.EndDate !== undefined) dbData.EndDate = data.EndDate
+    if(data.JobTitle !== undefined) dbData.JobTitle = data.JobTitle
+    if(data.StartDate !== undefined) dbData.StartDate = data.StartDate
 
     return dbData
 }

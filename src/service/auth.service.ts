@@ -292,14 +292,14 @@ export const registerEmployeeService = async (data: IEmployeeRegister): QueryRes
     }
 }
 
-export const loginEmployeeService = async (username: string, password: string): QueryResult<{token: string, username: string}> => {
+export const loginEmployeeService = async (username: string, password: string): QueryResult<{token: string, username: string, role: string}> => {
     const user = await findEmployeeUserByUsername(username)
 
     if(!user.success) {
         logger((user.error?.message || 'Failed to find user.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string},
+            data: {} as {token: string, username: string, role: string},
             error: {
                 message: 'Invalid credentials.',
                 code: 401
@@ -316,7 +316,7 @@ export const loginEmployeeService = async (username: string, password: string): 
         logger(('Password does not match.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string},
+            data: {} as {token: string, username: string, role: string},
             error: {
                 message: 'Invalid credentials.',
                 code: 401
@@ -331,7 +331,7 @@ export const loginEmployeeService = async (username: string, password: string): 
         logger(( session.error?.message || 'Failed to create session.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string},
+            data: {} as {token: string, username: string, role: string},
             error: {
                 message: 'Failed to create session.',
                 code: 500
@@ -343,7 +343,8 @@ export const loginEmployeeService = async (username: string, password: string): 
         success: true,
         data: {
             token: token,
-            username: username
+            username: username,
+            role: user.data.role
         }
     }    
 }

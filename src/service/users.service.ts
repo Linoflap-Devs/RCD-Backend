@@ -448,9 +448,9 @@ export const editAgentEducationService = async (
             AgentRegistrationID: userDetails.data.agentRegistrationId,
             AgentEducationID: edu.agentEducationID,
             Degree: edu.degree,
-            EndDate: edu.endDate,
+            EndDate: edu.endDate || null,
             School: edu.school,
-            StartDate: edu.startDate
+            StartDate: edu.startDate,
         });
     }
 
@@ -522,7 +522,7 @@ export const editAgentWorkExpService = async (
             AgentRegistrationID: userDetails.data.agentRegistrationId,
             AgentWorkExpID: work.agentWorkExpID,
             Company: work.company,
-            EndDate: work.endDate,
+            EndDate: work.endDate || null,
             JobTitle: work.jobTitle,
             StartDate: work.startDate
         });
