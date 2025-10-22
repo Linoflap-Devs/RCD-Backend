@@ -1233,7 +1233,7 @@ export const approvePendingSaleTransaction = async (agentId: number, pendingSale
         const updatedPendingSale = await trx.updateTable('Tbl_AgentPendingSales')
             .set({
                 ApprovalStatus: 3,
-                SalesStatus: 'APPROVED',
+                SalesStatus: 'NEW',
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: agentId
             })

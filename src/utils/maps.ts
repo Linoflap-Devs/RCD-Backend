@@ -47,7 +47,7 @@ export const mapToEditWorkExp = (data: IAgentWorkExpEdit): Partial<IAgentWorkExp
     const dbData: Partial<IAgentWorkExp> = {}
 
     if(data.Company !== undefined) dbData.Company = data.Company
-    if(data.EndDate !== undefined) dbData.EndDate = data.EndDate
+    if(data.EndDate !== undefined) dbData.EndDate = data.EndDate || null
     if(data.JobTitle !== undefined) dbData.JobTitle = data.JobTitle
     if(data.StartDate !== undefined) dbData.StartDate = data.StartDate
 
