@@ -106,7 +106,7 @@ export type IAgentWorkExpEdit = {
     AgentWorkExpID: number;
     AgentRegistrationID?: number | null;
     Company?: string;
-    EndDate?: Date;
+    EndDate?: Date | null; 
     JobTitle?: string;
     StartDate?: Date;
 }
