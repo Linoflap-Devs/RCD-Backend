@@ -1,10 +1,10 @@
 import { VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId } from "../repository/users.repository";
+import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AgentPendingSale, EditPendingSaleDetail } from "../types/sales.types";
+import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, SaleStatus } from "../types/sales.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -550,6 +550,40 @@ export const getCombinedPersonalSalesService = async (
     }
 };
 
+const pendingSaleValidation = (
+    currentStatus: SaleStatus, 
+    requiredStatus: SaleStatus
+): { validated: boolean; message: string } => {
+    if (currentStatus === SaleStatus.REJECTED) {
+        return { 
+            validated: false, 
+            message: 'This sale has already been rejected.' 
+        };
+    }
+    
+    if (currentStatus === SaleStatus.SALES_ADMIN_APPROVED) {
+        return { 
+            validated: false, 
+            message: 'This sale has already been fully approved.' 
+        };
+    }
+    
+    if (currentStatus !== requiredStatus) {
+        if (currentStatus > requiredStatus) {
+            return { 
+                validated: false, 
+                message: 'This sale has already been approved at this stage.' 
+            };
+        }
+        return { 
+            validated: false, 
+            message: 'This sale has not reached this approval stage yet.' 
+        };
+    }
+    
+    return { validated: true, message: '' };
+};
+
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
     pendingSalesId: number,
@@ -658,6 +692,74 @@ export const editPendingSalesDetailsService = async (
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const approveBranchHeadService = async (webUserId: number, pendingSalesId: number): QueryResult<any> => {
+
+    const userWeb = await findEmployeeUserById(webUserId);
+
+    if(!userWeb.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }   
+    }
+
+    if(userWeb.data.Role != 'BRANCH SALES STAFF'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const checkValid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.SALES_DIRECTOR_APPROVED
+    )
+
+    if(checkValid.validated == false){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: checkValid.message,
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const approveSalesAdminService = async (webUserId: number, pendingSalesId: number): QueryResult<any> => {
+    return {
+        success: true,
+        data: {}
     }
 }
 

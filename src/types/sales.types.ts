@@ -156,3 +156,19 @@ export interface SalesTargetTotals {
     TotalCurrentMonth: number
     TotalReachPercent: number
 }
+
+export enum SaleStatus {
+    REJECTED = 0,
+    NEWLY_SUBMITTED = 1,
+    UNIT_MANAGER_APPROVED = 2,
+    SALES_DIRECTOR_APPROVED = 3,
+    BRANCH_HEAD_APPROVED = 4,
+    SALES_ADMIN_APPROVED = 5
+}
+
+export enum ApproverRole {
+    UNIT_MANAGER = 1,
+    SALES_DIRECTOR = 2,
+    BRANCH_HEAD = 3,
+    SALES_ADMIN = 4
+}
