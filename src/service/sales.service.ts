@@ -4,7 +4,7 @@ import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/us
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -711,13 +711,13 @@ export const editPendingSalesDetailsService = async (
     }
 }
 
-export const approveSalesDirectorService = async (agentUserId: number, pendingSalesId: number): QueryResult<any> => {
+export const approveSalesDirectorService = async (agentUserId: number, pendingSalesId: number): QueryResult<IAgentPendingSale> => {
     const pendingSale = await getPendingSaleById(pendingSalesId)
 
     if(!pendingSale.success){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: 'No sales found',
                 code: 400
@@ -733,7 +733,7 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
     if(!valid.validated){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: valid.message,
                 code: 400
@@ -741,17 +741,17 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
         }
     }
 
-    const result = await approveNextStage(
-        agentUserId,
-        pendingSalesId,
-        SaleStatus.SALES_DIRECTOR_APPROVED,
-        SalesStatusText.PENDING_BH
-    )
+    const result = await approveNextStage({
+        agentId: agentUserId,
+        pendingSalesId: pendingSalesId,
+        nextApprovalStatus: SaleStatus.SALES_DIRECTOR_APPROVED,
+        nextSalesStatus: SalesStatusText.PENDING_BH
+    })
 
     if(!result.success){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: 'Approving sales failed.',
                 code: 400
@@ -765,14 +765,14 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
     }
 }
 
-export const approveBranchHeadService = async (webUserId: number, pendingSalesId: number): QueryResult<any> => {
+export const approveBranchHeadService = async (webUserId: number, pendingSalesId: number): QueryResult<IAgentPendingSale> => {
 
     const userWeb = await findEmployeeUserById(webUserId);
 
     if(!userWeb.success){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale, 
             error: {
                 message: 'No user found',
                 code: 404
@@ -783,7 +783,7 @@ export const approveBranchHeadService = async (webUserId: number, pendingSalesId
     if(userWeb.data.Role != 'BRANCH SALES STAFF'){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: 'Not enough permission.',
                 code: 403
@@ -796,10 +796,21 @@ export const approveBranchHeadService = async (webUserId: number, pendingSalesId
     if(!pendingSale.success){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: 'No sales found',
                 code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.SalesBranchID != userWeb.data.BranchID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'This sale does not belong to your branch.',
+                code: 403
             }
         }
     }
@@ -812,7 +823,7 @@ export const approveBranchHeadService = async (webUserId: number, pendingSalesId
     if(checkValid.validated == false){
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 message: checkValid.message,
                 code: 400
@@ -820,9 +831,27 @@ export const approveBranchHeadService = async (webUserId: number, pendingSalesId
         }
     }
 
+    const result = await approveNextStage({
+        userId: webUserId,
+        pendingSalesId: pendingSalesId,
+        nextApprovalStatus: SaleStatus.BRANCH_HEAD_APPROVED,
+        nextSalesStatus: SalesStatusText.PENDING_SA
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Approving sales failed.',
+                code: 400
+            }
+        }
+    }
+
     return {
         success: true,
-        data: {}
+        data: result.data
     }
 }
 

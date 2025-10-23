@@ -3,7 +3,7 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, SalesTargetTotals, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, IAgentPendingSale, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
@@ -1195,16 +1195,24 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
     }
 }
 
-export const approveNextStage = async (agentId: number, pendingSalesId: number, nextApprovalStatus: SaleStatus, nextSalesStatus: SalesStatusText): QueryResult<any> => {
+export const approveNextStage = async (data: {
+        agentId?: number,
+        userId?: number,
+        pendingSalesId: number,
+        nextApprovalStatus: number,
+        nextSalesStatus: string
+    }
+): QueryResult<IAgentPendingSale> => {
     try {
         const result = await db.updateTable('Tbl_AgentPendingSales')
             .set({
-                ApprovalStatus: nextApprovalStatus,
-                SalesStatus: nextSalesStatus,
+                ApprovalStatus: data.nextApprovalStatus,
+                SalesStatus: data.nextSalesStatus,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId
+                LastUpdateby: data.agentId || undefined,
+                LastUpdateByWeb:  data.userId || undefined
             })
-            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .where('AgentPendingSalesID', '=', data.pendingSalesId)
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
         
@@ -1218,7 +1226,7 @@ export const approveNextStage = async (agentId: number, pendingSalesId: number, 
         const error = err as Error
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 code: 400,
                 message: error.message

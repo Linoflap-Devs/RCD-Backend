@@ -105,6 +105,7 @@ export interface TblAgentPendingSales {
   FloorArea: number;
   LastUpdate: Date;
   LastUpdateby: number;
+  LastUpdateByWeb: number | null;
   Lot: string;
   LotArea: number;
   MiscFee: number;
