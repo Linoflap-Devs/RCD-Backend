@@ -45,3 +45,8 @@ export const changeForgottonPasswordSchema = z.object({
     resetToken: z.string(),
     newPassword: z.string(),
 })
+
+export const changeEmployeePasswordSchema = z.object({
+    oldPassword: z.string(),
+    newPassword: z.string(),
+})

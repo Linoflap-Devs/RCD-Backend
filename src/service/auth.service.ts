@@ -3,8 +3,8 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changePassword, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserByUsername } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -483,6 +483,62 @@ export const logoutEmployeeSessionService = async(sessionId: number): QueryResul
             }
         }
     }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const changeEmployeePasswordService = async (userId: number, oldPassword: string, newPassword: string): QueryResult<any> => {
+    const user = await findEmployeeUserById(userId)
+
+    if(!user.success){
+        logger('Failed to find user.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    // check if old password matches
+    const checkOldPassword = await verifyPassword(oldPassword, user.data.Password)
+
+    if(!checkOldPassword) {
+        logger('Old password does not match.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Old password does not match.',
+                code: 400
+            }
+        }
+    }
+
+    const hash = await hashPassword(newPassword)
+
+    const updatePassword = await changeEmployeePassword(user.data.UserWebID, hash)
+
+    if(!updatePassword.success){
+        logger('Failed to update password.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to update password.',
+                code: 500
+            }
+        }
+    }
+
+    // delete sessions
+
+    const deleteSessions = await deleteEmployeeAllSessions(userId)
 
     return {
         success: true,
