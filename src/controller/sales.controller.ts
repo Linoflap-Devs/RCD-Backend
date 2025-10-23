@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approvePendingSaleService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approvePendingSaleService, approveSalesDirectorService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -262,6 +262,31 @@ export const editPendingSalesController = async (req: Request, res: Response) =>
     }
 
     return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
+}
+
+export const approvePendingSalesSDController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+
+    const result = await approveSalesDirectorService(session.userID, Number(pendingSalesId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to approve sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales approved', data: result.data})
 }
 
 export const rejectPendingSalesController = async (req: Request, res: Response) => {

@@ -1,10 +1,10 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, SalesStatusText, SaleStatus } from "../types/sales.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -603,38 +603,54 @@ export const editPendingSalesDetailsService = async (
         }
     }
 
-    if(pendingSale.data.ApprovalStatus == 0){
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.NEWLY_SUBMITTED
+    )
+
+    if(valid.validated == false){
         return {
             success: false,
             data: {},
             error: {
-                message: 'This sale has already been rejected.',
+                message: valid.message,
                 code: 400
             }
         }
     }
 
-    if(pendingSale.data.ApprovalStatus == 2){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale has already been approved by the Unit Manager.',
-                code: 400
-            }
-        }
-    }
+    // if(pendingSale.data.ApprovalStatus == 0){
+    //     return {
+    //         success: false,
+    //         data: {},
+    //         error: {
+    //             message: 'This sale has already been rejected.',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
-    if(pendingSale.data.ApprovalStatus == 3){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale has already been approved by the Sales Director.',
-                code: 400
-            }
-        }
-    }
+    // if(pendingSale.data.ApprovalStatus == 2){
+    //     return {
+    //         success: false,
+    //         data: {},
+    //         error: {
+    //             message: 'This sale has already been approved by the Unit Manager.',
+    //             code: 400
+    //         }
+    //     }
+    // }
+
+    // if(pendingSale.data.ApprovalStatus == 3){
+    //     return {
+    //         success: false,
+    //         data: {},
+    //         error: {
+    //             message: 'This sale has already been approved by the Sales Director.',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
     const agentData = await findAgentDetailsByUserId(agentUserId)
 
@@ -684,6 +700,60 @@ export const editPendingSalesDetailsService = async (
             data: {},
             error: {
                 message: 'Editing sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const approveSalesDirectorService = async (agentUserId: number, pendingSalesId: number): QueryResult<any> => {
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.UNIT_MANAGER_APPROVED
+    )
+
+    if(!valid.validated){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: valid.message,
+                code: 400
+            }
+        }
+    }
+
+    const result = await approveNextStage(
+        agentUserId,
+        pendingSalesId,
+        SaleStatus.SALES_DIRECTOR_APPROVED,
+        SalesStatusText.PENDING_BH
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Approving sales failed.',
                 code: 400
             }
         }

@@ -3,9 +3,10 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, SalesTargetTotals } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
+import { SalesStatusText } from "../types/sales.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -1062,6 +1063,7 @@ export const addPendingSale = async (
     }
 }
 
+// UM Approval Step
 export const editPendingSalesDetails = async (agentId: number, pendingSalesId: number, data?: EditPendingSaleDetail[]): QueryResult<any> => {
 
     if(!data || !data.length) {
@@ -1165,8 +1167,8 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
             .set({
                 LastUpdate: new Date(),
                 LastUpdateby: agentId,
-                ApprovalStatus: 2,
-                SalesStatus: 'PENDING APPROVAL - SALES DIRECTOR'
+                ApprovalStatus: SaleStatus.UNIT_MANAGER_APPROVED,
+                SalesStatus: SalesStatusText.PENDING_SD
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .executeTakeFirstOrThrow();
@@ -1187,6 +1189,38 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
             data: {},
             error: {
                 code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const approveNextStage = async (agentId: number, pendingSalesId: number, nextApprovalStatus: SaleStatus, nextSalesStatus: SalesStatusText): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentPendingSales')
+            .set({
+                ApprovalStatus: nextApprovalStatus,
+                SalesStatus: nextSalesStatus,
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateby: agentId
+            })
+            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
                 message: error.message
             }
         }
