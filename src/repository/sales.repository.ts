@@ -1267,17 +1267,17 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number)
     }
 }
 
-export const approvePendingSaleTransaction = async (agentId: number, pendingSalesId: number): QueryResult<any> => {
+export const approvePendingSaleTransaction = async (userWebId: number, pendingSalesId: number): QueryResult<any> => {
 
     const trx = await db.startTransaction().execute()
     try {
         // update pending sale to approved
         const updatedPendingSale = await trx.updateTable('Tbl_AgentPendingSales')
             .set({
-                ApprovalStatus: 3,
-                SalesStatus: 'NEW',
+                ApprovalStatus: SaleStatus.SALES_ADMIN_APPROVED,
+                SalesStatus: SalesStatusText.APPROVED,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId
+                LastUpdateby: userWebId
             })
             .outputAll('inserted')
             .where('AgentPendingSalesID', '=', pendingSalesId)
@@ -1308,7 +1308,7 @@ export const approvePendingSaleTransaction = async (agentId: number, pendingSale
                 FinancingScheme: updatedPendingSale.FinancingScheme,
                 FloorArea: updatedPendingSale.FloorArea,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId,
+                LastUpdateby: userWebId,
                 Lot: updatedPendingSale.Lot,
                 LotArea: updatedPendingSale.LotArea,
                 MiscFee: updatedPendingSale.MiscFee,
@@ -1320,7 +1320,7 @@ export const approvePendingSaleTransaction = async (agentId: number, pendingSale
                 ReservationDate: updatedPendingSale.ReservationDate,
                 SalesBranchID: updatedPendingSale.SalesBranchID || null,
                 SalesSectorID: updatedPendingSale.SalesSectorID,
-                SalesStatus: updatedPendingSale.SalesStatus,
+                SalesStatus: SalesStatusText.NEW,
                 SalesTranCode: updatedPendingSale.PendingSalesTranCode,
                 SellerName: updatedPendingSale.SellerName || '',
             })

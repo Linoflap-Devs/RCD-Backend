@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesDirectorService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -354,7 +354,7 @@ export const approvePendingSalesController = async (req: Request, res: Response)
 
     const { pendingSalesId } = req.params
 
-    const result = await approvePendingSaleService(session.userID, Number(pendingSalesId))
+    const result = await approveSalesAdminService(session.userID, Number(pendingSalesId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to approve sales', data: {}})

@@ -5,6 +5,7 @@ import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { IAgent } from "../types/users.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -725,6 +726,30 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
         }
     }
 
+    const agentData = await findAgentDetailsByUserId(agentUserId);
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.DivisionID != agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'This sale does not belong to your division.',
+                code: 403
+            }
+        }
+    }
+
     const valid = pendingSaleValidation(
         pendingSale.data.ApprovalStatus,
         SaleStatus.UNIT_MANAGER_APPROVED
@@ -856,9 +881,77 @@ export const approveBranchHeadService = async (webUserId: number, pendingSalesId
 }
 
 export const approveSalesAdminService = async (webUserId: number, pendingSalesId: number): QueryResult<any> => {
+    
+    // validations
+    const userWeb = await findEmployeeUserById(webUserId);
+
+    if(!userWeb.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale, 
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }   
+    }
+
+    if(userWeb.data.Role != 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.BRANCH_HEAD_APPROVED
+    )
+
+    if(!valid.validated){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: valid.message,
+                code: 400
+            }
+        }
+    }
+
+    const result = await approvePendingSaleTransaction(userWeb.data.UserWebID, pendingSalesId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Approving sales failed.',
+                code: 400
+            }
+        }
+    }
+
     return {
         success: true,
-        data: {}
+        data: result.data
     }
 }
 

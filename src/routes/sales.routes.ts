@@ -18,6 +18,7 @@ router.route('/pending/reject/:pendingSalesId').patch([validateSession, validate
 router.route('/pending/approve/:pendingSalesId').patch([validateSession, validateRole(['SD'])], approvePendingSalesSDController);
 
 router.route('/pending/approve/bh/:pendingSalesId').patch([validateEmployeeSession, validateRole(['BH'])], approvePendingSalesBHController);
+router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSession, validateRole(['SA'])], approvePendingSalesController);
 
 router.route('/combined').get([validateSession], getCombinedPersonalSalesController);
 
