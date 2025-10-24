@@ -17,6 +17,15 @@ export interface IAgentUser {
     Position: string
 }
 
+export interface ITblAgentUser {
+    AgentID: number | null
+    AgentRegistrationID: number | null
+    AgentUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
 export interface IAgentUserSession {
     AgentSession: IAgentSession
     AgentUser: IAgentUser

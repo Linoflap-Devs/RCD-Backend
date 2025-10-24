@@ -7,7 +7,7 @@ import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
-import { IAgentRegistration } from "../types/agent.types";
+import { ITblAgentRegistration } from "../types/agent.types";
 
 // Agent Sessions
 
@@ -517,7 +517,7 @@ export const registerAgentTransaction = async(
     }
 }
 
-export const findAgentRegistrationById = async(agentRegistrationId: number): QueryResult<IAgentRegistration> => {
+export const findAgentRegistrationById = async(agentRegistrationId: number): QueryResult<ITblAgentRegistration> => {
     try {
         const result = await db.selectFrom('Tbl_AgentRegistration')
             .where('AgentRegistrationID', '=', agentRegistrationId)
@@ -535,7 +535,7 @@ export const findAgentRegistrationById = async(agentRegistrationId: number): Que
         const error = err as Error;
         return {
             success: false,
-            data: {} as IAgentRegistration,
+            data: {} as ITblAgentRegistration,
             error: {
                 code: 500,
                 message: error.message

@@ -9,7 +9,7 @@ export interface FnAgentSales {
     CurrentYear: number
 }
 
-export interface IAgentRegistration {
+export interface ITblAgentRegistration {
     Address: string;
     AddressEmergency: string;
     AffiliationDate: Date;

@@ -1,10 +1,11 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
-import { IAgentRegister, IAgentRegistration } from "../types/auth.types";
-import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
+import { IAgentRegister, IAgentRegistration, ITblAgentUser } from "../types/auth.types";
+import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { sql } from "kysely";
-import { FnAgentSales } from "../types/agent.types";
+import { FnAgentSales, ITblAgentRegistration } from "../types/agent.types";
+import { IAgentUser } from "../types/auth.types";
 
 export const getAgents = async (filters?: { showInactive?: boolean, division?: number }): QueryResult<IAgent[]> => {
     try {
@@ -449,6 +450,123 @@ export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: n
         return {
             success: false,
             data: [] as FnAgentSales[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWithRegistration = async (agentId: number): QueryResult<IAgent & ITblAgentRegistration & ITblAgentUser> => {
+    try {
+        const agentResult = await db.selectFrom('Tbl_Agents')
+            .innerJoin('Tbl_AgentUser'  , 'Tbl_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .innerJoin('Tbl_AgentRegistration', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            .selectAll()
+            .where('Tbl_Agents.AgentID', '=', agentId)
+            .executeTakeFirstOrThrow();
+
+        if (!agentResult) {
+            return {
+                success: false,
+                data: {} as (IAgent & ITblAgentRegistration & ITblAgentUser),
+                error: {
+                    code: 404,
+                    message: 'Agent not found'
+                }
+            }
+        }
+        
+        return {
+            success: true,
+            data: agentResult as (IAgent & ITblAgentRegistration & ITblAgentUser)
+        }
+            
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as (IAgent & ITblAgentRegistration & ITblAgentUser),
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWorkExp = async (agentId: number): QueryResult<IAgentWorkExp[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentWorkExp')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentWorkExp[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentEducation = async (agentId: number): QueryResult<IAgentEducation[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentEducation')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentImages = async (ids: number[]): QueryResult<TblImageWithId[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Image')
+            .selectAll()
+            .where('Tbl_Image.ImageID', 'in', ids)
+            .execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as TblImageWithId[],
             error: {
                 code: 500,
                 message: error.message
