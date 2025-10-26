@@ -4,6 +4,7 @@ import { getDivisionSalesController, getPersonalSalesController, getSalesTransac
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
+import { multerUpload } from '../middleware/multer';
 
 const router = express.Router();
 
@@ -14,7 +15,14 @@ router.route('/web/pending').get([validateEmployeeSession, validateRole(['BH', '
 
 router.route('/pending').get([validateSession, validateRole(['UM', 'SD'])], getPendingSalesController);
 router.route('/pending/:pendingSalesId').get([validateSession], getPendingSalesDetailsController);
-router.route('/pending').post([validateSession, validate(addPendingSaleSchema)], addPendingSaleController);
+router.route('/pending').post(
+    [
+        validateSession, 
+        multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
+        validate(addPendingSaleSchema),
+    ], 
+    addPendingSaleController
+);
 router.route('/pending/:pendingSalesId').patch([validateSession, validateRole(['UM'])], editPendingSalesController);
 router.route('/pending/reject/:pendingSalesId').patch([validateSession, validateRole(['UM', 'SD'])], rejectPendingSalesController);
 router.route('/pending/approve/:pendingSalesId').patch([validateSession, validateRole(['SD'])], approvePendingSalesSDController);

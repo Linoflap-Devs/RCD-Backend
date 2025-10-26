@@ -7,6 +7,7 @@ import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
+import { IImage } from "../types/image.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -899,7 +900,10 @@ export const addPendingSale = async (
             dpStartDate: Date,
             sellerName: string,
         },
-        
+        images?: {
+            receipt?: IImage,
+            agreement?: IImage,
+        }
     }
 ): QueryResult<any> => {
 
@@ -908,6 +912,9 @@ export const addPendingSale = async (
     const trx = await db.startTransaction().execute();
 
     try {
+
+        
+
         const result = await trx.insertInto('Tbl_AgentPendingSales')
             .values({
                 ReservationDate: data.reservationDate,
@@ -949,6 +956,34 @@ export const addPendingSale = async (
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
+
+        let receiptId = -1
+        if(data.images?.receipt){
+            const receiptResult = await trx.insertInto('Tbl_Image').values({
+                Filename: `${result.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+                ContentType: data.images.receipt.ContentType,
+                FileExtension: data.images.receipt.FileExt,
+                FileSize: data.images.receipt.FileSize,
+                FileContent: data.images.receipt.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            receiptId = receiptResult.ImageID
+        }
+
+        let agreementId = -1
+        if(data.images?.agreement){
+            const agreementResult = await trx.insertInto('Tbl_Image').values({
+                Filename: `${result.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+                ContentType: data.images.agreement.ContentType,
+                FileExtension: data.images.agreement.FileExt,
+                FileSize: data.images.agreement.FileSize,
+                FileContent: data.images.agreement.FileContent,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            agreementId = agreementResult.ImageID
+        }
 
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
             .values([
@@ -1051,6 +1086,24 @@ export const addPendingSale = async (
             ])
             .outputAll('inserted')
             .execute()
+
+        if(receiptId > 0){
+            await trx.insertInto('Tbl_SalesTranImage').values({
+                PendingSalesTransID: result.AgentPendingSalesID,
+                TranCode: result.PendingSalesTranCode,
+                ImageID: receiptId,
+                ImageType: 'RECEIPT',
+            }).execute()
+        }
+
+        if(agreementId > 0){
+            await trx.insertInto('Tbl_SalesTranImage').values({
+                PendingSalesTransID: result.AgentPendingSalesID,
+                TranCode: result.PendingSalesTranCode,
+                ImageID: agreementId,
+                ImageType: 'AGREEMENT',
+            }).execute()
+        }
         
         await trx.commit().execute()
 

@@ -206,6 +206,8 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         return;
     }
 
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
     const {
         reservationDate,
         salesBranchID,
@@ -260,6 +262,10 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
             monthlyPayment,
             dpStartDate,
             sellerName
+        },
+        images: {
+            receipt: images?.receipt ? images.receipt[0] : undefined,
+            agreement: images?.agreement ? images.agreement[0] : undefined
         }
     })
 

@@ -6,6 +6,8 @@ import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent } from "../types/users.types";
+import { IImage } from "../types/image.types";
+import path from "path";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -235,6 +237,10 @@ export const addPendingSalesService = async (
             monthlyPayment: number
             dpStartDate: Date,
             sellerName: string,
+        },
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
         }
     }
 ): QueryResult<any> => {
@@ -287,12 +293,40 @@ export const addPendingSalesService = async (
         }
     }
 
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
     const updatedData = {
         ...data,
         divisionID: Number(agentData.data.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID)
+        },
+        images: {
+            receipt: receiptMetadata,
+            agreement: agreementMetadata
         }
     }
 
