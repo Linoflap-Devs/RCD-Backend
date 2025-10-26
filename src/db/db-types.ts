@@ -671,6 +671,15 @@ export interface TblSalesTarget {
   TargetYear: number;
 }
 
+export interface TblSalesTranImage {
+  ImageID: number;
+  ImageType: string;
+  PendingSalesTransID: number;
+  SalesTranImageID: Generated<number>;
+  SalesTransID: number | null;
+  TranCode: string | null;
+}
+
 export interface TblSalesTrans {
   Block: string;
   BuyersAddress: string | null;
@@ -1545,6 +1554,7 @@ export interface DB {
   Tbl_SalesParameters: TblSalesParameters;
   Tbl_SalesSector: TblSalesSector;
   Tbl_SalesTarget: TblSalesTarget;
+  Tbl_SalesTranImage: TblSalesTranImage;
   Tbl_SalesTrans: TblSalesTrans;
   Tbl_SalesTransDtl: TblSalesTransDtl;
   tbl_SMSOut: TblSMSOut;
