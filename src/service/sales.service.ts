@@ -1248,6 +1248,51 @@ export const getWebPendingSalesService = async (
 
     return {
         success: true,
-        data: {}
+        data: obj
+    }
+}
+
+export const getWebPendingSalesDetailService = async (userId: number, pendingSalesId: number): QueryResult<any> => {
+
+    const user = await findEmployeeUserById(userId);
+
+    if(!user.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await getPendingSaleById(pendingSalesId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(result.data.SalesBranchID != user.data.BranchID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to your branch.',
+                code: 403
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

@@ -7,7 +7,7 @@ import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
-import { IImage } from "../types/image.types";
+import { IImage, IImageBase64 } from "../types/image.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -836,7 +836,34 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
             .selectAll()
             .where('PendingSalesTranCode', '=', result.PendingSalesTranCode)
             .execute()
+        
+        let imgs: IImageBase64[] = []
 
+        const imageJunction = await db.selectFrom('Tbl_SalesTranImage')
+            .selectAll()
+            .where('PendingSalesTransID', '=', pendingSaleId)
+            .execute()
+        
+        if(imageJunction && imageJunction.length > 0){
+            const imageIds = imageJunction.map(img => img.ImageID)
+
+            const images = await db.selectFrom('Tbl_Image')
+                .selectAll()
+                .where('ImageID', 'in', imageIds)
+                .execute()
+            
+            if(images && images.length > 0){
+                imgs = images.map(img => ({
+                    ImageID: img.ImageID,
+                    FileName: img.Filename,
+                    ContentType: img.ContentType,
+                    FileExt: img.FileExtension,
+                    FileSize: img.FileSize,
+                    FileContent: img.FileContent.toString('base64'),
+                }))
+            }
+        }
+        
         const obj = {
             ...result,
             DivisionName: result.DivisionName ? result.DivisionName.trim() : null,
@@ -845,7 +872,8 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
             DeveloperName: result.DeveloperName ? result.DeveloperName.trim() : null,
             SalesSectorName: result.SalesSectorName ? result.SalesSectorName.trim() : null,
             ProjectTypeName: result.ProjectTypeName ? result.ProjectTypeName.trim() : null,
-            Details: details
+            Details: details,
+            Images: imgs
         }
 
         return {
