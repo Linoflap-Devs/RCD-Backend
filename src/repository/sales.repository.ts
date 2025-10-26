@@ -649,7 +649,9 @@ export const getPendingSales = async (
         agentId?: number,
         createdBy?: number,
         developerId?: number,
-        isUnique?: boolean
+        isUnique?: boolean,
+        approvalStatus?: number[],
+        salesBranch?: number
     },
     pagination?: {
         page?: number, 
@@ -664,13 +666,13 @@ export const getPendingSales = async (
         let result = await db.selectFrom('Vw_PendingSalesTransactions')
             .selectAll()
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .where('ApprovalStatus', 'not in', [3])
+            .where('ApprovalStatus', 'not in', [5])
 
         let totalCountResult = await db
             .selectFrom("Vw_PendingSalesTransactions")
             .select(({ fn }) => [fn.countAll<number>().as("count")])
             .where('SalesStatus', '<>', 'ARCHIVED')
-            .where('ApprovalStatus', 'not in', [3])
+            .where('ApprovalStatus', 'not in', [5])
 
         if(divisionId) {
             result = result.where('DivisionID', '=', divisionId)
@@ -682,6 +684,15 @@ export const getPendingSales = async (
             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
         }
 
+        if(filters && filters.approvalStatus){
+            result = result.where('ApprovalStatus', 'in', filters.approvalStatus)
+            totalCountResult = totalCountResult.where('ApprovalStatus', 'in', filters.approvalStatus)
+        }
+
+        if(filters && filters.salesBranch){
+            result = result.where('SalesBranchID', '=', filters.salesBranch)
+            totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
 
         if(filters && filters.agentId){
             result = result.where('CreatedBy', '=', filters.agentId)
