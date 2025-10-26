@@ -1,3 +1,5 @@
+import { CommissionDetailPositions } from "./commission.types";
+
 export interface AgentPendingSalesDetail {
     AgentID: number;
     AgentName: string | null;
@@ -164,6 +166,14 @@ export interface EditPendingSaleDetail {
     agentName?: string,
     commissionRate: number,
 }
+
+export interface AddPendingSaleDetail {
+    position: CommissionDetailPositions
+    agentId?: number,
+    agentName?: string,
+    commissionRate: number,
+}
+
 
 export interface FnDivisionSales {
     Division: string,	

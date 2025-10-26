@@ -258,7 +258,8 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         dpTerms,
         monthlyPayment,
         dpStartDate,
-        sellerName
+        sellerName,
+        commissionRates
     } = req.body
 
     const result = await addPendingSalesService(session.userID, {
@@ -293,7 +294,8 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         images: {
             receipt: images?.receipt ? images.receipt[0] : undefined,
             agreement: images?.agreement ? images.agreement[0] : undefined
-        }
+        },
+        commissionRates: commissionRates,
     })
 
     if(!result.success){

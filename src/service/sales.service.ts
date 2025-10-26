@@ -4,7 +4,7 @@ import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/us
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent } from "../types/users.types";
 import { IImage } from "../types/image.types";
 import path from "path";
@@ -241,7 +241,8 @@ export const addPendingSalesService = async (
         images?: {
             receipt?: Express.Multer.File,
             agreement?: Express.Multer.File,
-        }
+        },
+        commissionRates?: AddPendingSaleDetail[]
     }
 ): QueryResult<any> => {
 
@@ -275,6 +276,19 @@ export const addPendingSalesService = async (
             data: {},
             error: {
                 message: 'No division found',
+                code: 400
+            }
+        }
+    }
+
+    if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
+        console.log(agentData.data.Position)
+        console.log(data.commissionRates)
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Commission rates are required for this user (Unit Manager / Sales Director).',
                 code: 400
             }
         }
@@ -327,10 +341,11 @@ export const addPendingSalesService = async (
         images: {
             receipt: receiptMetadata,
             agreement: agreementMetadata
-        }
+        },
+        commissionRates: data.commissionRates || []
     }
 
-    const result = await addPendingSale(agentData.data.AgentID, updatedData)
+    const result = await addPendingSale(agentData.data.AgentID, (agentData.data.Position || ''), updatedData)
 
     if(!result.success){
         logger('addPendingSalesService', {data: data})
@@ -654,39 +669,6 @@ export const editPendingSalesDetailsService = async (
             }
         }
     }
-
-    // if(pendingSale.data.ApprovalStatus == 0){
-    //     return {
-    //         success: false,
-    //         data: {},
-    //         error: {
-    //             message: 'This sale has already been rejected.',
-    //             code: 400
-    //         }
-    //     }
-    // }
-
-    // if(pendingSale.data.ApprovalStatus == 2){
-    //     return {
-    //         success: false,
-    //         data: {},
-    //         error: {
-    //             message: 'This sale has already been approved by the Unit Manager.',
-    //             code: 400
-    //         }
-    //     }
-    // }
-
-    // if(pendingSale.data.ApprovalStatus == 3){
-    //     return {
-    //         success: false,
-    //         data: {},
-    //         error: {
-    //             message: 'This sale has already been approved by the Sales Director.',
-    //             code: 400
-    //         }
-    //     }
-    // }
 
     const agentData = await findAgentDetailsByUserId(agentUserId)
 

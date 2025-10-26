@@ -1,6 +1,6 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, IAgentPendingSale, SalesTargetTotals, SaleStatus } from "../types/sales.types";
@@ -8,6 +8,7 @@ import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
 import { IImage, IImageBase64 } from "../types/image.types";
+import { CommissionDetailPositions, CommissionRateDetail } from "../types/commission.types";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -897,6 +898,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
 
 export const addPendingSale = async (
     userId: number,
+    userRole: string,
     data: {
         reservationDate: Date,
         divisionID: number,
@@ -931,7 +933,13 @@ export const addPendingSale = async (
         images?: {
             receipt?: IImage,
             agreement?: IImage,
-        }
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
     }
 ): QueryResult<any> => {
 
@@ -941,7 +949,12 @@ export const addPendingSale = async (
 
     try {
 
-        
+        if(userRole == ''){
+            throw new Error('User role is required to add pending sale.')
+        }
+
+        const approvalStatus = userRole === 'SALES PERSON' ? 1 : userRole === 'UNIT MANAGER' ? 2 : 3;
+        const statusText = userRole === 'SALES PERSON' ? SalesStatusText.PENDING_UM : userRole === 'UNIT MANAGER' ? SalesStatusText.PENDING_SD : SalesStatusText.PENDING_BH;
 
         const result = await trx.insertInto('Tbl_AgentPendingSales')
             .values({
@@ -979,8 +992,8 @@ export const addPendingSale = async (
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
 
                 PendingSalesTranCode: transactionNumber,
-                ApprovalStatus: 1,
-                SalesStatus: 'PENDING APPROVAL - UNIT MANAGER'
+                ApprovalStatus: approvalStatus,
+                SalesStatus: statusText,
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
@@ -1013,6 +1026,115 @@ export const addPendingSale = async (
             agreementId = agreementResult.ImageID
         }
 
+        // commission details
+        let commissionDetails: CommissionRateDetail = {};
+        if(data.commissionRates && data.commissionRates.length > 0 && userRole !== 'SALES PERSON'){
+
+            // fetch agent ids
+            const agentIds = data.commissionRates
+                .filter(c => c.agentId && c.agentId > 0)
+                .map(c => c.agentId!) // non-null assertion since we filtered out undefined
+
+            const agentData = new Map<number, VwAgents>();
+            if(agentIds.length > 0){
+                const agentsResult = await trx.selectFrom('Vw_Agents')
+                    .selectAll()
+                    .where('AgentID', 'in', agentIds)
+                    .execute()
+                
+                agentsResult.forEach(agent => {
+                    agentData.set(agent.AgentID || 0, agent)
+                })
+            }
+
+            // broker
+            const broker = data.commissionRates.find(c => c.position === CommissionDetailPositions.BROKER);
+            if(broker){
+                commissionDetails.broker = {
+                    agentName: broker.agentName || '',
+                    agentId: broker.agentId || 0,
+                    commissionRate: broker.commissionRate || 0
+                }
+            }
+
+            // sales director
+            const salesDirector = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_DIRECTOR);
+            const sdAgent = salesDirector && salesDirector.agentId ? agentData.get(salesDirector.agentId) : null;
+            if(salesDirector){
+                commissionDetails.salesDirector = {
+                    agentName: sdAgent ? `${sdAgent.LastName?.trim()}, ${sdAgent.FirstName?.trim()} ${sdAgent.MiddleName ? sdAgent.MiddleName.trim() : ''}` : (salesDirector.agentName || ''),
+                    agentId: salesDirector.agentId || 0,
+                    commissionRate: salesDirector.commissionRate || 0
+                }
+            }
+
+            // unit manager
+            const unitManager = data.commissionRates.find(c => c.position === CommissionDetailPositions.UNIT_MANAGER);
+            const umAgent = unitManager && unitManager.agentId ? agentData.get(unitManager.agentId) : null;
+            if(unitManager){
+                commissionDetails.unitManager = {
+                    agentName: umAgent ? `${umAgent.LastName?.trim()}, ${umAgent.FirstName?.trim()} ${umAgent.MiddleName ? umAgent.MiddleName.trim() : ''}` : (unitManager.agentName || ''),
+                    agentId: unitManager.agentId || 0,
+                    commissionRate: unitManager.commissionRate || 0
+                }
+            }
+
+            // sales person
+            const salesPerson = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_PERSON);
+            const spAgent = salesPerson && salesPerson.agentId ? agentData.get(salesPerson.agentId) : null;
+            if(salesPerson){
+                commissionDetails.salesPerson = {
+                    agentName: spAgent ? `${spAgent.LastName?.trim()}, ${spAgent.FirstName?.trim()} ${spAgent.MiddleName ? spAgent.MiddleName.trim() : ''}` : (salesPerson.agentName || ''),
+                    agentId: salesPerson.agentId || 0,
+                    commissionRate: salesPerson.commissionRate || 0
+                }
+            }
+
+            // sales associate
+            const salesAssociate = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_ASSOCIATE);
+            const sAssocAgent = salesAssociate && salesAssociate.agentId ? agentData.get(salesAssociate.agentId) : null;
+            if(salesAssociate){
+                commissionDetails.salesAssociate = {
+                    agentName: sAssocAgent ? `${sAssocAgent.LastName?.trim()}, ${sAssocAgent.FirstName?.trim()} ${sAssocAgent.MiddleName ? sAssocAgent.MiddleName.trim() : ''}` : (salesAssociate.agentName || ''),
+                    agentId: salesAssociate.agentId || 0,
+                    commissionRate: salesAssociate.commissionRate || 0
+                }
+            }
+
+            // assistance fee
+            const assistanceFee = data.commissionRates.find(c => c.position === CommissionDetailPositions.ASSISTANCE_FEE);
+            const afAgent = assistanceFee && assistanceFee.agentId ? agentData.get(assistanceFee.agentId) : null;
+            if(assistanceFee){
+                commissionDetails.assistanceFee = {
+                    agentName: afAgent ? `${afAgent.LastName?.trim()}, ${afAgent.FirstName?.trim()} ${afAgent.MiddleName ? afAgent.MiddleName.trim() : ''}` : (assistanceFee.agentName || ''),
+                    agentId: assistanceFee.agentId || 0,
+                    commissionRate: assistanceFee.commissionRate || 0
+                }
+            }
+
+            // referral fee
+            const referralFee = data.commissionRates.find(c => c.position === CommissionDetailPositions.REFERRAL_FEE);
+            const rfAgent = referralFee && referralFee.agentId ? agentData.get(referralFee.agentId) : null;
+            if(referralFee){
+                commissionDetails.referralFee = {
+                    agentName: rfAgent ? `${rfAgent.LastName?.trim()}, ${rfAgent.FirstName?.trim()} ${rfAgent.MiddleName ? rfAgent.MiddleName.trim() : ''}` : (referralFee.agentName || ''),
+                    agentId: referralFee.agentId || 0,
+                    commissionRate: referralFee.commissionRate || 0
+                }
+            }
+
+            // others
+            const others = data.commissionRates.find(c => c.position === CommissionDetailPositions.OTHERS);
+            const oAgent = others && others.agentId ? agentData.get(others.agentId) : null;
+            if(others){
+                commissionDetails.others = {
+                    agentName: oAgent ? `${oAgent.LastName?.trim()}, ${oAgent.FirstName?.trim()} ${oAgent.MiddleName ? oAgent.MiddleName.trim() : ''}` : (others.agentName || ''),
+                    agentId: others.agentId || 0,
+                    commissionRate: others.commissionRate || 0
+                }
+            }
+        }
+
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
             .values([
                 // Broker
@@ -1020,9 +1142,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'BROKER',
                     PositionID: 76,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.broker ? (commissionDetails.broker.agentName || '') : '',
+                    AgentID: commissionDetails.broker ? (commissionDetails.broker.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.broker ? commissionDetails.broker.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1032,9 +1154,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'SALES DIRECTOR',
                     PositionID: 85,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.salesDirector ? (commissionDetails.salesDirector.agentName || '') : '',
+                    AgentID: commissionDetails.salesDirector ? (commissionDetails.salesDirector.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesDirector ? commissionDetails.salesDirector.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1044,9 +1166,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'UNIT MANAGER',
                     PositionID: 86,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.unitManager ? (commissionDetails.unitManager.agentName || '') : '',
+                    AgentID: commissionDetails.unitManager ? (commissionDetails.unitManager.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.unitManager ? commissionDetails.unitManager.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1056,9 +1178,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'SALES PERSON',
                     PositionID: 0,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.salesPerson ? (commissionDetails.salesPerson.agentName || '') : '',
+                    AgentID: commissionDetails.salesPerson ? (commissionDetails.salesPerson.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesPerson ? commissionDetails.salesPerson.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1068,9 +1190,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'SALES ASSOCIATE',
                     PositionID: 0,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.salesAssociate ? (commissionDetails.salesAssociate.agentName || '') : '',
+                    AgentID: commissionDetails.salesAssociate ? (commissionDetails.salesAssociate.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesAssociate ? commissionDetails.salesAssociate.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1080,9 +1202,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'ASSISTANCE FEE',
                     PositionID: 0,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.assistanceFee ? (commissionDetails.assistanceFee.agentName || '') : '',
+                    AgentID: commissionDetails.assistanceFee ? (commissionDetails.assistanceFee.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.assistanceFee ? commissionDetails.assistanceFee.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1092,9 +1214,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'REFERRAL FEE',
                     PositionID: 0,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.referralFee ? (commissionDetails.referralFee.agentName || '') : '',
+                    AgentID: commissionDetails.referralFee ? (commissionDetails.referralFee.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.referralFee ? commissionDetails.referralFee.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1104,9 +1226,9 @@ export const addPendingSale = async (
                     PendingSalesTranCode: result.PendingSalesTranCode,
                     PositionName: 'OTHERS',
                     PositionID: 0,
-                    AgentName: '',
-                    AgentID: 0,
-                    CommissionRate: 0,
+                    AgentName: commissionDetails.others ? (commissionDetails.others.agentName || '') : '',
+                    AgentID: commissionDetails.others ? (commissionDetails.others.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.others ? commissionDetails.others.commissionRate : 0,
                     WTaxRate: 0,
                     VATRate: 0,
                     Commission: 0
@@ -1229,28 +1351,6 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
                 .outputAll('inserted') // Note: 'inserted' might need to be 'updated' depending on your DB
                 .executeTakeFirstOrThrow();
         });
-
-        // for(const agent of data){
-
-        //     const currentAgent = agents.find(a => a.AgentID === agent.agentId);
-
-        //     if(!currentAgent){
-        //         logger('Agent not found.', {agentId: agent.agentId})
-        //         continue
-        //     }
-
-        //     const updateOperation = await trx.updateTable('Tbl_AgentPendingSalesDtl')
-        //                                     .set({
-        //                                         AgentID: agent.agentId,
-        //                                         AgentName: `${currentAgent.LastName}, ${currentAgent.FirstName} ${currentAgent.MiddleName ? currentAgent.MiddleName : ''}`,
-        //                                         CommissionRate: agent.commissionRate,
-        //                                     })
-        //                                     .where('AgentPendingSalesDtlID', '=', agent.pendingSalesDtlId)
-        //                                     .outputAll('inserted')
-        //                                     .executeTakeFirstOrThrow();
-
-        //     updatedArr.push(updateOperation);
-        // }
 
         const resolvedPromises = await Promise.all(updatePromises);
 
