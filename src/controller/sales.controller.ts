@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -92,6 +92,39 @@ export const getPendingSalesController = async (req: Request, res: Response) => 
     const { page, pageSize, month, year, agentId, developerId } = req.query
 
     const result = await getPendingSalesService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get pending sales', data: {}})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Pending sales', data: result.data})
+}
+
+export const getWebPendingSalesController = async (req: Request, res: Response) => {
+    logger('getPendingSalesController')
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { page, pageSize, month, year, developerId } = req.query
+
+    const result = await getWebPendingSalesService(session.userID, {
         month: month ? Number(month) : undefined,
         year: year ? Number(year) : undefined,
         developerId: developerId ? Number(developerId) : undefined

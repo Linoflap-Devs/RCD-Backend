@@ -369,6 +369,7 @@ export const getPendingSalesService = async (
         { 
             ...filters, 
             agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined,
+            approvalStatus: [1,2],
             isUnique: true
         }, 
         pagination
@@ -1134,5 +1135,85 @@ export const approvePendingSaleService = async (agentUserId: number, pendingSale
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const getWebPendingSalesService = async (
+    userId: number, 
+    filters: {
+        month?: number,
+        year?: number,
+        developerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<any> => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const role = userData.data.Role.toLowerCase().trim();
+
+    if(role != 'branch sales staff' && role != 'sales admin'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const result = await getPendingSales(
+        undefined, 
+        { 
+            ...filters,
+            approvalStatus: role == 'branch sales staff' ? [3] : [4],
+            salesBranch: userData.data.BranchID,
+            isUnique: true
+        }, 
+        pagination
+    )
+
+    if(!result.success){
+        logger(result.error?.message || '', {data: filters})
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Getting pending sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    const obj = result.data.results.map((item: AgentPendingSale) => {
+        return {
+            AgentPendingSalesID: item.AgentPendingSalesID,
+            PendingSalesTransCode: item.PendingSalesTranCode,
+            SellerName: item.SellerName || 'N/A',
+            FinancingScheme: item.FinancingScheme,
+            ReservationDate: item.ReservationDate,
+            ApprovalStatus: item.ApprovalStatus,
+            CreatedBy: item.CreatedBy
+        }
+    })
+
+    return {
+        success: true,
+        data: {}
     }
 }
