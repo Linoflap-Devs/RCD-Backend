@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -154,6 +154,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     }
 
+    const images = await getSaleImagesByTransactionDetail(salesTransDtlId);
+
     let branchName = undefined
     if(result.data.SalesBranchID){
         const fetchBranch = await getSalesBranch(result.data.SalesBranchID)
@@ -197,7 +199,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             downPaymentTerms: result.data.DPTerms,
             monthlyPayment: result.data.MonthlyDP,
             downpaymentStartDate: result.data.DPStartSchedule
-        }
+        },
+        images: images.data
     }
 
     return {

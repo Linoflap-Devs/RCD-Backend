@@ -1580,3 +1580,68 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
         }
     }
 }
+
+export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number): QueryResult<IImageBase64[]> => {
+    try {
+        const transaction = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTransDtlID', '=', salesTransDtlId)
+            .executeTakeFirst()
+
+        if(!transaction){
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 404,
+                    message: 'Sales transaction detail not found.'
+                }
+            }
+        }
+
+        const imageJunction = await db.selectFrom('Tbl_SalesTranImage')
+            .selectAll()
+            .where('SalesTransID', '=', transaction.SalesTranID)
+            .execute()
+        
+        if(!imageJunction || imageJunction.length === 0){
+            return {
+                success: true,
+                data: []
+            }
+        }
+
+        const imageIds = imageJunction.map(imgJunc => imgJunc.ImageID)
+
+        const images = await db.selectFrom('Tbl_Image')
+            .selectAll()
+            .where('ImageID', 'in', imageIds)
+            .execute()
+
+        const obj: IImageBase64[] = images.map(img => ({
+            ImageID: img.ImageID,
+            FileName: img.Filename,
+            ContentType: img.ContentType,
+            FileExt: img.FileExtension,
+            FileSize: img.FileSize,
+            FileContent: img.FileContent.toString('base64'),
+        }))
+        
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
