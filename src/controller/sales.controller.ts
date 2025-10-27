@@ -295,7 +295,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
             receipt: images?.receipt ? images.receipt[0] : undefined,
             agreement: images?.agreement ? images.agreement[0] : undefined
         },
-        commissionRates: JSON.parse(commissionRates),
+        commissionRates: commissionRates ? JSON.parse(commissionRates) : [],
     })
 
     if(!result.success){
