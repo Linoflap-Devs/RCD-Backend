@@ -1,4 +1,4 @@
-import { getAgentEducation, getAgentImages, getAgentRegistrations, getAgents, getAgentWithRegistration, getAgentWorkExp } from "../repository/agents.repository";
+import { getAgent, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { IAgentRegistration } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
@@ -40,26 +40,31 @@ export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistra
 
 export const lookupAgentDetailsService = async (agentId: number): QueryResult<any> => {
 
-    const agentResult = await getAgentWithRegistration(agentId);
+    const [
+        agentWithUserResult,
+        registrationResult,
+        agentEducation,
+        agentWork
+    ] = await Promise.all([
+        getAgentWithUser(agentId),
+        getAgentRegistration(agentId),
+        getAgentEducation(agentId),
+        getAgentWorkExp(agentId)
+    ])
 
-    if(!agentResult.success){
+
+    if(!agentWithUserResult.success){
         return {
             success: false,
             data: null,
-            error: agentResult.error
+            error: agentWithUserResult.error
         }
     }
 
     const imageIds = []
-    imageIds.push(agentResult.data.ImageID)
-    imageIds.push(agentResult.data.SelfieImageID)
-    imageIds.push(agentResult.data.GovImageID)
-
-    // get education and work
-
-    const agentEducation = await getAgentEducation(agentId)
-
-    const agentWork = await getAgentWorkExp(agentId)
+    imageIds.push(agentWithUserResult.data.user.ImageID || null)
+    imageIds.push(registrationResult.data.SelfieImageID || null)
+    imageIds.push(registrationResult.data.GovImageID || null)
 
     // images
 
@@ -70,14 +75,15 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
                 FileContent: img.FileContent.toString('base64')
             }
     })
-
-    console.log(agentResult.data)
     
     const obj = {
-        ...agentResult.data,
-        Education: agentEducation.data,
-        Experience: agentWork.data,
-        Images: formattedImages
+        agent: agentWithUserResult.data.agent,
+        registrationResult: {
+            ...registrationResult.data,
+            experience: agentWork.data,
+            education: agentEducation.data,
+        },
+        images: formattedImages
     }
 
     return {

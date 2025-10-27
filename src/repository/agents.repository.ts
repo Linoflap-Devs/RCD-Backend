@@ -6,6 +6,7 @@ import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../type
 import { sql } from "kysely";
 import { FnAgentSales, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentUser } from "../types/auth.types";
+import { TblAgentUser, VwAgents } from "../db/db-types";
 
 export const getAgents = async (filters?: { showInactive?: boolean, division?: number }): QueryResult<IAgent[]> => {
     try {
@@ -490,6 +491,136 @@ export const getAgentWithRegistration = async (agentId: number): QueryResult<IAg
         return {
             success: false,
             data: {} as (IAgent & ITblAgentRegistration & ITblAgentUser),
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: VwAgents, user: ITblAgentUser }> => {
+    try {
+        const result = await db.selectFrom('Vw_Agents')
+            .innerJoin('Tbl_AgentUser', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .selectAll('Vw_Agents')
+            .select([
+                'Tbl_AgentUser.AgentUserID',
+                'Tbl_AgentUser.AgentID',
+                'Tbl_AgentUser.AgentRegistrationID',
+                'Tbl_AgentUser.ImageID',
+                'Tbl_AgentUser.Email',
+                'Tbl_AgentUser.IsVerified'
+            ])
+            .where('Vw_Agents.AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                agent: result, // contains both tables due to selectAll
+                user: result   // typescript will need proper typing here
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: { agent: {} as VwAgents, user: {} as ITblAgentUser },
+            error: {
+                code: error.message.includes('no result') ? 404 : 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+
+export const getAgent = async (agentId: number): QueryResult<VwAgents> => {
+    try {
+        const result = await db.selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgents,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentRegistration = async (agentId: number): QueryResult<ITblAgentRegistration> => {
+    try {
+        const registration = await db.selectFrom('Tbl_AgentRegistration')
+            .innerJoin('Tbl_AgentUser', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
+            .selectAll('Tbl_AgentRegistration')
+            .where('Tbl_AgentUser.AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        if(!registration){
+            return {
+                success: false,
+                data: {} as ITblAgentRegistration,
+                error: {
+                    message: 'No agent registration found.',
+                    code: 404
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: registration
+        }
+        
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentUserByAgentId = async (agentId: number): QueryResult<ITblAgentUser> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentUser')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
             error: {
                 code: 500,
                 message: error.message
