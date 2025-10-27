@@ -1542,7 +1542,21 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .executeTakeFirstOrThrow()
+
+        const saleImages = await trx.selectFrom('Tbl_SalesTranImage')
+            .selectAll()
+            .where('PendingSalesTransID', '=', pendingSalesId)
+            .execute()
         
+        if(saleImages && saleImages.length > 0){
+            const linkSaleImage = await trx.updateTable('Tbl_SalesTranImage')
+                .set({
+                    TranCode: newSalesTrans.SalesTranCode,
+                    SalesTransID: newSalesTrans.SalesTranID
+                })
+                .where('PendingSalesTransID', '=', pendingSalesId)
+                .executeTakeFirstOrThrow()
+        }
 
         await trx.commit().execute();
 
