@@ -5,8 +5,8 @@ import { validate } from '../middleware/zod';
 
 const router = express.Router();
 
-router.route('/:agentId').get([validateEmployeeSession], getAgentDetailsController);
-router.route('/').get([validateEmployeeSession], getAgentsController);
 router.route('/registrations').get([validateEmployeeSession], getAgentRegistrationsController);
+router.route('/').get([validateEmployeeSession], getAgentsController);
+router.route('/:agentId').get([validateEmployeeSession], getAgentDetailsController);
 
 export default router;
