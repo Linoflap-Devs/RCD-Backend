@@ -1645,3 +1645,148 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
         }
     }
 }
+
+export const editSaleImages = async (pendingSaleId?: number, transSaleId?: number, receipt?: IImage, agreement?: IImage) => {
+    const trx = await db.startTransaction().execute();
+    try {
+
+        if(!pendingSaleId && !transSaleId){
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 400,
+                    message: 'Pending sale id or transaction sale id is required.'
+                }
+            }
+        }
+
+        if(!receipt && !agreement){
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 400,
+                    message: 'Receipt or agreement is required.'
+                }
+            }
+        }
+
+        let existingReceiptId: number = -1
+        let existingAgreementId: number = -1
+        let newReceiptId: number = -1
+        let newAgreementId: number = -1
+
+        const existingImages = await db.selectFrom('Tbl_SalesTranImage')
+            .selectAll()
+        
+        if(pendingSaleId){
+            existingImages
+                .where('PendingSalesTransID', '=', pendingSaleId)
+        }
+
+        if(transSaleId){
+            existingImages
+                .where('SalesTransID', '=', transSaleId)
+        }
+
+        const images = await existingImages.execute()
+
+        if(images && images.length > 0){
+            existingReceiptId = images.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1
+            existingAgreementId = images.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1
+        }
+
+        
+
+        // upload images
+        if(receipt){
+            const newReceipt = await trx.insertInto('Tbl_Image')
+                .values({
+                    Filename: receipt?.FileName,
+                    ContentType: receipt?.ContentType,
+                    FileExtension: receipt?.FileExt,
+                    FileSize: receipt?.FileSize,
+                    FileContent: receipt?.FileContent,
+                    CreatedAt: new Date()
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            
+            newReceiptId = newReceipt.ImageID
+        }
+
+        if(agreement){
+            const newAgreement = await trx.insertInto('Tbl_Image')
+                .values({
+                    Filename: agreement?.FileName,
+                    ContentType: agreement?.ContentType,
+                    FileExtension: agreement?.FileExt,
+                    FileSize: agreement?.FileSize,
+                    FileContent: agreement?.FileContent,
+                    CreatedAt: new Date()
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            
+            newAgreementId = newAgreement.ImageID
+        }
+
+        // create new junction rows
+        if(newReceiptId > 0){
+            await trx.insertInto('Tbl_SalesTranImage')
+                .values({
+                    PendingSalesTransID: pendingSaleId ? pendingSaleId : 0,
+                    SalesTransID: transSaleId ? transSaleId : null,
+                    ImageID: newReceiptId,
+                    ImageType: 'RECEIPT'
+                })
+                .execute()
+        }
+
+        if(newAgreementId > 0){
+            await trx.insertInto('Tbl_SalesTranImage')
+                .values({
+                    PendingSalesTransID: pendingSaleId ? pendingSaleId : 0,
+                    SalesTransID: transSaleId ? transSaleId : null,
+                    ImageID: newAgreementId,
+                    ImageType: 'AGREEMENT'
+                })
+                .execute()
+        }
+
+        // delete old images
+        if(existingReceiptId > 0 && existingReceiptId !== newReceiptId){
+            await trx.deleteFrom('Tbl_Image')
+                .where('ImageID', '=', existingReceiptId)
+                .execute()
+        }
+
+        if(existingAgreementId > 0 && existingAgreementId !== newAgreementId){
+            await trx.deleteFrom('Tbl_Image')
+                .where('ImageID', '=', existingAgreementId)
+                .execute()
+        }
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: [],
+            error: null
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute()
+        const error = err as Error
+        return {
+            success: false,
+            data: [],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
