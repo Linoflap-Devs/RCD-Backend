@@ -1,6 +1,6 @@
 import { VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -1304,12 +1304,36 @@ export const editPendingSaleImagesService = async (
         }
     }
 
-    if(pendingSale.data.SalesBranchID != agentUserId){
+    const agentUser = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentUser.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    if(pendingSale.data.CreatedBy != agentUser.data.AgentID){
         return {
             success: false,
             data: {},
             error: {
                 message: 'This sale does not belong to you.',
+                code: 403
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus > 1){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been approved.',
                 code: 403
             }
         }
@@ -1331,7 +1355,7 @@ export const editPendingSaleImagesService = async (
         FileContent: images.agreement.buffer
     } : undefined
 
-    const result = await editSaleImages(pendingSalesId, undefined, receiptImg, agreementImg) 
+    const result = await editSaleImages(pendingSalesId, undefined, receiptImg, agreementImg, pendingSale.data.PendingSalesTranCode) 
 
     if(!result.success){
         return {

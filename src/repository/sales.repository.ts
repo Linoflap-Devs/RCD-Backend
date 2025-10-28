@@ -1658,7 +1658,7 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
     }
 }
 
-export const editSaleImages = async (pendingSaleId?: number, transSaleId?: number, receipt?: IImage, agreement?: IImage): QueryResult<{newReceiptId: number | null, newAgreementId: number | null}> => {
+export const editSaleImages = async (pendingSaleId?: number, transSaleId?: number, receipt?: IImage, agreement?: IImage, pendingTranCode?: string): QueryResult<{newReceiptId: number | null, newAgreementId: number | null}> => {
     const trx = await db.startTransaction().execute();
     try {
 
@@ -1689,16 +1689,18 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         let newReceiptId: number = -1
         let newAgreementId: number = -1
 
-        const existingImages = await db.selectFrom('Tbl_SalesTranImage')
+        let existingImages = await db.selectFrom('Tbl_SalesTranImage')
             .selectAll()
+
+        console.log('pendingSaleId: ', pendingSaleId, 'transSaleId: ', transSaleId)
         
-        if(pendingSaleId){
-            existingImages
+        if(pendingSaleId !== undefined && pendingSaleId !== null){
+            existingImages = existingImages
                 .where('PendingSalesTransID', '=', pendingSaleId)
         }
 
-        if(transSaleId){
-            existingImages
+        if(transSaleId !== undefined && transSaleId !== null){
+            existingImages = existingImages
                 .where('SalesTransID', '=', transSaleId)
         }
 
@@ -1713,7 +1715,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         if(receipt){
             const newReceipt = await trx.insertInto('Tbl_Image')
                 .values({
-                    Filename: receipt?.FileName,
+                    Filename: pendingTranCode ? `${pendingTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase() : receipt?.FileName,
                     ContentType: receipt?.ContentType,
                     FileExtension: receipt?.FileExt,
                     FileSize: receipt?.FileSize,
@@ -1729,7 +1731,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         if(agreement){
             const newAgreement = await trx.insertInto('Tbl_Image')
                 .values({
-                    Filename: agreement?.FileName,
+                    Filename: pendingTranCode ? `${pendingTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase() : agreement.FileName,
                     ContentType: agreement?.ContentType,
                     FileExtension: agreement?.FileExt,
                     FileSize: agreement?.FileSize,
@@ -1765,14 +1767,28 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
                 .execute()
         }
 
+        console.log('existingReceiptId: ', existingReceiptId, 'existingAgreementId: ', existingAgreementId, 'newReceiptId: ', newReceiptId, 'newAgreementId: ', newAgreementId)
+
         // delete old images
         if(existingReceiptId > 0 && existingReceiptId !== newReceiptId){
+            console.log('existingReceiptId: ', existingReceiptId, 'newReceiptId: ', newReceiptId, "deleting receipt")
+            
+            await trx.deleteFrom('Tbl_SalesTranImage')
+                .where('ImageID', '=', existingReceiptId)
+                .execute()
+
             await trx.deleteFrom('Tbl_Image')
                 .where('ImageID', '=', existingReceiptId)
                 .execute()
         }
 
         if(existingAgreementId > 0 && existingAgreementId !== newAgreementId){
+            console.log('existingAgreementId: ', existingAgreementId, 'newAgreementId: ', newAgreementId, "deleting agreement")
+
+            await trx.deleteFrom('Tbl_SalesTranImage')
+                .where('ImageID', '=', existingAgreementId)
+                .execute()
+
             await trx.deleteFrom('Tbl_Image')
                 .where('ImageID', '=', existingAgreementId)
                 .execute()
