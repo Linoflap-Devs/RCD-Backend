@@ -1,6 +1,6 @@
 import { getAgent, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { ITblAgentRegistration } from "../types/agent.types";
-import { IAgentRegistration } from "../types/auth.types";
+import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
 import { IAgent } from "../types/users.types";
@@ -22,20 +22,30 @@ export const getAgentsService = async (filters?: {}): QueryResult<IAgent[]> => {
     }
 }
 
-export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistrationListItem[]> => {
     const result = await getAgentRegistrations()
 
     if(!result.success){
         return {
             success: false,
-            data: [] as IAgentRegistration[],
+            data: [] as IAgentRegistrationListItem[],
             error: result.error
         }
     }
 
+    const obj: IAgentRegistrationListItem[] = result.data.map((item: IAgentRegistration) => ({
+        AgentRegistrationID: item.AgentRegistrationID,
+        FirstName: item.FirstName,
+        MiddleName: item.MiddleName || '',
+        LastName: item.LastName,
+        Email: item.Email,
+        Gender: item.Gender,
+        ContactNumber: item.ContactNumber
+    }))
+
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
@@ -93,20 +103,31 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     }
 }
 
-export const lookupAgentRegistrationService = async (userId: number, agentRegistrationId: number): QueryResult<ITblAgentRegistration> => {
+export const lookupAgentRegistrationService = async (userId: number, agentRegistrationId: number): QueryResult<IAgentRegistration> => {
 
-    const result = await getAgentRegistration({agentRegistrationId: agentRegistrationId})
+    if(!agentRegistrationId){
+        return {
+            success: false,
+            data: {} as IAgentRegistration,
+            error: {
+                code: 400,
+                message: 'Agent registration id is required.'
+            }
+        }
+    }
+
+    const result = await getAgentRegistrations({agentRegistrationId: agentRegistrationId})
 
     if(!result.success){
         return {
             success: false,
-            data: {} as ITblAgentRegistration,
+            data: {} as IAgentRegistration,
             error: result.error
         }
     }
 
     return {
         success: true,
-        data: result.data
+        data: result.data[0]
     }
 }

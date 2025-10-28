@@ -89,6 +89,16 @@ export interface IAgentRegister {
     }[]
 }
 
+export interface IAgentRegistrationListItem {
+    AgentRegistrationID: number,
+    FirstName: string,
+    MiddleName?: string | null,
+    LastName: string,
+    Email: string,
+    Gender: string,
+    ContactNumber: string,
+}
+
 export interface IAgentRegistration {
     AgentRegistrationID: number,
     IsVerified: number,

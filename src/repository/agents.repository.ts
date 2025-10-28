@@ -174,10 +174,10 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
 //     }
 // }
 
-export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number}): QueryResult<IAgentRegistration[]> => {
     try {
         // 1. Get base agent registration data with user info and all three images
-        const baseAgentData = await db.selectFrom('Tbl_AgentRegistration')
+        let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
             .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
             // Join for profile image
             .leftJoin('Tbl_Image as ProfileImage', 'Tbl_AgentUser.ImageID', 'ProfileImage.ImageID')
@@ -228,6 +228,13 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
                 'SelfieImage.FileSize as SelfieFileSize',
                 'SelfieImage.FileContent as SelfieFileContent'
             ])
+
+        console.log(filters)
+        if(filters && filters.agentRegistrationId){
+             baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+        }
+
+        const baseAgentData = await baseAgentDataQuery
             .where('Tbl_AgentRegistration.IsVerified', '=', 0)
             .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
             .execute();

@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { get } from "http"
-import { getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService } from "../service/agents.service"
+import { getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService, lookupAgentRegistrationService } from "../service/agents.service"
 
 export const getAgentsController = async (req: Request, res: Response) => {
 
@@ -46,9 +46,21 @@ export const getAgentDetailsController = async (req: Request, res: Response) => 
 }
 
 export const getAgentRegistrationController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
     const { agentRegistrationId } = req.params
 
-    const result = await lookupAgentDetailsService(Number(agentRegistrationId));
+    const result = await lookupAgentRegistrationService(Number(session.userID), Number(agentRegistrationId));
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agent details.', data: {}})
