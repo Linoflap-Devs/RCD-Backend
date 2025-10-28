@@ -1285,8 +1285,8 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 export const editPendingSaleImagesService = async (
     pendingSalesId: number, 
     images: {
-        receipt: Express.Multer.File,
-        agreement: Express.Multer.File
+        receipt?: Express.Multer.File,
+        agreement?: Express.Multer.File
     },
     agentUserId: number,
 ): QueryResult<any> => {
