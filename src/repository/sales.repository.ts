@@ -854,14 +854,20 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 .execute()
             
             if(images && images.length > 0){
-                imgs = images.map(img => ({
-                    ImageID: img.ImageID,
-                    FileName: img.Filename,
-                    ContentType: img.ContentType,
-                    FileExt: img.FileExtension,
-                    FileSize: img.FileSize,
-                    FileContent: img.FileContent.toString('base64'),
-                }))
+                imgs = images.map(img => {
+
+                    const fileName = img.Filename.toLowerCase()
+
+                    return {
+                        ImageID: img.ImageID,
+                        FileName: img.Filename,
+                        ContentType: img.ContentType,
+                        FileExt: img.FileExtension,
+                        FileSize: img.FileSize,
+                        FileContent: img.FileContent.toString('base64'),
+                        ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
+                    }
+                })
             }
         }
         
@@ -1618,14 +1624,20 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
             .where('ImageID', 'in', imageIds)
             .execute()
 
-        const obj: IImageBase64[] = images.map(img => ({
-            ImageID: img.ImageID,
-            FileName: img.Filename,
-            ContentType: img.ContentType,
-            FileExt: img.FileExtension,
-            FileSize: img.FileSize,
-            FileContent: img.FileContent.toString('base64'),
-        }))
+        const obj: IImageBase64[] = images.map(img => {
+
+            const fileName = img.Filename.toLowerCase()
+            return {
+                ImageID: img.ImageID,
+                FileName: img.Filename,
+                ContentType: img.ContentType,
+                FileExt: img.FileExtension,
+                FileSize: img.FileSize,
+                FileContent: img.FileContent.toString('base64'),
+                ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
+
+            }    
+        })
         
         return {
             success: true,
@@ -1646,14 +1658,14 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
     }
 }
 
-export const editSaleImages = async (pendingSaleId?: number, transSaleId?: number, receipt?: IImage, agreement?: IImage) => {
+export const editSaleImages = async (pendingSaleId?: number, transSaleId?: number, receipt?: IImage, agreement?: IImage): QueryResult<{newReceiptId: number | null, newAgreementId: number | null}> => {
     const trx = await db.startTransaction().execute();
     try {
 
         if(!pendingSaleId && !transSaleId){
             return {
                 success: false,
-                data: [],
+                data: {} as {newReceiptId: number, newAgreementId: number},
                 error: {
                     code: 400,
                     message: 'Pending sale id or transaction sale id is required.'
@@ -1664,7 +1676,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         if(!receipt && !agreement){
             return {
                 success: false,
-                data: [],
+                data: {} as {newReceiptId: number, newAgreementId: number},
                 error: {
                     code: 400,
                     message: 'Receipt or agreement is required.'
@@ -1696,8 +1708,6 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
             existingReceiptId = images.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1
             existingAgreementId = images.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1
         }
-
-        
 
         // upload images
         if(receipt){
@@ -1772,8 +1782,10 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
 
         return {
             success: true,
-            data: [],
-            error: null
+            data: {
+                newReceiptId: newReceiptId > 0 ? newReceiptId : null, 
+                newAgreementId: newAgreementId > 0 ? newAgreementId : null
+            },
         }
     }
 
@@ -1782,7 +1794,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         const error = err as Error
         return {
             success: false,
-            data: [],
+            data: {} as {newReceiptId: number, newAgreementId: number},
             error: {
                 code: 500,
                 message: error.message

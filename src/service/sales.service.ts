@@ -1,5 +1,5 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -1272,6 +1272,74 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
             error: {
                 message: 'This sale does not belong to your branch.',
                 code: 403
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editPendingSaleImagesService = async (
+    pendingSalesId: number, 
+    images: {
+        receipt: Express.Multer.File,
+        agreement: Express.Multer.File
+    },
+    agentUserId: number,
+): QueryResult<any> => {
+    
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.SalesBranchID != agentUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to you.',
+                code: 403
+            }
+        }
+    }
+
+    let receiptImg: IImage | undefined = images.receipt ?{
+        FileName: images.receipt.originalname,
+        ContentType: images.receipt.mimetype,
+        FileExt: path.extname(images.receipt.originalname),
+        FileSize: images.receipt.size,
+        FileContent: images.receipt.buffer
+    } : undefined
+
+    let agreementImg: IImage | undefined = images.agreement ?{
+        FileName: images.agreement.originalname,
+        ContentType: images.agreement.mimetype,
+        FileExt: path.extname(images.agreement.originalname),
+        FileSize: images.agreement.size,
+        FileContent: images.agreement.buffer
+    } : undefined
+
+    const result = await editSaleImages(pendingSalesId, undefined, receiptImg, agreementImg) 
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Editing sale images failed.',
+                code: 400
             }
         }
     }
