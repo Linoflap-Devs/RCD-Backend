@@ -1,10 +1,12 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
-import { IAgentRegister, IAgentRegistration } from "../types/auth.types";
-import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
+import { IAgentRegister, IAgentRegistration, ITblAgentUser } from "../types/auth.types";
+import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { sql } from "kysely";
-import { FnAgentSales } from "../types/agent.types";
+import { FnAgentSales, ITblAgentRegistration } from "../types/agent.types";
+import { IAgentUser } from "../types/auth.types";
+import { TblAgentUser, VwAgents } from "../db/db-types";
 
 export const getAgents = async (filters?: { showInactive?: boolean, division?: number }): QueryResult<IAgent[]> => {
     try {
@@ -172,10 +174,10 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
 //     }
 // }
 
-export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number}): QueryResult<IAgentRegistration[]> => {
     try {
         // 1. Get base agent registration data with user info and all three images
-        const baseAgentData = await db.selectFrom('Tbl_AgentRegistration')
+        let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
             .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
             // Join for profile image
             .leftJoin('Tbl_Image as ProfileImage', 'Tbl_AgentUser.ImageID', 'ProfileImage.ImageID')
@@ -226,6 +228,13 @@ export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]>
                 'SelfieImage.FileSize as SelfieFileSize',
                 'SelfieImage.FileContent as SelfieFileContent'
             ])
+
+        console.log(filters)
+        if(filters && filters.agentRegistrationId){
+             baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+        }
+
+        const baseAgentData = await baseAgentDataQuery
             .where('Tbl_AgentRegistration.IsVerified', '=', 0)
             .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
             .execute();
@@ -449,6 +458,261 @@ export const getSalesPersonSalesTotalsFn = async (sorts?: SortOption[], take?: n
         return {
             success: false,
             data: [] as FnAgentSales[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWithRegistration = async (agentId: number): QueryResult<IAgent & ITblAgentRegistration & ITblAgentUser> => {
+    try {
+        const agentResult = await db.selectFrom('Tbl_Agents')
+            .innerJoin('Tbl_AgentUser'  , 'Tbl_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .innerJoin('Tbl_AgentRegistration', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            .selectAll()
+            .where('Tbl_Agents.AgentID', '=', agentId)
+            .executeTakeFirstOrThrow();
+
+        if (!agentResult) {
+            return {
+                success: false,
+                data: {} as (IAgent & ITblAgentRegistration & ITblAgentUser),
+                error: {
+                    code: 404,
+                    message: 'Agent not found'
+                }
+            }
+        }
+        
+        return {
+            success: true,
+            data: agentResult as (IAgent & ITblAgentRegistration & ITblAgentUser)
+        }
+            
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as (IAgent & ITblAgentRegistration & ITblAgentUser),
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: VwAgents, user: ITblAgentUser }> => {
+    try {
+        const result = await db.selectFrom('Vw_Agents')
+            .innerJoin('Tbl_AgentUser', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .selectAll('Vw_Agents')
+            .select([
+                'Tbl_AgentUser.AgentUserID',
+                'Tbl_AgentUser.AgentID',
+                'Tbl_AgentUser.AgentRegistrationID',
+                'Tbl_AgentUser.ImageID',
+                'Tbl_AgentUser.Email',
+                'Tbl_AgentUser.IsVerified'
+            ])
+            .where('Vw_Agents.AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                agent: result, // contains both tables due to selectAll
+                user: result   // typescript will need proper typing here
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: { agent: {} as VwAgents, user: {} as ITblAgentUser },
+            error: {
+                code: error.message.includes('no result') ? 404 : 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+
+export const getAgent = async (agentId: number): QueryResult<VwAgents> => {
+    try {
+        const result = await db.selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgents,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentRegistration = async (filters?: {agentId?: number, agentRegistrationId?: number}): QueryResult<ITblAgentRegistration> => {
+    try {
+        let registrationQuery = await db.selectFrom('Tbl_AgentRegistration')
+            .innerJoin('Tbl_AgentUser', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
+            .selectAll('Tbl_AgentRegistration')
+
+        if(filters?.agentId){
+            registrationQuery = registrationQuery.where('Tbl_AgentUser.AgentID', '=', filters.agentId)
+        }
+
+        if(filters?.agentRegistrationId){
+            registrationQuery = registrationQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId)
+        }
+
+        const registration = await registrationQuery.executeTakeFirstOrThrow()
+
+        if(!registration){
+            return {
+                success: false,
+                data: {} as ITblAgentRegistration,
+                error: {
+                    message: 'No agent registration found.',
+                    code: 404
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: registration
+        }
+        
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentUserByAgentId = async (agentId: number): QueryResult<ITblAgentUser> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentUser')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentWorkExp = async (agentId: number): QueryResult<IAgentWorkExp[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentWorkExp')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentWorkExp[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentEducation = async (agentId: number): QueryResult<IAgentEducation[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_AgentEducation')
+            .selectAll()
+            .where('AgentID', '=', agentId)
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentImages = async (ids: number[]): QueryResult<TblImageWithId[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Image')
+            .selectAll()
+            .where('Tbl_Image.ImageID', 'in', ids)
+            .execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as TblImageWithId[],
             error: {
                 code: 500,
                 message: error.message

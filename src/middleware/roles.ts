@@ -4,6 +4,11 @@ const roleMap = new Map<string, string>([
     ["SALES PERSON", "SP"],
     ["UNIT MANAGER", "UM"],
     ["SALES DIRECTOR", "SD"],
+
+    ["BRANCH SALES STAFF", "BH"],
+    ["SALES ADMIN", "SA"],
+    ["ACCOUNTING STAFF", "AS"],
+    ["MANAGEMENT LEVEL", "ML"]
 ])
 
 export const validateRole = (allowedRoles: string[]) => {

@@ -7,7 +7,7 @@ import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
-import { IAgentRegistration } from "../types/agent.types";
+import { ITblAgentRegistration } from "../types/agent.types";
 
 // Agent Sessions
 
@@ -315,6 +315,29 @@ export const deleteEmployeeSession = async (sessionId: number): QueryResult<null
     }
 }
 
+export const deleteEmployeeAllSessions = async (userId: number): QueryResult<null> => {
+    try {
+        const result = await db.deleteFrom('Tbl_UserWebSession').where('UserID', '=', userId).execute();
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
     try {
 
@@ -494,7 +517,7 @@ export const registerAgentTransaction = async(
     }
 }
 
-export const findAgentRegistrationById = async(agentRegistrationId: number): QueryResult<IAgentRegistration> => {
+export const findAgentRegistrationById = async(agentRegistrationId: number): QueryResult<ITblAgentRegistration> => {
     try {
         const result = await db.selectFrom('Tbl_AgentRegistration')
             .where('AgentRegistrationID', '=', agentRegistrationId)
@@ -512,7 +535,7 @@ export const findAgentRegistrationById = async(agentRegistrationId: number): Que
         const error = err as Error;
         return {
             success: false,
-            data: {} as IAgentRegistration,
+            data: {} as ITblAgentRegistration,
             error: {
                 code: 500,
                 message: error.message
@@ -1175,6 +1198,33 @@ export const changePassword = async (userId: number, password: string): QueryRes
         return {
             success: false,
             data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const changeEmployeePassword = async (userId: number, password: string): QueryResult<ITblUsersWeb> => {
+    try {
+        const result = await db.updateTable('Tbl_UsersWeb')
+            .set({ Password: password })
+            .where('UserWebID', '=', userId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
             error: {
                 code: 500,
                 message: error.message

@@ -1,3 +1,5 @@
+import { CommissionDetailPositions } from "./commission.types";
+
 export interface AgentPendingSalesDetail {
     AgentID: number;
     AgentName: string | null;
@@ -9,6 +11,47 @@ export interface AgentPendingSalesDetail {
     PositionName: string;
     VATRate: number;
     WTaxRate: number;
+}
+
+export interface IAgentPendingSale {
+    AgentPendingSalesID: number;
+    ApprovalStatus: number;
+    ApprovedSalesTranID: number | null;
+    Block: string;
+    BuyersAddress: string | null;
+    BuyersContactNumber: string | null;
+    BuyersName: string | null;
+    BuyersOccupation: string | null;
+    CommStatus: string | null;
+    CreatedBy: number;
+    DateFiled: Date | null;
+    DevCommType: string;
+    DeveloperID: number | null;
+    DivisionID: number | null;
+    DownPayment: number;
+    DPStartSchedule: Date | null;
+    DPTerms: string;
+    FinancingScheme: string;
+    FloorArea: number;
+    LastUpdate: Date;
+    LastUpdateby: number;
+    LastUpdateByWeb: number | null;
+    Lot: string;
+    LotArea: number;
+    MiscFee: number;
+    MonthlyDP: number;
+    NetTotalTCP: number;
+    PendingSalesTranCode: string;
+    Phase: string;
+    ProjectID: number | null;
+    ProjectLocationID: number | null;
+    Remarks: string | null;
+    ReservationDate: Date;
+    SalesBranchID: number | null;
+    SalesSectorID: number;
+    SalesStatus: string;
+    SellerName: string;
+    
 }
 
 export interface AgentPendingSale {
@@ -124,6 +167,14 @@ export interface EditPendingSaleDetail {
     commissionRate: number,
 }
 
+export interface AddPendingSaleDetail {
+    position: CommissionDetailPositions
+    agentId?: number,
+    agentName?: string,
+    commissionRate: number,
+}
+
+
 export interface FnDivisionSales {
     Division: string,	
     CurrentMonth: number,	
@@ -155,4 +206,30 @@ export interface SalesTargetTotals {
     TotalTargetMonth: number
     TotalCurrentMonth: number
     TotalReachPercent: number
+}
+
+export enum SaleStatus {
+    REJECTED = 0,
+    NEWLY_SUBMITTED = 1,
+    UNIT_MANAGER_APPROVED = 2,
+    SALES_DIRECTOR_APPROVED = 3,
+    BRANCH_HEAD_APPROVED = 4,
+    SALES_ADMIN_APPROVED = 5
+}
+
+export enum ApproverRole {
+    UNIT_MANAGER = 1,
+    SALES_DIRECTOR = 2,
+    BRANCH_HEAD = 3,
+    SALES_ADMIN = 4
+}
+
+export enum SalesStatusText {
+    REJECTED = 'REJECTED',
+    NEW = 'NEW',
+    PENDING_UM = 'PENDING APPROVAL - UNIT MANAGER',
+    PENDING_SD = 'PENDING APPROVAL - SALES DIRECTOR',
+    PENDING_BH = 'PENDING APPROVAL - BRANCH HEAD',
+    PENDING_SA = 'PENDING APPROVAL - SALES ADMIN',
+    APPROVED = 'APPROVED'
 }

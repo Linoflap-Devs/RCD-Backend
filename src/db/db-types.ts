@@ -105,6 +105,7 @@ export interface TblAgentPendingSales {
   FloorArea: number;
   LastUpdate: Date;
   LastUpdateby: number;
+  LastUpdateByWeb: number | null;
   Lot: string;
   LotArea: number;
   MiscFee: number;
@@ -668,6 +669,15 @@ export interface TblSalesTarget {
   TargetName: string;
   TargetNameID: number;
   TargetYear: number;
+}
+
+export interface TblSalesTranImage {
+  ImageID: number;
+  ImageType: string;
+  PendingSalesTransID: number;
+  SalesTranImageID: Generated<number>;
+  SalesTransID: number | null;
+  TranCode: string | null;
 }
 
 export interface TblSalesTrans {
@@ -1544,6 +1554,7 @@ export interface DB {
   Tbl_SalesParameters: TblSalesParameters;
   Tbl_SalesSector: TblSalesSector;
   Tbl_SalesTarget: TblSalesTarget;
+  Tbl_SalesTranImage: TblSalesTranImage;
   Tbl_SalesTrans: TblSalesTrans;
   Tbl_SalesTransDtl: TblSalesTransDtl;
   tbl_SMSOut: TblSMSOut;

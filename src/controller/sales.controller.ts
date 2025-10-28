@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approvePendingSaleService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -108,11 +108,71 @@ export const getPendingSalesController = async (req: Request, res: Response) => 
     res.status(200).json({success: true, message: 'Pending sales', data: result.data})
 }
 
+export const getWebPendingSalesController = async (req: Request, res: Response) => {
+    logger('getPendingSalesController')
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { page, pageSize, month, year, developerId } = req.query
+
+    const result = await getWebPendingSalesService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get pending sales', data: {}})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Pending sales', data: result.data})
+}
+
 export const getPendingSalesDetailsController = async (req: Request, res: Response) => {
 
     const { pendingSalesId } = req.params
 
     const result = await getPendingSalesDetailService(Number(pendingSalesId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get pending sales detail', data: {}})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Pending sales detail', data: result.data})
+
+}
+
+export const getWebPendingSalesDetailsController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+
+    const result = await getWebPendingSalesDetailService(Number(session.userID), Number(pendingSalesId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get pending sales detail', data: {}})
@@ -161,6 +221,7 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
 }
 
 export const addPendingSaleController = async (req: Request, res: Response) => {
+
     const session = req.session
 
     if(!session){
@@ -172,6 +233,8 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
         return;
     }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
 
     const {
         reservationDate,
@@ -196,8 +259,29 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         dpTerms,
         monthlyPayment,
         dpStartDate,
-        sellerName
+        sellerName,
+        commissionRates
     } = req.body
+
+    let parsedCommissionRates = [];
+    if (commissionRates) {
+        try {
+            parsedCommissionRates = JSON.parse(commissionRates);
+        } catch (error) {
+            // Try parsing double-escaped JSON
+            try {
+                const unescaped = commissionRates.replace(/\\\"/g, '"');
+                parsedCommissionRates = JSON.parse(unescaped);
+            } catch (innerError) {
+                res.status(400).json({
+                    success: false, 
+                    message: 'Invalid commissionRates format', 
+                    data: {}
+                });
+                return;
+            }
+        }
+    }
 
     const result = await addPendingSalesService(session.userID, {
         reservationDate,
@@ -227,7 +311,12 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
             monthlyPayment,
             dpStartDate,
             sellerName
-        }
+        },
+        images: {
+            receipt: images?.receipt ? images.receipt[0] : undefined,
+            agreement: images?.agreement ? images.agreement[0] : undefined
+        },
+        commissionRates: parsedCommissionRates ? parsedCommissionRates : [],
     })
 
     if(!result.success){
@@ -262,6 +351,56 @@ export const editPendingSalesController = async (req: Request, res: Response) =>
     }
 
     return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
+}
+
+export const approvePendingSalesSDController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+
+    const result = await approveSalesDirectorService(session.userID, Number(pendingSalesId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to approve sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales approved', data: result.data})
+}
+
+export const approvePendingSalesBHController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    const { pendingSalesId } = req.params
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await approveBranchHeadService(session.userID, Number(pendingSalesId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to approve sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales approved', data: result.data})
 }
 
 export const rejectPendingSalesController = async (req: Request, res: Response) => {
@@ -304,7 +443,7 @@ export const approvePendingSalesController = async (req: Request, res: Response)
 
     const { pendingSalesId } = req.params
 
-    const result = await approvePendingSaleService(session.userID, Number(pendingSalesId))
+    const result = await approveSalesAdminService(session.userID, Number(pendingSalesId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to approve sales', data: {}})
@@ -312,4 +451,38 @@ export const approvePendingSalesController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Sales approved', data: result.data})
+}
+
+export const editSaleImagesController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    const { pendingSalesId } = req.params
+
+    const result = await editPendingSaleImagesService(
+        Number(pendingSalesId), 
+        {
+            receipt: images?.receipt ? images.receipt[0] : undefined, 
+            agreement: images?.agreement ? images.agreement[0] : undefined
+        }, 
+        session.userID
+    )
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit sales images', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales images edited', data: result.data})
 }

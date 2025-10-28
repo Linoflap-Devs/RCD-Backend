@@ -17,6 +17,15 @@ export interface IAgentUser {
     Position: string
 }
 
+export interface ITblAgentUser {
+    AgentID: number | null
+    AgentRegistrationID: number | null
+    AgentUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
 export interface IAgentUserSession {
     AgentSession: IAgentSession
     AgentUser: IAgentUser
@@ -78,6 +87,16 @@ export interface IAgentRegister {
         startDate: Date,
         endDate?: Date | null
     }[]
+}
+
+export interface IAgentRegistrationListItem {
+    AgentRegistrationID: number,
+    FirstName: string,
+    MiddleName?: string | null,
+    LastName: string,
+    Email: string,
+    Gender: string,
+    ContactNumber: string,
 }
 
 export interface IAgentRegistration {

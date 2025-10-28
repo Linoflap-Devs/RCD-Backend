@@ -1,9 +1,9 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
-import { approveRegistrationSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
+import { approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
 import { validateRole } from '../middleware/roles';
 
@@ -27,5 +27,7 @@ router.route('/send-otp').post(sendOTPController)
 router.route('/verify-otp').post(validate(verifyOTPSchema), verifyOTPController)
 router.route('/change-password').post(validate(changePasswordSchema), updateAgentPasswordController)
 router.route('/forgot-password').post(validate(changeForgottonPasswordSchema), updateForgottenPasswordController)
+
+router.route('/change-employee-password').post([validateEmployeeSession, validate(changeEmployeePasswordSchema)], changeEmployeePasswordController)
 
 export default router;

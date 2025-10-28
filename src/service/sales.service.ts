@@ -1,10 +1,13 @@
 import { VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approvePendingSaleTransaction, editPendingSalesDetails, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId } from "../repository/users.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AgentPendingSale, EditPendingSaleDetail } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { IAgent } from "../types/users.types";
+import { IImage } from "../types/image.types";
+import path from "path";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -151,6 +154,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     }
 
+    const images = await getSaleImagesByTransactionDetail(salesTransDtlId);
+
     let branchName = undefined
     if(result.data.SalesBranchID){
         const fetchBranch = await getSalesBranch(result.data.SalesBranchID)
@@ -194,7 +199,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             downPaymentTerms: result.data.DPTerms,
             monthlyPayment: result.data.MonthlyDP,
             downpaymentStartDate: result.data.DPStartSchedule
-        }
+        },
+        images: images.data
     }
 
     return {
@@ -234,7 +240,12 @@ export const addPendingSalesService = async (
             monthlyPayment: number
             dpStartDate: Date,
             sellerName: string,
-        }
+        },
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: AddPendingSaleDetail[]
     }
 ): QueryResult<any> => {
 
@@ -273,6 +284,19 @@ export const addPendingSalesService = async (
         }
     }
 
+    if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
+        console.log(agentData.data.Position)
+        console.log(data.commissionRates)
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Commission rates are required for this user (Unit Manager / Sales Director).',
+                code: 400
+            }
+        }
+    }
+
     const project = await getProjectById(data.property.projectID)
 
     if(!project.success){
@@ -286,16 +310,45 @@ export const addPendingSalesService = async (
         }
     }
 
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
     const updatedData = {
         ...data,
         divisionID: Number(agentData.data.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID)
-        }
+        },
+        images: {
+            receipt: receiptMetadata,
+            agreement: agreementMetadata
+        },
+        commissionRates: data.commissionRates || []
     }
 
-    const result = await addPendingSale(agentData.data.AgentID, updatedData)
+    const result = await addPendingSale(agentData.data.AgentID, (agentData.data.Position || ''), updatedData)
 
     if(!result.success){
         logger('addPendingSalesService', {data: data})
@@ -368,6 +421,7 @@ export const getPendingSalesService = async (
         { 
             ...filters, 
             agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined,
+            approvalStatus: [1,2],
             isUnique: true
         }, 
         pagination
@@ -550,6 +604,40 @@ export const getCombinedPersonalSalesService = async (
     }
 };
 
+const pendingSaleValidation = (
+    currentStatus: SaleStatus, 
+    requiredStatus: SaleStatus
+): { validated: boolean; message: string } => {
+    if (currentStatus === SaleStatus.REJECTED) {
+        return { 
+            validated: false, 
+            message: 'This sale has already been rejected.' 
+        };
+    }
+    
+    if (currentStatus === SaleStatus.SALES_ADMIN_APPROVED) {
+        return { 
+            validated: false, 
+            message: 'This sale has already been fully approved.' 
+        };
+    }
+    
+    if (currentStatus !== requiredStatus) {
+        if (currentStatus > requiredStatus) {
+            return { 
+                validated: false, 
+                message: 'This sale has already been approved at this stage.' 
+            };
+        }
+        return { 
+            validated: false, 
+            message: 'This sale has not reached this approval stage yet.' 
+        };
+    }
+    
+    return { validated: true, message: '' };
+};
+
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
     pendingSalesId: number,
@@ -569,34 +657,17 @@ export const editPendingSalesDetailsService = async (
         }
     }
 
-    if(pendingSale.data.ApprovalStatus == 0){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale has already been rejected.',
-                code: 400
-            }
-        }
-    }
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.NEWLY_SUBMITTED
+    )
 
-    if(pendingSale.data.ApprovalStatus == 2){
+    if(valid.validated == false){
         return {
             success: false,
             data: {},
             error: {
-                message: 'This sale has already been approved by the Unit Manager.',
-                code: 400
-            }
-        }
-    }
-
-    if(pendingSale.data.ApprovalStatus == 3){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale has already been approved by the Sales Director.',
+                message: valid.message,
                 code: 400
             }
         }
@@ -650,6 +721,249 @@ export const editPendingSalesDetailsService = async (
             data: {},
             error: {
                 message: 'Editing sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const approveSalesDirectorService = async (agentUserId: number, pendingSalesId: number): QueryResult<IAgentPendingSale> => {
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const agentData = await findAgentDetailsByUserId(agentUserId);
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.DivisionID != agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'This sale does not belong to your division.',
+                code: 403
+            }
+        }
+    }
+
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.UNIT_MANAGER_APPROVED
+    )
+
+    if(!valid.validated){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: valid.message,
+                code: 400
+            }
+        }
+    }
+
+    const result = await approveNextStage({
+        agentId: agentUserId,
+        pendingSalesId: pendingSalesId,
+        nextApprovalStatus: SaleStatus.SALES_DIRECTOR_APPROVED,
+        nextSalesStatus: SalesStatusText.PENDING_BH
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Approving sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const approveBranchHeadService = async (webUserId: number, pendingSalesId: number): QueryResult<IAgentPendingSale> => {
+
+    const userWeb = await findEmployeeUserById(webUserId);
+
+    if(!userWeb.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale, 
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }   
+    }
+
+    if(userWeb.data.Role != 'BRANCH SALES STAFF'){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.SalesBranchID != userWeb.data.BranchID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'This sale does not belong to your branch.',
+                code: 403
+            }
+        }
+    }
+
+    const checkValid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.SALES_DIRECTOR_APPROVED
+    )
+
+    if(checkValid.validated == false){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: checkValid.message,
+                code: 400
+            }
+        }
+    }
+
+    const result = await approveNextStage({
+        userId: webUserId,
+        pendingSalesId: pendingSalesId,
+        nextApprovalStatus: SaleStatus.BRANCH_HEAD_APPROVED,
+        nextSalesStatus: SalesStatusText.PENDING_SA
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Approving sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const approveSalesAdminService = async (webUserId: number, pendingSalesId: number): QueryResult<any> => {
+    
+    // validations
+    const userWeb = await findEmployeeUserById(webUserId);
+
+    if(!userWeb.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale, 
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }   
+    }
+
+    if(userWeb.data.Role != 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const valid = pendingSaleValidation(
+        pendingSale.data.ApprovalStatus,
+        SaleStatus.BRANCH_HEAD_APPROVED
+    )
+
+    if(!valid.validated){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: valid.message,
+                code: 400
+            }
+        }
+    }
+
+    const result = await approvePendingSaleTransaction(userWeb.data.UserWebID, pendingSalesId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Approving sales failed.',
                 code: 400
             }
         }
@@ -832,6 +1146,199 @@ export const approvePendingSaleService = async (agentUserId: number, pendingSale
             data: {},
             error: {
                 message: 'Approving sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const getWebPendingSalesService = async (
+    userId: number, 
+    filters: {
+        month?: number,
+        year?: number,
+        developerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<any> => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const role = userData.data.Role.toLowerCase().trim();
+
+    if(role != 'branch sales staff' && role != 'sales admin'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Not enough permission.',
+                code: 403
+            }
+        }
+    }
+
+    const result = await getPendingSales(
+        undefined, 
+        { 
+            ...filters,
+            approvalStatus: role == 'branch sales staff' ? [3] : [4],
+            salesBranch: userData.data.BranchID,
+            isUnique: true
+        }, 
+        pagination
+    )
+
+    if(!result.success){
+        logger(result.error?.message || '', {data: filters})
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Getting pending sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    const obj = result.data.results.map((item: AgentPendingSale) => {
+        return {
+            AgentPendingSalesID: item.AgentPendingSalesID,
+            PendingSalesTransCode: item.PendingSalesTranCode,
+            SellerName: item.SellerName || 'N/A',
+            FinancingScheme: item.FinancingScheme,
+            ReservationDate: item.ReservationDate,
+            ApprovalStatus: item.ApprovalStatus,
+            CreatedBy: item.CreatedBy
+        }
+    })
+
+    return {
+        success: true,
+        data: obj
+    }
+}
+
+export const getWebPendingSalesDetailService = async (userId: number, pendingSalesId: number): QueryResult<any> => {
+
+    const user = await findEmployeeUserById(userId);
+
+    if(!user.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await getPendingSaleById(pendingSalesId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(result.data.SalesBranchID != user.data.BranchID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to your branch.',
+                code: 403
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editPendingSaleImagesService = async (
+    pendingSalesId: number, 
+    images: {
+        receipt?: Express.Multer.File,
+        agreement?: Express.Multer.File
+    },
+    agentUserId: number,
+): QueryResult<any> => {
+    
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.SalesBranchID != agentUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to you.',
+                code: 403
+            }
+        }
+    }
+
+    let receiptImg: IImage | undefined = images.receipt ?{
+        FileName: images.receipt.originalname,
+        ContentType: images.receipt.mimetype,
+        FileExt: path.extname(images.receipt.originalname),
+        FileSize: images.receipt.size,
+        FileContent: images.receipt.buffer
+    } : undefined
+
+    let agreementImg: IImage | undefined = images.agreement ?{
+        FileName: images.agreement.originalname,
+        ContentType: images.agreement.mimetype,
+        FileExt: path.extname(images.agreement.originalname),
+        FileSize: images.agreement.size,
+        FileContent: images.agreement.buffer
+    } : undefined
+
+    const result = await editSaleImages(pendingSalesId, undefined, receiptImg, agreementImg) 
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Editing sale images failed.',
                 code: 400
             }
         }
