@@ -1,4 +1,5 @@
 import { getAgent, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
@@ -47,7 +48,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
         agentWork
     ] = await Promise.all([
         getAgentWithUser(agentId),
-        getAgentRegistration(agentId),
+        getAgentRegistration({agentId: agentId}),
         getAgentEducation(agentId),
         getAgentWorkExp(agentId)
     ])
@@ -89,5 +90,23 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     return {
         success: true,
         data: obj
+    }
+}
+
+export const lookupAgentRegistrationService = async (userId: number, agentRegistrationId: number): QueryResult<ITblAgentRegistration> => {
+
+    const result = await getAgentRegistration({agentRegistrationId: agentRegistrationId})
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

@@ -563,13 +563,21 @@ export const getAgent = async (agentId: number): QueryResult<VwAgents> => {
     }
 }
 
-export const getAgentRegistration = async (agentId: number): QueryResult<ITblAgentRegistration> => {
+export const getAgentRegistration = async (filters?: {agentId?: number, agentRegistrationId?: number}): QueryResult<ITblAgentRegistration> => {
     try {
-        const registration = await db.selectFrom('Tbl_AgentRegistration')
+        let registrationQuery = await db.selectFrom('Tbl_AgentRegistration')
             .innerJoin('Tbl_AgentUser', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
             .selectAll('Tbl_AgentRegistration')
-            .where('Tbl_AgentUser.AgentID', '=', agentId)
-            .executeTakeFirstOrThrow()
+
+        if(filters?.agentId){
+            registrationQuery = registrationQuery.where('Tbl_AgentUser.AgentID', '=', filters.agentId)
+        }
+
+        if(filters?.agentRegistrationId){
+            registrationQuery = registrationQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId)
+        }
+
+        const registration = await registrationQuery.executeTakeFirstOrThrow()
 
         if(!registration){
             return {
