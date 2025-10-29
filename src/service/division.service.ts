@@ -1,7 +1,32 @@
 import { QueryResult } from "../types/global.types"
 import { findAgentDetailsByUserId } from "../repository/users.repository"
-import { getDivisionAgents } from "../repository/division.repository"
+import { getDivisionAgents, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
+import { IDivision } from "../types/division.types"
+import { TblDivision } from "../db/db-types"
+
+export const getDivisionsService = async (): QueryResult<IDivision[]> => {
+    const result = await getDivisions()
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: result.error
+        }
+    }
+
+    const obj = result.data.map((div: TblDivision) => ({
+        DivisionID: div.DivisionID,
+        DivisionName: div.Division,
+        DivisionCode: div.DivisionCode
+    }))
+
+    return {
+        success: true,
+        data: obj
+    }
+}   
 
 export const getDivisionHierarchyService = async (agentUserId: number): QueryResult<any> => {
     const result = await findAgentDetailsByUserId(agentUserId)

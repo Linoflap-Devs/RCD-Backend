@@ -1,7 +1,30 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
-import { VwAgents } from "../db/db-types"
+import { TblDivision, VwAgents } from "../db/db-types"
+import { IDivision } from "../types/division.types"
 
+export const getDivisions = async (): QueryResult<TblDivision[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Division').selectAll().execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as TblDivision[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
 
 export const getDivisionAgents = async (agentId: number, divisionId: number, role: string): QueryResult<VwAgents[]> => {
     try {
