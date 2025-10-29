@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
-import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController } from '../controller/sales.controller';
+import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
@@ -12,8 +12,16 @@ router.route('/division').get([validateSession], getDivisionSalesController);
 router.route('/personal').get([validateSession], getPersonalSalesController);
 
 router.route('/web/pending').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getWebPendingSalesController);
+router.route('/web/pending').post(
+    [
+        validateEmployeeSession, 
+        validateRole(['BH', 'SA']),
+        multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
+        validate(addPendingSaleSchema),
+    ], 
+    addWebPendingSaleController
+);
 router.route('/web/pending/:pendingSalesId').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getWebPendingSalesDetailsController);
-
 router.route('/pending').get([validateSession, validateRole(['UM', 'SD'])], getPendingSalesController);
 router.route('/pending/:pendingSalesId').get([validateSession], getPendingSalesDetailsController);
 router.route('/pending').post(

@@ -5,9 +5,10 @@ import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
-import { IAgent } from "../types/users.types";
+import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage } from "../types/image.types";
 import path from "path";
+import { ITblUsersWeb } from "../types/auth.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -211,11 +212,15 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
 }
 
 export const addPendingSalesService = async (
-    agentUserId: number,
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
     data: {
         reservationDate: Date,
         salesBranchID: number,
-        sectorID: number
+        sectorID: number, 
+        divisionID?: number,
         buyer: {
             buyersName: string,
             address: string,
@@ -249,53 +254,157 @@ export const addPendingSalesService = async (
     }
 ): QueryResult<any> => {
 
-    const agentData = await findAgentDetailsByUserId(agentUserId)
-
-    if(!agentData.success){
+    if(!user.agentUserId && !user.webUserId){
         return {
             success: false,
             data: {},
             error: {
-                message: 'No user found',
+                message: 'No user submitted.',
                 code: 400
             }
         }
     }
 
-    if(!agentData.data.AgentID){
+    if(user.agentUserId && user.webUserId){
         return {
             success: false,
             data: {},
             error: {
-                message: 'No user found',
+                message: 'Cannot submit both agent and web user.',
                 code: 400
+            }
+        }
+    }
+    
+    let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
+    let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
+    let role = ''
+
+    if(user.agentUserId){
+        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.AgentID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.DivisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No division found',
+                    code: 400
+                }
+            }
+        }
+
+        mobileAgentData = agentData.data
+
+        if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
+            console.log(agentData.data.Position)
+            console.log(data.commissionRates)
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Commission rates are required for this user (Unit Manager / Sales Director).',
+                    code: 400
+                }
             }
         }
     }
 
-    if(!agentData.data.DivisionID){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'No division found',
-                code: 400
+    else if(user.webUserId) {
+        const webUserData = await findEmployeeUserById(user.webUserId)
+
+        if(!webUserData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
             }
         }
+
+        if(!webUserData.data.UserWebID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.divisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Division is required.',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.images?.receipt || !data.images?.agreement){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Receipt and agreement images are required.',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.commissionRates || data.commissionRates.length === 0){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Commission rates are required.',
+                    code: 400
+                }
+            }
+        }
+
+        role = webUserData.data.Role
+        webAgentData = webUserData.data
     }
 
-    if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
-        console.log(agentData.data.Position)
-        console.log(data.commissionRates)
+    else {
         return {
             success: false,
             data: {},
             error: {
-                message: 'Commission rates are required for this user (Unit Manager / Sales Director).',
+                message: 'No user submitted.',
                 code: 400
             }
         }
     }
+    
 
     const project = await getProjectById(data.property.projectID)
 
@@ -336,7 +445,7 @@ export const addPendingSalesService = async (
 
     const updatedData = {
         ...data,
-        divisionID: Number(agentData.data.DivisionID),
+        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID)
@@ -348,7 +457,14 @@ export const addPendingSalesService = async (
         commissionRates: data.commissionRates || []
     }
 
-    const result = await addPendingSale(agentData.data.AgentID, (agentData.data.Position || ''), updatedData)
+    const result = await addPendingSale(
+        {
+            agentUserId: user.agentUserId,
+            webUserId: user.webUserId
+        }, 
+        role, 
+        updatedData
+    )
 
     if(!result.success){
         logger('addPendingSalesService', {data: data})
@@ -361,6 +477,10 @@ export const addPendingSalesService = async (
                 code: 400
             }
         }
+    }
+
+    if(webAgentData && webAgentData.Role === 'SALES ADMIN' && result.success){
+        await approvePendingSaleTransaction(webAgentData.UserWebID, result.data.AgentPendingSalesID)
     }
 
     return {

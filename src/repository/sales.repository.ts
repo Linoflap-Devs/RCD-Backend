@@ -903,7 +903,10 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
 }
 
 export const addPendingSale = async (
-    userId: number,
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
     userRole: string,
     data: {
         reservationDate: Date,
@@ -947,7 +950,31 @@ export const addPendingSale = async (
             position: CommissionDetailPositions
         }[]
     }
-): QueryResult<any> => {
+): QueryResult<IAgentPendingSale> => {
+
+    if(!user.agentUserId && !user.webUserId){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User not found',
+                code: 400
+            }
+        }
+    }
+
+    if(user.agentUserId && user.webUserId){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User role is required to add pending sale.',
+                code: 400
+            }
+        }
+    }
+
+
 
     const transactionNumber = await generateUniqueTranCode();
 
@@ -959,8 +986,18 @@ export const addPendingSale = async (
             throw new Error('User role is required to add pending sale.')
         }
 
-        const approvalStatus = userRole === 'SALES PERSON' ? 1 : userRole === 'UNIT MANAGER' ? 2 : 3;
-        const statusText = userRole === 'SALES PERSON' ? SalesStatusText.PENDING_UM : userRole === 'UNIT MANAGER' ? SalesStatusText.PENDING_SD : SalesStatusText.PENDING_BH;
+        const lookUpMap = new Map<string, {approvalStatus: number, statusText: string}>([
+            ['SALES PERSON', {approvalStatus: 1, statusText: SalesStatusText.PENDING_UM}],
+            ['UNIT MANAGER', {approvalStatus: 2, statusText: SalesStatusText.PENDING_SD}],
+            ['SALES DIRECTOR', {approvalStatus: 3, statusText: SalesStatusText.PENDING_BH}],
+            ['BRANCH SALES STAFF', {approvalStatus: 4, statusText: SalesStatusText.PENDING_SA}],
+            ['SALES ADMIN', {approvalStatus: 5, statusText: SalesStatusText.APPROVED}]
+        ])
+
+        const {approvalStatus, statusText} = lookUpMap.get(userRole) || {approvalStatus: 1, statusText: SalesStatusText.PENDING_UM};
+
+        // const approvalStatus = userRole === 'SALES PERSON' ? 1 : userRole === 'UNIT MANAGER' ? 2 : 3;
+        // const statusText = userRole === 'SALES PERSON' ? SalesStatusText.PENDING_UM : userRole === 'UNIT MANAGER' ? SalesStatusText.PENDING_SD : SalesStatusText.PENDING_BH;
 
         const result = await trx.insertInto('Tbl_AgentPendingSales')
             .values({
@@ -991,10 +1028,11 @@ export const addPendingSale = async (
                 DPTerms: data.payment.dpTerms.toString(),
                 MonthlyDP: data.payment.monthlyPayment,
                 DPStartSchedule: data.payment.dpStartDate,
-                CreatedBy: userId,
+                CreatedBy: user.agentUserId ? user.agentUserId : user.webUserId || 0,
                 SellerName: data.payment.sellerName,
 
-                LastUpdateby: userId,
+                LastUpdateby: user.agentUserId || undefined,
+                LastUpdateByWeb: user.webUserId || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
 
                 PendingSalesTranCode: transactionNumber,
@@ -1274,7 +1312,7 @@ export const addPendingSale = async (
         const error = err as Error;
         return {
             success: false,
-            data: {},
+            data: {} as IAgentPendingSale,
             error: {
                 code: 500,
                 message: error.message
