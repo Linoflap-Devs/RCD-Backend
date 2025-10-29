@@ -283,8 +283,125 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         }
     }
 
-    const result = await addPendingSalesService(session.userID, {
+    const result = await addPendingSalesService(
+        {
+            agentUserId: session.userID
+        }, 
+        {
         reservationDate,
+        salesBranchID,
+        sectorID,
+        buyer: {
+            buyersName,
+            address,
+            phoneNumber,
+            occupation
+        },
+        property: {
+            projectID,
+            blkFlr,
+            lotUnit,
+            phase,
+            lotArea,
+            flrArea,
+            developerCommission,
+            netTCP,
+            miscFee,
+            financingScheme
+        },
+        payment: {
+            downpayment,
+            dpTerms,
+            monthlyPayment,
+            dpStartDate,
+            sellerName
+        },
+        images: {
+            receipt: images?.receipt ? images.receipt[0] : undefined,
+            agreement: images?.agreement ? images.agreement[0] : undefined
+        },
+        commissionRates: parsedCommissionRates ? parsedCommissionRates : [],
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales added', data: result.data})
+}
+
+export const addWebPendingSaleController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    const {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        divisionID,
+        buyersName,
+        address,
+        phoneNumber,
+        occupation,
+        projectID,
+        blkFlr,
+        lotUnit,
+        phase,
+        lotArea,
+        flrArea,
+        developerID,
+        developerCommission,
+        netTCP,
+        miscFee,
+        financingScheme,
+        downpayment,
+        dpTerms,
+        monthlyPayment,
+        dpStartDate,
+        sellerName,
+        commissionRates
+    } = req.body
+
+    let parsedCommissionRates = [];
+    if (commissionRates) {
+        try {
+            parsedCommissionRates = JSON.parse(commissionRates);
+        } catch (error) {
+            // Try parsing double-escaped JSON
+            try {
+                const unescaped = commissionRates.replace(/\\\"/g, '"');
+                parsedCommissionRates = JSON.parse(unescaped);
+            } catch (innerError) {
+                res.status(400).json({
+                    success: false, 
+                    message: 'Invalid commissionRates format', 
+                    data: {}
+                });
+                return;
+            }
+        }
+    }
+
+    const result = await addPendingSalesService(
+        {
+            webUserId: session.userID
+        }, 
+        {
+        reservationDate,
+        divisionID,
         salesBranchID,
         sectorID,
         buyer: {

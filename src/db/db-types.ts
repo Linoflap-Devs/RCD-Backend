@@ -104,7 +104,7 @@ export interface TblAgentPendingSales {
   FinancingScheme: string;
   FloorArea: number;
   LastUpdate: Date;
-  LastUpdateby: number;
+  LastUpdateby: number | null;
   LastUpdateByWeb: number | null;
   Lot: string;
   LotArea: number;
