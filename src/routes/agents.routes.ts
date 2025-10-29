@@ -6,8 +6,8 @@ import { validateRole } from '../middleware/roles';
 
 const router = express.Router();
 
-router.route('/registrations').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getAgentRegistrationsController);
-router.route('/registrations/:agentRegistrationId').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getAgentRegistrationController);
+router.route('/registrations').get([validateEmployeeSession], getAgentRegistrationsController);
+router.route('/registrations/:agentRegistrationId').get([validateEmployeeSession], getAgentRegistrationController);
 router.route('/').get([validateEmployeeSession], getAgentsController);
 router.route('/:agentId').get([validateEmployeeSession], getAgentDetailsController);
 
