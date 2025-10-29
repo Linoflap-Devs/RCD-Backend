@@ -1,5 +1,24 @@
 import { Request, Response } from "express";
-import { getDivisionHierarchyService, getTop10DivisionService } from "../service/division.service";
+import { getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
+
+export const getDivisionsController = async (req: Request, res: Response) => {
+
+    const result = await getDivisionsService()
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to get divisions.",
+            data: {}
+        })
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "List of divisions.",
+        data: result.data
+    })
+}
 
 export const getAgentHierarchyController = async (req: Request, res: Response) => {
     const session = req.session
