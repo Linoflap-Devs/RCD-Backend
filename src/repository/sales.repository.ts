@@ -1472,6 +1472,18 @@ export const approveNextStage = async (data: {
 }
 
 export const rejectPendingSale = async (agentId: number, pendingSalesId: number): QueryResult<any> => {
+
+    if(agentId == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
     try {
         const result = await db.updateTable('Tbl_AgentPendingSales')
             .set({

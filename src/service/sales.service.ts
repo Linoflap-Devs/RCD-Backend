@@ -1,4 +1,4 @@
-import { VwSalesTransactions } from "../db/db-types";
+import { VwAgents, VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -1095,30 +1095,88 @@ export const approveSalesAdminService = async (webUserId: number, pendingSalesId
     }
 }
 
-export const rejectPendingSaleService = async ( agentUserId: number, pendingSalesId: number ): QueryResult<any> => {
-    const agentData = await findAgentDetailsByUserId(agentUserId)
+export const rejectPendingSaleService = async ( user: { agentUserId?: number, webUserId?: number }, pendingSalesId: number ): QueryResult<any> => {
 
-    if(!agentData.success){
+    if(!user.agentUserId && !user.webUserId){
         return {
             success: false,
             data: {},
             error: {
-                message: 'No user found',
+                message: 'No user submitted.',
                 code: 400
             }
         }
     }
 
-    if(!agentData.data.AgentID){
+    if(user.agentUserId && user.webUserId){
         return {
             success: false,
             data: {},
             error: {
-                message: 'No user found',
+                message: 'Cannot submit both agent and web user.',
                 code: 400
             }
         }
     }
+
+    let mobileUserData: VwAgents = {} as VwAgents
+    let webUserData: ITblUsersWeb = {} as ITblUsersWeb
+
+    if(user.agentUserId){
+            
+        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.AgentID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        mobileUserData = agentData.data
+    }
+
+    else if(user.webUserId){
+        const data = await findEmployeeUserById(user.webUserId)
+
+        if(!data.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        webUserData = data.data
+    }
+    else {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }   
 
     const pendingSale = await getPendingSaleById(pendingSalesId)
 
@@ -1144,18 +1202,34 @@ export const rejectPendingSaleService = async ( agentUserId: number, pendingSale
         }
     }
 
-    if(agentData.data.Position == 'UNIT MANAGER' && pendingSale.data.ApprovalStatus == 2){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale can only be rejected by the Sales Director.',
-                code: 400
+    if(user.agentUserId){
+        if(mobileUserData.Position == 'UNIT MANAGER' && pendingSale.data.ApprovalStatus == 2){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'This sale can only be rejected by the Sales Director.',
+                    code: 400
+                }
+            }
+        }
+    }
+    
+    if(user.webUserId){
+        if(webUserData.Role == 'BRANCH SALES STAFF' && pendingSale.data.ApprovalStatus == 4){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'This sale can only be rejected by the Sales Admin.',
+                    code: 400
+                }
             }
         }
     }
 
-    const result = await rejectPendingSale(agentData.data.AgentID, pendingSalesId);
+
+    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId);
 
     if(!result.success){
         return {
