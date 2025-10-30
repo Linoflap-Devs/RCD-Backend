@@ -317,6 +317,7 @@ export const addPendingSalesService = async (
 
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
+        user.agentUserId = agentData.data.AgentID
 
         if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
             console.log(agentData.data.Position)
@@ -392,6 +393,7 @@ export const addPendingSalesService = async (
 
         role = webUserData.data.Role
         webAgentData = webUserData.data
+        user.webUserId = webUserData.data.UserWebID
     }
 
     else {
