@@ -13,6 +13,7 @@ import { emailChangePasswordTemplate, emailOTPTemplate } from "../assets/email/e
 import 'dotenv/config'
 import { verifyDESPassword } from "../utils/utils";
 import { getSalesBranch } from "../repository/sales.repository";
+import is from "zod/v4/locales/is.cjs";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -97,8 +98,25 @@ export const registerAgentService = async (
     data: IAgentRegister, 
     image?: Express.Multer.File,
     govIdImage?: Express.Multer.File,
-    selfieImage?: Express.Multer.File
+    selfieImage?: Express.Multer.File,
+    agentId?: number
 ): QueryResult<any> => {
+
+    if(agentId){
+        const agent = await findAgentDetailsByAgentId(agentId)
+
+        if(!agent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent details.'
+                }
+            }
+        }
+    }
+
     const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
     const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
     const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
@@ -137,16 +155,7 @@ export const registerAgentService = async (
         }
     )
 
-    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata)
-
-    // const result = {
-    //     success: true,
-    //     data: {},
-    //     error: {
-    //         message: 'Registration is disabled for now.',
-    //         code: 403
-    //     }
-    // }
+    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata, agentId)
 
     if(!result.success) {
         return {
