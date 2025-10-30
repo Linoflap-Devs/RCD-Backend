@@ -282,7 +282,6 @@ export const addPendingSalesService = async (
 
     if(user.agentUserId){
         const agentData = await findAgentDetailsByUserId(user.agentUserId)
-
         if(!agentData.success){
             return {
                 success: false,
@@ -311,19 +310,6 @@ export const addPendingSalesService = async (
                 data: {},
                 error: {
                     message: 'No division found',
-                    code: 400
-                }
-            }
-        }
-        
-        const agentUser = await findAgentUserById(agentData.data.AgentID)
-
-        if(!agentUser.success){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    message: 'No user found',
                     code: 400
                 }
             }
