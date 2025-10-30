@@ -1820,7 +1820,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         console.log('existingReceiptId: ', existingReceiptId, 'existingAgreementId: ', existingAgreementId, 'newReceiptId: ', newReceiptId, 'newAgreementId: ', newAgreementId)
 
         // delete old images
-        if(existingReceiptId > 0 && existingReceiptId !== newReceiptId){
+        if( receipt && existingReceiptId > 0 && existingReceiptId !== newReceiptId){
             console.log('existingReceiptId: ', existingReceiptId, 'newReceiptId: ', newReceiptId, "deleting receipt")
             
             await trx.deleteFrom('Tbl_SalesTranImage')
@@ -1832,7 +1832,7 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
                 .execute()
         }
 
-        if(existingAgreementId > 0 && existingAgreementId !== newAgreementId){
+        if( agreement && existingAgreementId > 0 && existingAgreementId !== newAgreementId){
             console.log('existingAgreementId: ', existingAgreementId, 'newAgreementId: ', newAgreementId, "deleting agreement")
 
             await trx.deleteFrom('Tbl_SalesTranImage')
@@ -1849,8 +1849,8 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         return {
             success: true,
             data: {
-                newReceiptId: newReceiptId > 0 ? newReceiptId : null, 
-                newAgreementId: newAgreementId > 0 ? newAgreementId : null
+                newReceiptId: newReceiptId > 0 ? newReceiptId : 0, 
+                newAgreementId: newAgreementId > 0 ? newAgreementId : 0
             },
         }
     }
