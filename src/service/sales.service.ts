@@ -315,7 +315,21 @@ export const addPendingSalesService = async (
                 }
             }
         }
+        
+        const agentUser = await findAgentUserById(agentData.data.AgentID)
 
+        if(!agentUser.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        role = agentData.data.Position || ''
         mobileAgentData = agentData.data
 
         if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
