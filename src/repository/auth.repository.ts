@@ -367,7 +367,8 @@ export const registerAgentTransaction = async(
     data: IAgentRegister, 
     profileImageMetadata?: IImage, 
     govIdImageMetadata?: IImage,
-    selfieImageMetadata?: IImage
+    selfieImageMetadata?: IImage,
+    agentId?: number
 ): QueryResult<any> => {
 
     const registerTransaction = await db.startTransaction().execute();
@@ -444,6 +445,7 @@ export const registerAgentTransaction = async(
             AffiliationDate: new Date(),
             GovImageID: govImageId > 0 ? govImageId : null,
             SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
+            IsVerified: agentId ? 1 : 0 // Only if agent id is present
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
@@ -454,7 +456,8 @@ export const registerAgentTransaction = async(
                     JobTitle: exp.jobTitle,
                     StartDate: exp.startDate,
                     EndDate: exp.endDate,
-                    AgentRegistrationID: agentRegistration.AgentRegistrationID
+                    AgentRegistrationID: agentRegistration.AgentRegistrationID,
+                    AgentID: agentId ? agentId : null // Only if agent id is present
                 }))
             ).execute()
         }
@@ -467,7 +470,8 @@ export const registerAgentTransaction = async(
                     Degree: educ.degree,
                     StartDate: educ.startDate,
                     EndDate: educ.endDate,
-                    AgentRegistrationID: agentRegistration.AgentRegistrationID
+                    AgentRegistrationID: agentRegistration.AgentRegistrationID,
+                    AgentID: agentId ? agentId : null // Only if agent id is present
                 }))
             ).execute()
         }
@@ -481,7 +485,9 @@ export const registerAgentTransaction = async(
             AgentRegistrationID: agentRegistration.AgentRegistrationID,
             Email: data.email,
             Password: hash,
-            ImageID: imageId > 0 ? imageId : null
+            ImageID: imageId > 0 ? imageId : null,
+            IsVerified: agentId ? 1 : 0, // Only if agent id is present
+            AgentID: agentId ? agentId : null // Only if agent id is present
         }).executeTakeFirstOrThrow();
 
         await registerTransaction.commit().execute();
