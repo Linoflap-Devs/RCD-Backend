@@ -1397,7 +1397,7 @@ export const getWebPendingSalesService = async (
         { 
             ...filters,
             approvalStatus: role == 'branch sales staff' ? [3] : [4],
-            salesBranch: userData.data.BranchID,
+            //salesBranch: userData.data.BranchID,
             isUnique: true
         }, 
         pagination
