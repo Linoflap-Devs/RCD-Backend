@@ -185,7 +185,7 @@ export const findEmployeeUserById = async (userWebId: number): QueryResult<ITblU
     }
 }
 
-export const findEmployeeUserByUsername = async (username: string): QueryResult<{userId: number, username: string, branch: string, role: string, password: string}> => {
+export const findEmployeeUserByUsername = async (username: string): QueryResult<{userId: number, username: string, branch: string, branchId: number, role: string, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_UsersWeb')
             .where('UserName', '=', username)
@@ -202,6 +202,7 @@ export const findEmployeeUserByUsername = async (username: string): QueryResult<
                 userId: user.UserWebID, 
                 username: user.UserName, 
                 branch: user.BranchName,
+                branchId: user.BranchID,
                 role: user.Role, 
                 password: user.Password 
             }
@@ -212,7 +213,7 @@ export const findEmployeeUserByUsername = async (username: string): QueryResult<
         const error = err as Error
         return {
             success: false,
-            data: {} as {userId: number, username: string, branch: string, role: string, password: string},
+            data: {} as {userId: number, username: string, branch: string, branchId: number, role: string, password: string},
             error: {
                 code: 400,
                 message: error.message
