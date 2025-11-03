@@ -317,6 +317,7 @@ export const addPendingSalesService = async (
 
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
+        user.agentUserId = agentData.data.AgentID
 
         if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
             console.log(agentData.data.Position)
@@ -392,6 +393,7 @@ export const addPendingSalesService = async (
 
         role = webUserData.data.Role
         webAgentData = webUserData.data
+        user.webUserId = webUserData.data.UserWebID
     }
 
     else {
@@ -1395,7 +1397,7 @@ export const getWebPendingSalesService = async (
         { 
             ...filters,
             approvalStatus: role == 'branch sales staff' ? [3] : [4],
-            salesBranch: userData.data.BranchID,
+            salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
             isUnique: true
         }, 
         pagination
@@ -1459,16 +1461,19 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
-    if(result.data.SalesBranchID != user.data.BranchID){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'This sale does not belong to your branch.',
-                code: 403
+    if(user.data.Role == 'BRANCH SALES STAFF'){
+        if(result.data.SalesBranchID != user.data.BranchID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'This sale does not belong to your branch.',
+                    code: 403
+                }
             }
         }
     }
+
 
     return {
         success: true,

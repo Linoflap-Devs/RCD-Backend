@@ -301,14 +301,14 @@ export const registerEmployeeService = async (data: IEmployeeRegister): QueryRes
     }
 }
 
-export const loginEmployeeService = async (username: string, password: string): QueryResult<{token: string, username: string, role: string}> => {
+export const loginEmployeeService = async (username: string, password: string): QueryResult<{token: string, username: string, role: string, branchId: number}> => {
     const user = await findEmployeeUserByUsername(username)
 
     if(!user.success) {
         logger((user.error?.message || 'Failed to find user.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string, role: string},
+            data: {} as {token: string, username: string, role: string, branchId: number},
             error: {
                 message: 'Invalid credentials.',
                 code: 401
@@ -325,7 +325,7 @@ export const loginEmployeeService = async (username: string, password: string): 
         logger(('Password does not match.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string, role: string},
+            data: {} as {token: string, username: string, role: string, branchId: number},
             error: {
                 message: 'Invalid credentials.',
                 code: 401
@@ -340,7 +340,7 @@ export const loginEmployeeService = async (username: string, password: string): 
         logger(( session.error?.message || 'Failed to create session.'), {username: username})
         return {
             success: false,
-            data: {} as {token: string, username: string, role: string},
+            data: {} as {token: string, username: string, role: string, branchId: number},
             error: {
                 message: 'Failed to create session.',
                 code: 500
@@ -353,7 +353,8 @@ export const loginEmployeeService = async (username: string, password: string): 
         data: {
             token: token,
             username: username,
-            role: user.data.role
+            role: user.data.role,
+            branchId: user.data.branchId
         }
     }    
 }
