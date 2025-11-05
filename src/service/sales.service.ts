@@ -1488,8 +1488,50 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         }
     }
 
+    // set approval status and sales status
 
-    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId);
+    let approvalStatus: number | undefined = undefined
+    let salesStatus: string | undefined = undefined
+
+    // check for agent first
+    
+    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+
+    const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
+
+    const createdUserId = createdBy.data || createdByWeb.data
+
+    if(!createdBy.success && !createdByWeb.success){
+        approvalStatus = SaleStatus.NEWLY_SUBMITTED,
+        salesStatus = SalesStatusText.PENDING_UM
+    }
+
+    if(createdUserId.Position == 'SALES PERSON'){
+        approvalStatus = SaleStatus.NEWLY_SUBMITTED,
+        salesStatus = SalesStatusText.PENDING_UM
+    }
+
+    if(createdUserId.Position == 'UNIT MANAGER'){
+        approvalStatus = SaleStatus.UNIT_MANAGER_APPROVED,
+        salesStatus = SalesStatusText.PENDING_SD
+    }
+
+    if(createdUserId.Position == 'SALES DIRECTOR'){
+        approvalStatus = SaleStatus.SALES_DIRECTOR_APPROVED,
+        salesStatus = SalesStatusText.PENDING_BH
+    }
+
+    if(createdUserId.Position == 'BRANCH HEAD'){
+        approvalStatus = SaleStatus.BRANCH_HEAD_APPROVED,
+        salesStatus = SalesStatusText.PENDING_SA
+    }
+
+    if(createdUserId.Position == 'SALES ADMIN'){
+        approvalStatus = SaleStatus.SALES_ADMIN_APPROVED,
+        salesStatus = SalesStatusText.APPROVED
+    }
+
+    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM));
 
     if(!result.success){
         return {

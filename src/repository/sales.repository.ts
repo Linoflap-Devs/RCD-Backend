@@ -1861,7 +1861,7 @@ export const approveNextStage = async (data: {
     }
 }
 
-export const rejectPendingSale = async (agentId: number, pendingSalesId: number): QueryResult<any> => {
+export const rejectPendingSale = async (agentId: number, pendingSalesId: number, approvalStatus: number, salesStatus: string): QueryResult<any> => {
 
     if(agentId == 0){
         return {
@@ -1877,8 +1877,8 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number)
     try {
         const result = await db.updateTable('Tbl_AgentPendingSales')
             .set({
-                ApprovalStatus: 0,
-                SalesStatus: 'REJECTED',
+                ApprovalStatus: approvalStatus || 0,
+                SalesStatus: salesStatus || 'REJECTED',
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: agentId
             })
