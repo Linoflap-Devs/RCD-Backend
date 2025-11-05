@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -9,6 +9,8 @@ import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
+import { CommissionDetailPositions } from "../types/commission.types";
+import { VwProjectDeveloper } from "../types/projects.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -760,6 +762,262 @@ const pendingSaleValidation = (
     return { validated: true, message: '' };
 };
 
+enum Roles {
+    SALES_ADMIN = 'SALES ADMIN',
+}
+
+export const editPendingSaleService = async (
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
+    data: {
+        pendingSalesId: number,
+        reservationDate?: Date,
+        divisionID?: number,
+        salesBranchID?: number,
+        sectorID?: number,
+        buyersName?: string,
+        address?: string,
+        phoneNumber?: string,
+        occupation?: string,
+        projectID?: number,
+        blkFlr?: string,
+        lotUnit?: string,
+        phase?: string,
+        lotArea?: number,
+        flrArea?: number,
+        developerID?: number,
+        developerCommission?: number,
+        netTCP?: number,
+        miscFee?: number,
+        financingScheme?: string,
+        downpayment?: number,
+        dpTerms?: number,
+        monthlyPayment?: number
+        dpStartDate?: Date,
+        sellerName?: string,
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
+    }
+) => {
+
+    // validations
+
+    const pendingSale = await getPendingSaleById(data.pendingSalesId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No pending sale found.',
+                code: 400
+            }
+        }
+    }
+
+    if(!user.agentUserId && !user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+
+    if(user.agentUserId && user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Cannot submit both agent and web user.',
+                code: 400
+            }
+        }
+    }
+    
+    let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
+    let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
+    let role = ''
+
+    if(user.agentUserId){
+        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.AgentID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.DivisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No division found',
+                    code: 400
+                }
+            }
+        }
+
+        role = agentData.data.Position || ''
+        mobileAgentData = agentData.data
+        user.agentUserId = agentData.data.AgentID
+    }
+
+    else if(user.webUserId) {
+        const webUserData = await findEmployeeUserById(user.webUserId)
+
+        if(!webUserData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!webUserData.data.UserWebID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(webUserData.data.Role !== 'SALES ADMIN'){
+            
+        }
+
+        role = webUserData.data.Role
+        webAgentData = webUserData.data
+        user.webUserId = webUserData.data.UserWebID
+    }
+
+    else {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+    
+    let project: VwProjectDeveloper | undefined = undefined
+    
+    if(data.projectID){
+        let projectQuery = await getProjectById(data.projectID)
+        if(!projectQuery.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No project found',
+                    code: 400
+                }
+            }
+        }
+
+        project = projectQuery.data
+        
+    }
+
+    
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
+    const updatedData = {
+        ...data,
+        ...project && {developerID: Number(project.DeveloperID)},
+        ...data.divisionID && {divisionID: data.divisionID},
+        images: {
+            receipt: receiptMetadata,
+            agreement: agreementMetadata
+        },
+        commissionRates: data.commissionRates || []
+    }
+
+    const updatePendingSale = await editPendingSale(
+        {
+            ...user.agentUserId && {agentUserId: user.agentUserId},
+            ...user.webUserId && {webUserId: user.webUserId},
+        },
+        role,
+        pendingSale.data.AgentPendingSalesID,
+        updatedData
+    )
+
+    if(!updatePendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: updatePendingSale?.error?.message,
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: updatePendingSale.data,
+    }
+}
+
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
     pendingSalesId: number,
@@ -1230,8 +1488,50 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         }
     }
 
+    // set approval status and sales status
 
-    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId);
+    let approvalStatus: number | undefined = undefined
+    let salesStatus: string | undefined = undefined
+
+    // check for agent first
+    
+    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+
+    const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
+
+    const createdUserId = createdBy.data || createdByWeb.data
+
+    if(!createdBy.success && !createdByWeb.success){
+        approvalStatus = SaleStatus.NEWLY_SUBMITTED,
+        salesStatus = SalesStatusText.PENDING_UM
+    }
+
+    if(createdUserId.Position == 'SALES PERSON'){
+        approvalStatus = SaleStatus.NEWLY_SUBMITTED,
+        salesStatus = SalesStatusText.PENDING_UM
+    }
+
+    if(createdUserId.Position == 'UNIT MANAGER'){
+        approvalStatus = SaleStatus.UNIT_MANAGER_APPROVED,
+        salesStatus = SalesStatusText.PENDING_SD
+    }
+
+    if(createdUserId.Position == 'SALES DIRECTOR'){
+        approvalStatus = SaleStatus.SALES_DIRECTOR_APPROVED,
+        salesStatus = SalesStatusText.PENDING_BH
+    }
+
+    if(createdUserId.Position == 'BRANCH HEAD'){
+        approvalStatus = SaleStatus.BRANCH_HEAD_APPROVED,
+        salesStatus = SalesStatusText.PENDING_SA
+    }
+
+    if(createdUserId.Position == 'SALES ADMIN'){
+        approvalStatus = SaleStatus.SALES_ADMIN_APPROVED,
+        salesStatus = SalesStatusText.APPROVED
+    }
+
+    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM));
 
     if(!result.success){
         return {
