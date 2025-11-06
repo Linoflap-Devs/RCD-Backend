@@ -1361,6 +1361,7 @@ export interface VwSalesTrans {
   ProjectName: string | null;
   Property: string | null;
   ReservationDate: string | null;
+  ReservationDateFormatted: Date;
   SalesBranchID: number | null;
   SalesSectorID: number;
   SalesStatus: string;

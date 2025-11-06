@@ -37,6 +37,127 @@ async function generateUniqueTranCode(): Promise<string> {
     return tranCode;
 }
 
+export const getSalesTrans = async (
+    filters?: {
+        divisionId?: number,
+        month?: number,
+        year?: number,
+        agentId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, results: VwSalesTrans[]}> => {
+
+    try {
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        let result = await db.selectFrom('vw_SalesTrans')
+            .selectAll()
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        let totalCountResult = await db
+            .selectFrom("vw_SalesTrans")
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(filters && filters.divisionId) {
+            result = result.where('DivisionID', '=', filters.divisionId)
+            totalCountResult = totalCountResult.where('DivisionID', '=', filters.divisionId)
+        }
+
+        if(filters && filters.developerId){
+            result = result.where('DeveloperID', '=', filters.developerId)
+            totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+        }
+        
+
+        if(filters && filters.salesBranch){
+            result = result.where('SalesBranchID', '=', filters.salesBranch)
+            totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
+
+        if(filters && filters.month){
+            const year = filters.year ? filters.year : new Date().getFullYear();
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+            result = result.where('ReservationDateFormatted', '>', firstDay)
+            result = result.where('ReservationDateFormatted', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
+        }
+
+        result = result.orderBy('ReservationDateFormatted', 'desc')
+        
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
+        
+        const queryResult = await result.execute();
+        const countResult = await totalCountResult.execute();
+        if(!result){
+            throw new Error('No sales found.')
+        }
+
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+        console.log('totalPages', totalPages)
+        
+        let filteredResult = queryResult
+
+        // Filter to get unique ProjectName records (keeps first occurrence)
+        if(filters && filters.isUnique  && filters.isUnique === true){
+            const uniqueProjects = new Map();
+            filteredResult = queryResult.filter(record => {
+                if (!uniqueProjects.has(record.SalesTranCode)) {
+                    uniqueProjects.set(record.SalesTranCode, true);
+                    return true;
+                }
+                return false;
+            })
+        }
+        
+        return {
+            success: true,
+            data: {
+                totalResults: totalCount,
+                totalPages: totalPages,
+                results: filteredResult
+            }
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getPersonalSales = async (
     agentId: number, 
     filters?: { month?: number }, 

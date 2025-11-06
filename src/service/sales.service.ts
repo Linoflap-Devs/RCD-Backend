@@ -1,5 +1,5 @@
-import { VwAgents, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -140,6 +140,77 @@ export const getUserPersonalSalesService = async (userId: number, filters?: { mo
     return {
         success: true,
         data: obj
+    }
+}
+
+export const getWebSalesTransService = async (
+    userId: number,
+    filters?: {
+        divisionId?: number,
+        month?: number,
+        year?: number,
+        agentId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, results: Partial<VwSalesTrans>[]}> => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, results: Partial<VwSalesTrans>[]},
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getSalesTrans(
+        {
+            ...filters,
+            salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined
+        },
+        pagination
+    );
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+    
+    const obj = result.data.results.map((sale: VwSalesTrans) => {
+        return {
+            SalesTranID: sale.SalesTranID,
+            DeveloperName: sale.DeveloperName?.trim() || '',
+            Division: sale.Division?.trim() || '',
+            ProjectName: sale.ProjectName?.trim() || '',
+            SalesStatus: sale.SalesStatus?.trim() || '',
+            SalesTranCode: sale.SalesTranCode?.trim() || '',
+        }
+    })
+
+    return {
+        success: true,
+        data: {
+            totalResults: result.data.totalResults,
+            totalPages: result.data.totalPages,
+            results: obj
+        }
     }
 }
 

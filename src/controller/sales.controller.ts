@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -73,6 +73,39 @@ export const getSalesTransactionDetailController = async (req: Request, res: Res
     }
 
     res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const getWebSalesTransController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { page, pageSize, month, year, developerId } = req.query
+
+    const result = await getWebSalesTransService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales transactions', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'List of sales transactions.', data: result.data})
+    
 }
 
 export const getPendingSalesController = async (req: Request, res: Response) => {
