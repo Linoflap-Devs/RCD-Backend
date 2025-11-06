@@ -158,6 +158,32 @@ export const getSalesTrans = async (
     }
 }
 
+export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwSalesTransactions[]> => {
+    try {
+        const result = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTranID', '=', salesTranId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getPersonalSales = async (
     agentId: number, 
     filters?: { month?: number }, 

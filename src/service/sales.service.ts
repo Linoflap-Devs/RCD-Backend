@@ -1,12 +1,12 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
-import { IImage } from "../types/image.types";
+import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
 import { CommissionDetailPositions } from "../types/commission.types";
@@ -210,6 +210,114 @@ export const getWebSalesTransService = async (
             totalResults: result.data.totalResults,
             totalPages: result.data.totalPages,
             results: obj
+        }
+    }
+}
+
+export const getWebSalesTranDtlService = async (userId: number, salesTranId: number) => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getSalesTransDetails(salesTranId);
+
+     if(!result.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: result.error?.code || 500,
+                message: 'No sales found.'
+            }
+        }
+     }
+
+    if((userData.data.Role !== 'SALES ADMIN') && (userData.data.BranchID !== result.data[0]?.SalesBranchID)){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    let images: IImageBase64[] = []
+    if(result.data[0].SalesTransDtlID){
+        const data = await getSaleImagesByTransactionDetail(result.data[0].SalesTransDtlID);
+
+        if(data.success){
+            images = data.data
+        }
+    }
+
+    const details = result.data.map((sale: VwSalesTransactions) => {
+        return {
+            SalesTranDtlId: sale.SalesTransDtlID,
+            Position: sale.PositionName?.trim() || '',
+            AgentID: sale.AgentID,
+            AgentName: sale.AgentName?.trim() || '',
+            CommissionRate: sale.CommissionRate
+        }
+    })
+
+    const data = result.data[0]
+
+    const obj = {
+        SalesTransId: data.SalesTranID,
+        SalesTranCode: data.SalesTranCode,
+        DivisionID: data.DivisionID,
+        DateFiled: data.DateFiled,
+        ReservationDate: data.ReservationDate,
+        BuyersName: data.BuyersName,
+        BuyersAddress: data.BuyersAddress,
+        BuyersOccupation: data.BuyersOccupation,
+        BuyersContactNumber: data.BuyersContactNumber,
+        ProjectID: data.ProjectID,
+        ProjectLocationID: data.ProjectLocationID,
+        DeveloperID: data.DeveloperID,
+        FinancingScheme: data.FinancingScheme,
+        Block: data.Block,
+        Lot: data.Lot,
+        Phase: data.Phase,
+        LotArea: data.LotArea,
+        FloorArea: data.FloorArea,
+        NetTotalTCP: data.NetTotalTCP,
+        MiscFee: data.MiscFee,
+        DownPayment: data.DownPayment,
+        MonthlyDP: data.MonthlyDP,
+        DPStartSchedule: data.DPStartSchedule,
+        DPTerms: data.DPTerms,
+        SalesStatus: data.SalesStatus,
+        LastUpdateby: data.LastUpdateby,
+        LastUpdate: data.LastUpdate,
+        SalesBranchID: data.SalesBranchID,
+        DevCommType: data.DevCommType,
+        ProjectName: data.ProjectName,
+        DeveloperName: data.DeveloperName,
+        Division: data.Division,
+        SalesSectorID: data.SalesSectorID,
+        SectorName: data.SectorName,
+        ProjectTypeName: data.ProjectTypeName
+    }
+
+    return {
+        success: true,
+        data: {
+            ...obj,
+            Details: details,
+            Images: images
         }
     }
 }
