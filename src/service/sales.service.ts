@@ -4,7 +4,7 @@ import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } fro
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage } from "../types/image.types";
 import path from "path";
@@ -654,36 +654,48 @@ export const getCombinedPersonalSalesService = async (
 
         // Process approved sales
         if (approvedSalesResult.success) {
-            const approvedSales = approvedSalesResult.data.results.map((sale: VwSalesTransactions) => ({
-                salesId: sale.SalesTranID,
-                salesTransDtlId: sale.SalesTransDtlID,
-                pendingSalesId: null,
-                pendingSalesDtlId: null,
-                projectName: sale.ProjectName?.trim() || '',
-                projectCode: sale.SalesTranCode?.trim() || '',
-                agentName: sale.AgentName || '',
-                reservationDate: sale.ReservationDate,
-                dateFiled: sale.DateFiled,
-                approvalStatus: null,
-            }));
+            const approvedSales = approvedSalesResult.data.results.map((sale: VwSalesTransactions) => {
+
+                return {
+                    salesId: sale.SalesTranID,
+                    salesTransDtlId: sale.SalesTransDtlID,
+                    pendingSalesId: null,
+                    pendingSalesDtlId: null,
+                    projectName: sale.ProjectName?.trim() || '',
+                    projectCode: sale.SalesTranCode?.trim() || '',
+                    agentName: sale.AgentName || '',
+                    reservationDate: sale.ReservationDate,
+                    dateFiled: sale.DateFiled,
+                    approvalStatus: null,
+                    isEditable: false
+                }
+            });
             combinedSales.push(...approvedSales);
         }
 
         // Process pending sales
         console.log(pendingSalesResult.data)
         if (pendingSalesResult.success) {
-            const pendingSales = pendingSalesResult.data.results.map((sale: AgentPendingSale) => ({
-                salesId: null,
-                salesTransDtlId: null,
-                pendingSalesId: sale.AgentPendingSalesID,
-                pendingSalesDtlId: null,
-                projectName: sale.ProjectName?.trim() || '',
-                projectCode: sale.PendingSalesTranCode?.trim() || '',
-                agentName: sale.AgentName || sale.CreatedByName || '',
-                reservationDate: sale.ReservationDate,
-                dateFiled: sale.DateFiled,
-                approvalStatus: sale.ApprovalStatus,
-            }));
+            const pendingSales = pendingSalesResult.data.results.map((sale: AgentPendingSale) => {
+
+                const role = agent.data.Position ? RoleMap.get(agent.data.Position.toUpperCase()) || 0 : 0
+
+                const isSubmitter = agent.data.AgentID === (sale.CreatedBy)
+
+                return {
+                    salesId: null,
+                    salesTransDtlId: null,
+                    pendingSalesId: sale.AgentPendingSalesID,
+                    pendingSalesDtlId: null,
+                    projectName: sale.ProjectName?.trim() || '',
+                    projectCode: sale.PendingSalesTranCode?.trim() || '',
+                    agentName: sale.AgentName || sale.CreatedByName || '',
+                    reservationDate: sale.ReservationDate,
+                    dateFiled: sale.DateFiled,
+                    approvalStatus: sale.ApprovalStatus,
+                    isEditable: (isSubmitter && role == sale.ApprovalStatus) || role == sale.ApprovalStatus + 1 
+                }
+            });
             combinedSales.push(...pendingSales);
         }
 

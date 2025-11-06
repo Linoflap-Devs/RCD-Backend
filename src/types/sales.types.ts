@@ -233,3 +233,19 @@ export enum SalesStatusText {
     PENDING_SA = 'PENDING APPROVAL - SALES ADMIN',
     APPROVED = 'APPROVED'
 }
+
+export enum Roles {
+    "SALES PERSON" = 1,
+    "UNIT MANAGER" = 2,
+    "SALES DIRECTOR" = 3,
+    "BRANCH SALES STAFF" = 4,
+    "SALES ADMIN" = 5
+}
+
+export const RoleMap = new Map<string, number>([
+    ["SALES PERSON", 1], 
+    ["UNIT MANAGER", 2], 
+    ["SALES DIRECTOR", 3], 
+    ["BRANCH SALES STAFF", 4], 
+    ["SALES ADMIN", 5]
+])
