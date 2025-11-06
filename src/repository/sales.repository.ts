@@ -46,7 +46,8 @@ export const getSalesTrans = async (
         createdBy?: number,
         developerId?: number,
         isUnique?: boolean,
-        salesBranch?: number
+        salesBranch?: number,
+        search?: string
     },
     pagination?: {
         page?: number, 
@@ -103,6 +104,37 @@ export const getSalesTrans = async (
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
         }
+
+        if(filters && filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        console.log(filters.search)
+        const searchAsNumber = Number(filters.search);
+        const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+        
+        result = result.where(({ or, eb }) => 
+            or([
+                // String columns - always search these
+                eb('SalesTranCode', 'like', searchTerm),
+                eb('DeveloperName', 'like', searchTerm),
+                eb('ProjectName', 'like', searchTerm),
+                eb('Division', 'like', searchTerm),
+                eb('SalesStatus', 'like', searchTerm),
+                // Numeric column - only search if valid number
+                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+            ])
+        );
+        
+        totalCountResult = totalCountResult.where(({ or, eb }) => 
+            or([
+                eb('SalesTranCode', 'like', searchTerm),
+                eb('DeveloperName', 'like', searchTerm),
+                eb('ProjectName', 'like', searchTerm),
+                eb('Division', 'like', searchTerm),
+                eb('SalesStatus', 'like', searchTerm),
+                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+            ])
+        );
+    }
 
         result = result.orderBy('ReservationDateFormatted', 'desc')
         

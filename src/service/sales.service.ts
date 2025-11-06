@@ -153,7 +153,8 @@ export const getWebSalesTransService = async (
         createdBy?: number,
         developerId?: number,
         isUnique?: boolean,
-        salesBranch?: number
+        salesBranch?: number,
+        search?: string
     },
     pagination?: {
         page?: number, 
@@ -178,6 +179,7 @@ export const getWebSalesTransService = async (
         {
             ...filters,
             salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined,
+            search: filters?.search ? filters.search : undefined,
             isUnique: true
         },
         pagination
