@@ -72,7 +72,14 @@ router.route('/combined').get([validateSession], getCombinedPersonalSalesControl
 router.route('/:salesTransactionId').get([validateSession], getSalesTransactionDetailController);
 
 router.route('/web/:salesTransactionId').get([validateEmployeeSession, validateRole(['BH', 'SA', 'AL', 'ML'])], getWebSalesTransDtlController);
-router.route('/web/:salesTransactionId').patch([validateEmployeeSession, validateRole(['SA'])], editSalesTransactionController);
+router.route('/web/:salesTransactionId').patch(
+    [
+        validateEmployeeSession, 
+        validateRole(['SA']),
+        multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
+    ], 
+    editSalesTransactionController
+);
 
 router.route('/').get([validateEmployeeSession, validateRole(['BH', 'SA', 'AL', 'ML'])], getWebSalesTransController);
 

@@ -107,7 +107,7 @@ export const getSalesTrans = async (
 
         if(filters && filters.search) {
         const searchTerm = `%${filters.search}%`;
-        console.log(filters.search)
+        console.log(    )
         const searchAsNumber = Number(filters.search);
         const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
         
@@ -2059,7 +2059,7 @@ export const editSalesTransaction = async (
 
         // Build update object dynamically - only include fields that are provided
         const updateData: any = {
-            LastUpdateByWeb: userId || undefined,
+            LastUpdateby: userId || undefined,
             LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
         };
 
@@ -2107,6 +2107,8 @@ export const editSalesTransaction = async (
             const existingReceiptId = existingImages.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1;
             const existingAgreementId = existingImages.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1;
 
+            console.log(existingImages, existingReceiptId, existingAgreementId)
+
             // Handle receipt
             if(data.images.receipt){
                 const newReceipt = await trx.insertInto('Tbl_Image')
@@ -2125,7 +2127,7 @@ export const editSalesTransaction = async (
 
                 await trx.insertInto('Tbl_SalesTranImage')
                     .values({
-                        PendingSalesTransID: existingImages[0].PendingSalesTransID,
+                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
                         SalesTransID: salesTranId,
                         TranCode: existingSale.SalesTranCode,
                         ImageID: newReceiptId,
@@ -2163,7 +2165,8 @@ export const editSalesTransaction = async (
 
                 await trx.insertInto('Tbl_SalesTranImage')
                     .values({
-                        PendingSalesTransID: existingImages[0].PendingSalesTransID,
+                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
+                        SalesTransID: salesTranId,
                         TranCode: existingSale.SalesTranCode,
                         ImageID: newAgreementId,
                         ImageType: 'AGREEMENT'
