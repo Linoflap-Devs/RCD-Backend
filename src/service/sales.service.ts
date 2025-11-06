@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -177,7 +177,8 @@ export const getWebSalesTransService = async (
     const result = await getSalesTrans(
         {
             ...filters,
-            salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined
+            salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined,
+            isUnique: true
         },
         pagination
     );
@@ -1300,6 +1301,142 @@ export const editPendingSalesDetailsService = async (
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const editSalesTranService = async (
+    userId: number,
+    data: {
+        salesTranId: number,
+        reservationDate?: Date,
+        divisionID?: number,
+        salesBranchID?: number,
+        sectorID?: number,
+        buyersName?: string,
+        address?: string,
+        phoneNumber?: string,
+        occupation?: string,
+        projectID?: number,
+        blkFlr?: string,
+        lotUnit?: string,
+        phase?: string,
+        lotArea?: number,
+        flrArea?: number,
+        developerID?: number,
+        developerCommission?: number,
+        netTCP?: number,
+        miscFee?: number,
+        financingScheme?: string,
+        downpayment?: number,
+        dpTerms?: number,
+        monthlyPayment?: number
+        dpStartDate?: Date,
+        sellerName?: string,
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
+    }
+) => {
+
+    // validations
+
+    const pendingSale = await getSalesTransDetails(data.salesTranId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No pending sale found.',
+                code: 400
+            }
+        }
+    }
+
+    const sale = pendingSale.data[0]
+    
+    let project: VwProjectDeveloper | undefined = undefined
+    
+    if(data.projectID){
+        let projectQuery = await getProjectById(data.projectID)
+        if(!projectQuery.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No project found',
+                    code: 400
+                }
+            }
+        }
+
+        project = projectQuery.data
+        
+    }
+
+    
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
+    const updatedData = {
+        ...data,
+        ...project && {developerID: Number(project.DeveloperID)},
+        ...data.divisionID && {divisionID: data.divisionID},
+        images: {
+            receipt: receiptMetadata,
+            agreement: agreementMetadata
+        },
+        commissionRates: data.commissionRates || []
+    }
+
+    const updateSalesTran = await editSalesTransaction(
+        userId,
+        data.salesTranId,
+        updatedData
+    )
+
+    if(!updateSalesTran.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: updateSalesTran?.error?.message,
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: updateSalesTran.data,
     }
 }
 
