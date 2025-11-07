@@ -51,6 +51,29 @@ export const addDivisionService = async ( userId: number, data: IAddDivision ): 
         }
     }
 
+    const existingDivision = await getDivisions()
+
+    if(!existingDivision.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: existingDivision.error
+        }
+    }
+    const activeDivisions = existingDivision.data.filter((div: ITblDivision) => div.IsActive == 1)
+    const duplicates = activeDivisions.filter((div: ITblDivision) => div.DivisionCode.toLowerCase() === data.DivisionCode.toLowerCase() || div.Division.toLowerCase() === data.Division.toLowerCase())
+
+    if(duplicates.length > 0){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: 'Division name or division code already exists.'
+            }
+        }
+    }
+
     const result = await addDivision(userId, data)
 
     if(!result.success){
