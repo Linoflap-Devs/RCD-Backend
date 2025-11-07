@@ -15,7 +15,7 @@ import projectRoutes from './routes/projects.routes'
 import branchRoutes from './routes/branches.routes'
 
 const app = express()
-const port = process.env.PORT || 3000
+const port = Number(process.env.PORT) || 3000
 app.set('port', port)
 
 app.use(helmet())
@@ -43,6 +43,6 @@ app.get('/', (async (req, res) => {
     res.send('Hello World!')
 }))
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`Server running on PORT ${port}`)
 })
