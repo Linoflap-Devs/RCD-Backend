@@ -61,6 +61,39 @@ export const addDivision = async (userId: number, data: IAddDivision): QueryResu
     }
 }
 
+export const editDivision = async (userId: number, divisionId: number, data: Partial<IAddDivision>): QueryResult<ITblDivision> => {
+    try {
+        const updateData: Partial<ITblDivision> = {
+            ...data,
+            LastUpdate: new Date(),
+            UpdateBy: userId
+        }
+
+        const result = await db.updateTable('Tbl_Division')
+            .where('DivisionID', '=', divisionId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const deleteDivision = async (divisionId: number): QueryResult<ITblDivision> => {
     try {
         const result = await db.updateTable('Tbl_Division')

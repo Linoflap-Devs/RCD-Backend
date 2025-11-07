@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addDivisionService, deleteDivisionService, getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
+import { addDivisionService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
 
 export const getDivisionsController = async (req: Request, res: Response) => {
 
@@ -48,6 +48,39 @@ export const addDivisionController = async  (req: Request, res: Response) => {
     return res.status(200).json({
         success: true,
         message: "Division added.",
+        data: result.data
+    })
+}
+
+export const editDivisionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { divisionId } = req.params
+    const { divisionCode, divisionName, directorId } = req.body
+
+    const result = await editDivisionService(session.userID, Number(divisionId), { DivisionCode: divisionCode, Division: divisionName, DirectorId: directorId })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to edit division.",
+            data: {}
+        })
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division edited.",
         data: result.data
     })
 }
