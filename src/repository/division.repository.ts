@@ -1,9 +1,10 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { TblDivision, VwAgents } from "../db/db-types"
-import { IDivision } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
 
-export const getDivisions = async (): QueryResult<TblDivision[]> => {
+// Divisions
+export const getDivisions = async (): QueryResult<ITblDivision[]> => {
     try {
         const result = await db.selectFrom('Tbl_Division').selectAll().execute();
 
@@ -17,7 +18,41 @@ export const getDivisions = async (): QueryResult<TblDivision[]> => {
         const error = err as Error
         return {
             success: false,
-            data: [] as TblDivision[],
+            data: [] as ITblDivision[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const addDivision = async (userId: number, data: IAddDivision): QueryResult<ITblDivision> => {
+    try {
+
+        const result = await db.insertInto('Tbl_Division')
+            .values({
+                Division: data.Division,
+                DivisionCode: data.DivisionCode,
+                DirectorID: data.DirectorId || 0,
+                LastUpdate: new Date(),
+                UpdateBy: userId,
+                IsActive: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblDivision,
             error: {
                 code: 400,
                 message: error.message

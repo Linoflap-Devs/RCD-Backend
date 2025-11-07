@@ -549,7 +549,7 @@ export interface TblDivision {
   DirectorID: number;
   Division: string;
   DivisionCode: string;
-  DivisionID: number;
+  DivisionID: Generated<number>;
   IsActive: number;
   LastUpdate: Date;
   UpdateBy: number;
