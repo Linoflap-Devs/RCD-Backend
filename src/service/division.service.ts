@@ -1,6 +1,6 @@
 import { QueryResult } from "../types/global.types"
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository"
-import { addDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
+import { addDivision, deleteDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
 import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
@@ -52,6 +52,34 @@ export const addDivisionService = async ( userId: number, data: IAddDivision ): 
     }
 
     const result = await addDivision(userId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const deleteDivisionService = async ( userId: number, divisionId: number ): QueryResult<ITblDivision> => {
+
+    const userData = await findEmployeeUserById(userId)
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: userData.error
+        }
+    }
+
+    const result = await deleteDivision(divisionId)
 
     if(!result.success){
         return {
