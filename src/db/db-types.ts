@@ -549,7 +549,7 @@ export interface TblDivision {
   DirectorID: number;
   Division: string;
   DivisionCode: string;
-  DivisionID: number;
+  DivisionID: Generated<number>;
   IsActive: number;
   LastUpdate: Date;
   UpdateBy: number;
@@ -1361,6 +1361,7 @@ export interface VwSalesTrans {
   ProjectName: string | null;
   Property: string | null;
   ReservationDate: string | null;
+  ReservationDateFormatted: Date;
   SalesBranchID: number | null;
   SalesSectorID: number;
   SalesStatus: string;

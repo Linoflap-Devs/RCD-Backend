@@ -208,6 +208,41 @@ export interface SalesTargetTotals {
     TotalReachPercent: number
 }
 
+export interface ITblSalesTrans {
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommStatus: string | null;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  FinancingScheme: string;
+  FloorArea: number;
+  LastUpdate: Date;
+  LastUpdateby: number;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  Phase: string;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  ReservationDate: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SalesTranCode: string;
+  SalesTranID: number;
+  SellerName: string;
+}
+
 export enum SaleStatus {
     REJECTED = 0,
     NEWLY_SUBMITTED = 1,
@@ -233,3 +268,19 @@ export enum SalesStatusText {
     PENDING_SA = 'PENDING APPROVAL - SALES ADMIN',
     APPROVED = 'APPROVED'
 }
+
+export enum Roles {
+    "SALES PERSON" = 1,
+    "UNIT MANAGER" = 2,
+    "SALES DIRECTOR" = 3,
+    "BRANCH SALES STAFF" = 4,
+    "SALES ADMIN" = 5
+}
+
+export const RoleMap = new Map<string, number>([
+    ["SALES PERSON", 1], 
+    ["UNIT MANAGER", 2], 
+    ["SALES DIRECTOR", 3], 
+    ["BRANCH SALES STAFF", 4], 
+    ["SALES ADMIN", 5]
+])

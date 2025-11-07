@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTranService, getCombinedPersonalSalesService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -73,6 +73,66 @@ export const getSalesTransactionDetailController = async (req: Request, res: Res
     }
 
     res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const getWebSalesTransController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { page, pageSize, month, year, developerId, search } = req.query
+
+    const result = await getWebSalesTransService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined,
+        search: search ? search.toString() : undefined
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales transactions', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'List of sales transactions.', data: result.data})
+    
+}
+
+export const getWebSalesTransDtlController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { salesTransactionId } = req.params
+
+    const result = await getWebSalesTranDtlService(session.userID, Number(salesTransactionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales transaction detail', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
 }
 
 export const getPendingSalesController = async (req: Request, res: Response) => {
@@ -629,6 +689,116 @@ export const editWebPendingSalesControllerV2 = async (req: Request, res: Respons
         }, 
         {
             pendingSalesId: Number(pendingSalesId),
+            reservationDate,
+            divisionID,
+            salesBranchID,
+            sectorID,
+            buyersName,
+            address,
+            phoneNumber,
+            occupation,
+            projectID,
+            blkFlr,
+            lotUnit,
+            phase,
+            lotArea,
+            flrArea,
+            developerCommission,
+            netTCP,
+            miscFee,
+            financingScheme,
+            downpayment,
+            dpTerms,
+            monthlyPayment,
+            dpStartDate,
+            sellerName,
+            images: {
+                receipt: images?.receipt ? images.receipt[0] : undefined,
+                agreement: images?.agreement ? images.agreement[0] : undefined
+            },
+            commissionRates: parsedCommissionRates ? parsedCommissionRates : [],
+        }
+)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
+}
+
+export const editSalesTransactionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    const {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        divisionID,
+        buyersName,
+        address,
+        phoneNumber,
+        occupation,
+        projectID,
+        blkFlr,
+        lotUnit,
+        phase,
+        lotArea,
+        flrArea,
+        developerID,
+        developerCommission,
+        netTCP,
+        miscFee,
+        financingScheme,
+        downpayment,
+        dpTerms,
+        monthlyPayment,
+        dpStartDate,
+        sellerName,
+        commissionRates
+    } = req.body
+
+    const { 
+        salesTransactionId
+    } = req.params
+
+    let parsedCommissionRates = [];
+    if (commissionRates) {
+        try {
+            parsedCommissionRates = JSON.parse(commissionRates);
+        } catch (error) {
+            // Try parsing double-escaped JSON
+            try {
+                const unescaped = commissionRates.replace(/\\\"/g, '"');
+                parsedCommissionRates = JSON.parse(unescaped);
+            } catch (innerError) {
+                res.status(400).json({
+                    success: false, 
+                    message: 'Invalid commissionRates format', 
+                    data: {}
+                });
+                return;
+            }
+        }
+    }
+
+    const result = await editSalesTranService(
+        session.userID, 
+        {
+            salesTranId: Number(salesTransactionId),
             reservationDate,
             divisionID,
             salesBranchID,

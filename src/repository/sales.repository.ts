@@ -1,9 +1,9 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, IAgentPendingSale, SalesTargetTotals, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, IAgentPendingSale, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
@@ -35,6 +35,185 @@ async function generateUniqueTranCode(): Promise<string> {
     }
 
     return tranCode;
+}
+
+export const getSalesTrans = async (
+    filters?: {
+        divisionId?: number,
+        month?: number,
+        year?: number,
+        agentId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number,
+        search?: string
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, results: VwSalesTrans[]}> => {
+
+    try {
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        let result = await db.selectFrom('vw_SalesTrans')
+            .selectAll()
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        let totalCountResult = await db
+            .selectFrom("vw_SalesTrans")
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(filters && filters.divisionId) {
+            result = result.where('DivisionID', '=', filters.divisionId)
+            totalCountResult = totalCountResult.where('DivisionID', '=', filters.divisionId)
+        }
+
+        if(filters && filters.developerId){
+            result = result.where('DeveloperID', '=', filters.developerId)
+            totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+        }
+        
+
+        if(filters && filters.salesBranch){
+            result = result.where('SalesBranchID', '=', filters.salesBranch)
+            totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
+
+        if(filters && filters.month){
+            const year = filters.year ? filters.year : new Date().getFullYear();
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+            result = result.where('ReservationDateFormatted', '>', firstDay)
+            result = result.where('ReservationDateFormatted', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
+        }
+
+        if(filters && filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        console.log(    )
+        const searchAsNumber = Number(filters.search);
+        const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+        
+        result = result.where(({ or, eb }) => 
+            or([
+                // String columns - always search these
+                eb('SalesTranCode', 'like', searchTerm),
+                eb('DeveloperName', 'like', searchTerm),
+                eb('ProjectName', 'like', searchTerm),
+                eb('Division', 'like', searchTerm),
+                eb('SalesStatus', 'like', searchTerm),
+                // Numeric column - only search if valid number
+                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+            ])
+        );
+        
+        totalCountResult = totalCountResult.where(({ or, eb }) => 
+            or([
+                eb('SalesTranCode', 'like', searchTerm),
+                eb('DeveloperName', 'like', searchTerm),
+                eb('ProjectName', 'like', searchTerm),
+                eb('Division', 'like', searchTerm),
+                eb('SalesStatus', 'like', searchTerm),
+                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+            ])
+        );
+    }
+
+        result = result.orderBy('ReservationDateFormatted', 'desc')
+        
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
+        
+        const queryResult = await result.execute();
+        const countResult = await totalCountResult.execute();
+        if(!result){
+            throw new Error('No sales found.')
+        }
+
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+        console.log('totalPages', totalPages)
+        
+        let filteredResult = queryResult
+
+        // Filter to get unique ProjectName records (keeps first occurrence)
+        if(filters && filters.isUnique  && filters.isUnique === true){
+            const uniqueProjects = new Map();
+            filteredResult = queryResult.filter(record => {
+                if (!uniqueProjects.has(record.SalesTranCode)) {
+                    uniqueProjects.set(record.SalesTranCode, true);
+                    return true;
+                }
+                return false;
+            })
+        }
+        
+        return {
+            success: true,
+            data: {
+                totalResults: totalCount,
+                totalPages: totalPages,
+                results: filteredResult
+            }
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwSalesTransactions[]> => {
+    try {
+        const result = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTranID', '=', salesTranId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
 }
 
 export const getPersonalSales = async (
@@ -1819,7 +1998,291 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
     }
 }
 
+export const editSalesTransaction = async (
+    userId: number,
+    salesTranId: number,
+    data: {
+        reservationDate?: Date,
+        divisionID?: number,
+        salesBranchID?: number,
+        sectorID?: number,
+        buyersName?: string,
+        address?: string,
+        phoneNumber?: string,
+        occupation?: string,
+        projectID?: number,
+        blkFlr?: string,
+        lotUnit?: string,
+        phase?: string,
+        lotArea?: number,
+        flrArea?: number,
+        developerID?: number,
+        developerCommission?: number,
+        netTCP?: number,
+        miscFee?: number,
+        financingScheme?: string,
+        downpayment?: number,
+        dpTerms?: number,
+        monthlyPayment?: number
+        dpStartDate?: Date,
+        sellerName?: string,
+        images?: {
+            receipt?: IImage,
+            agreement?: IImage,
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
+    }
+): QueryResult<ITblSalesTrans> => {
 
+    const trx = await db.startTransaction().execute();
+    
+    try {
+        // First, get the existing pending sale to retrieve the transaction code
+        // const existingSale = await trx.selectFrom('Tbl_AgentPendingSales')
+        //     .selectAll()
+        //     .where('AgentPendingSalesID', '=', pendingSalesId)
+        //     .executeTakeFirst();
+
+        const existingSale = await trx.selectFrom('Tbl_SalesTrans')
+            .selectAll()
+            .where('SalesTranID', '=', salesTranId)
+            .executeTakeFirst();    
+
+        if(!existingSale){
+            throw new Error('Pending sale not found');
+        }
+
+        // Build update object dynamically - only include fields that are provided
+        const updateData: any = {
+            LastUpdateby: userId || undefined,
+            LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+        };
+
+        if(data.reservationDate !== undefined) updateData.ReservationDate = data.reservationDate;
+        if(data.divisionID !== undefined) updateData.DivisionID = data.divisionID;
+        if(data.salesBranchID !== undefined) updateData.SalesBranchID = data.salesBranchID;
+        if(data.sectorID !== undefined) updateData.SalesSectorID = data.sectorID;
+        if(data.buyersName !== undefined) updateData.BuyersName = data.buyersName;
+        if(data.address !== undefined) updateData.BuyersAddress = data.address;
+        if(data.phoneNumber !== undefined) updateData.BuyersContactNumber = data.phoneNumber;
+        if(data.occupation !== undefined) updateData.BuyersOccupation = data.occupation;
+        if(data.projectID !== undefined) updateData.ProjectID = data.projectID;
+        if(data.blkFlr !== undefined) updateData.Block = data.blkFlr;
+        if(data.lotUnit !== undefined) updateData.Lot = data.lotUnit;
+        if(data.phase !== undefined) updateData.Phase = data.phase;
+        if(data.lotArea !== undefined) updateData.LotArea = data.lotArea;
+        if(data.flrArea !== undefined) updateData.FloorArea = data.flrArea;
+        if(data.developerID !== undefined) updateData.DeveloperID = data.developerID;
+        if(data.developerCommission !== undefined) updateData.DevCommType = data.developerCommission.toString();
+        if(data.netTCP !== undefined) updateData.NetTotalTCP = data.netTCP;
+        if(data.miscFee !== undefined) updateData.MiscFee = data.miscFee;
+        if(data.financingScheme !== undefined) updateData.FinancingScheme = data.financingScheme;
+        if(data.downpayment !== undefined) updateData.DownPayment = data.downpayment;
+        if(data.dpTerms !== undefined) updateData.DPTerms = data.dpTerms.toString();
+        if(data.monthlyPayment !== undefined) updateData.MonthlyDP = data.monthlyPayment;
+        if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate;
+        if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
+
+        // Update the pending sale
+        console.log(data)
+        console.log(updateData)
+        const result = await trx.updateTable('Tbl_SalesTrans')
+            .where('SalesTranID', '=', salesTranId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        // Handle images if provided
+        if(data.images && (data.images.receipt || data.images.agreement)){
+            const existingImages = await trx.selectFrom('Tbl_SalesTranImage')
+                .selectAll()
+                .where('SalesTransID', '=', salesTranId)
+                .execute();
+
+            const existingReceiptId = existingImages.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1;
+            const existingAgreementId = existingImages.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1;
+
+            console.log(existingImages, existingReceiptId, existingAgreementId)
+
+            // Handle receipt
+            if(data.images.receipt){
+                const newReceipt = await trx.insertInto('Tbl_Image')
+                    .values({
+                        Filename: `${existingSale.SalesTranCode}-receipt_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
+                        ContentType: data.images.receipt.ContentType,
+                        FileExtension: data.images.receipt.FileExt,
+                        FileSize: data.images.receipt.FileSize,
+                        FileContent: data.images.receipt.FileContent,
+                        CreatedAt: new Date()
+                    })
+                    .output('inserted.ImageID')
+                    .executeTakeFirstOrThrow();
+
+                const newReceiptId = newReceipt.ImageID;
+
+                await trx.insertInto('Tbl_SalesTranImage')
+                    .values({
+                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
+                        SalesTransID: salesTranId,
+                        TranCode: existingSale.SalesTranCode,
+                        ImageID: newReceiptId,
+                        ImageType: 'RECEIPT'
+                    })
+                    .execute();
+
+                // Delete old receipt if exists
+                if(existingReceiptId > 0){
+                    await trx.deleteFrom('Tbl_SalesTranImage')
+                        .where('ImageID', '=', existingReceiptId)
+                        .execute();
+                    
+                    await trx.deleteFrom('Tbl_Image')
+                        .where('ImageID', '=', existingReceiptId)
+                        .execute();
+                }
+            }
+
+            // Handle agreement
+            if(data.images.agreement){
+                const newAgreement = await trx.insertInto('Tbl_Image')
+                    .values({
+                        Filename: `${existingSale.SalesTranCode}-agreement_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
+                        ContentType: data.images.agreement.ContentType,
+                        FileExtension: data.images.agreement.FileExt,
+                        FileSize: data.images.agreement.FileSize,
+                        FileContent: data.images.agreement.FileContent,
+                        CreatedAt: new Date()
+                    })
+                    .output('inserted.ImageID')
+                    .executeTakeFirstOrThrow();
+
+                const newAgreementId = newAgreement.ImageID;
+
+                await trx.insertInto('Tbl_SalesTranImage')
+                    .values({
+                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
+                        SalesTransID: salesTranId,
+                        TranCode: existingSale.SalesTranCode,
+                        ImageID: newAgreementId,
+                        ImageType: 'AGREEMENT'
+                    })
+                    .execute();
+
+                // Delete old agreement if exists
+                if(existingAgreementId > 0){
+                    await trx.deleteFrom('Tbl_SalesTranImage')
+                        .where('ImageID', '=', existingAgreementId)
+                        .execute();
+                    
+                    await trx.deleteFrom('Tbl_Image')
+                        .where('ImageID', '=', existingAgreementId)
+                        .execute();
+                }
+            }
+        }
+
+        // Handle commission rates if provided
+        if(data.commissionRates && data.commissionRates.length > 0){
+            // Fetch agent ids and data
+            const agentIds = data.commissionRates
+                .filter(c => c.agentId && c.agentId > 0)
+                .map(c => c.agentId!);
+
+            const agentData = new Map<number, VwAgents>();
+            if(agentIds.length > 0){
+                const agentsResult = await trx.selectFrom('Vw_Agents')
+                    .selectAll()
+                    .where('AgentID', 'in', agentIds)
+                    .execute();
+                
+                agentsResult.forEach(agent => {
+                    agentData.set(agent.AgentID || 0, agent);
+                });
+            }
+
+            // Build commission details object
+            let commissionDetails: CommissionRateDetail = {};
+
+            const buildCommissionDetail = (position: CommissionDetailPositions): CommissionRate | undefined => {
+                const commission = data.commissionRates!.find(c => c.position === position);
+
+                if(!commission) {
+                    return undefined
+                };
+
+                const agent = commission.agentId ? agentData.get(commission.agentId) : null;
+                return {
+                    agentName: agent 
+                        ? `${agent.LastName?.trim()}, ${agent.FirstName?.trim()} ${agent.MiddleName ? agent.MiddleName.trim() : ''}`.trim()
+                        : (commission.agentName || ''),
+                    agentId: commission.agentId || 0,
+                    commissionRate: commission.commissionRate || 0
+                };
+            };
+
+            commissionDetails.broker = buildCommissionDetail(CommissionDetailPositions.BROKER);
+            commissionDetails.salesDirector = buildCommissionDetail(CommissionDetailPositions.SALES_DIRECTOR);
+            commissionDetails.unitManager = buildCommissionDetail(CommissionDetailPositions.UNIT_MANAGER);
+            commissionDetails.salesPerson = buildCommissionDetail(CommissionDetailPositions.SALES_PERSON);
+            commissionDetails.salesAssociate = buildCommissionDetail(CommissionDetailPositions.SALES_ASSOCIATE);
+            commissionDetails.assistanceFee = buildCommissionDetail(CommissionDetailPositions.ASSISTANCE_FEE);
+            commissionDetails.referralFee = buildCommissionDetail(CommissionDetailPositions.REFERRAL_FEE);
+            commissionDetails.others = buildCommissionDetail(CommissionDetailPositions.OTHERS);
+
+            // Update each commission detail row
+            const updateCommission = async (positionName: string, positionID: number, detail: any) => {
+                await trx.updateTable('Tbl_SalesTransDtl')
+                    .where('SalesTranCode', '=', existingSale.SalesTranCode)
+                    .where('PositionName', '=', positionName)
+                    .set({
+                        AgentName: detail ? (detail.agentName || '') : '',
+                        AgentID: detail ? (detail.agentId || 0) : 0,
+                        CommissionRate: detail ? detail.commissionRate : 0
+                    })
+                    .execute();
+            };
+
+            await updateCommission('BROKER', 76, commissionDetails.broker);
+            await updateCommission('SALES DIRECTOR', 85, commissionDetails.salesDirector);
+            await updateCommission('UNIT MANAGER', 86, commissionDetails.unitManager);
+            await updateCommission('SALES PERSON', 0, commissionDetails.salesPerson);
+            await updateCommission('SALES ASSOCIATE', 0, commissionDetails.salesAssociate);
+            await updateCommission('ASSISTANCE FEE', 0, commissionDetails.assistanceFee);
+            await updateCommission('REFERRAL FEE', 0, commissionDetails.referralFee);
+            await updateCommission('OTHERS', 0, commissionDetails.others);
+        }
+
+        await trx.commit().execute();
+
+        const obj: ITblSalesTrans = {
+            ...result,
+            SalesTranID: existingSale.SalesTranID,
+
+        }
+
+        return {
+            success: true,
+            data: result
+        };
+    }
+    catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblSalesTrans ,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
 
 export const approveNextStage = async (data: {
         agentId?: number,

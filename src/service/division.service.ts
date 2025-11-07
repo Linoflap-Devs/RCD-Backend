@@ -1,8 +1,8 @@
 import { QueryResult } from "../types/global.types"
-import { findAgentDetailsByUserId } from "../repository/users.repository"
-import { getDivisionAgents, getDivisions } from "../repository/division.repository"
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository"
+import { addDivision, deleteDivision, editDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
-import { IDivision } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
 
 export const getDivisionsService = async (): QueryResult<IDivision[]> => {
@@ -16,7 +16,7 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
         }
     }
 
-    const obj = result.data.map((div: TblDivision) => ({
+    const obj = result.data.map((div: ITblDivision) => ({
         DivisionID: div.DivisionID,
         DivisionName: div.Division,
         DivisionCode: div.DivisionCode
@@ -27,6 +27,160 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
         data: obj
     }
 }   
+
+export const addDivisionService = async ( userId: number, data: IAddDivision ): QueryResult<ITblDivision> => {
+    const userData = await findEmployeeUserById(userId)
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: userData.error
+        }
+    }
+
+    if(data.DirectorId){
+        const directorData = await findAgentDetailsByAgentId(data.DirectorId)
+
+        if(!directorData.success){
+            return {
+                success: false,
+                data: {} as ITblDivision,
+                error: directorData.error
+            }
+        }
+    }
+
+    const existingDivision = await getDivisions()
+
+    if(!existingDivision.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: existingDivision.error
+        }
+    }
+    const activeDivisions = existingDivision.data.filter((div: ITblDivision) => div.IsActive == 1)
+    const duplicates = activeDivisions.filter((div: ITblDivision) => div.DivisionCode.toLowerCase() === data.DivisionCode.toLowerCase() || div.Division.toLowerCase() === data.Division.toLowerCase())
+
+    if(duplicates.length > 0){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: 'Division name or division code already exists.'
+            }
+        }
+    }
+
+    const result = await addDivision(userId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editDivisionService = async ( userId: number, divisionId: number, data: Partial<IAddDivision> ): QueryResult<ITblDivision> => {
+
+    const userData = await findEmployeeUserById(userId)
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: userData.error
+        }
+    }
+
+    const existingDivisions = await getDivisions()
+
+    const activeDivisions = existingDivisions.data.filter((div: ITblDivision) => div.IsActive == 1)
+
+    if(data && data.Division){
+        const division = data.Division.toLowerCase()
+        const duplicates = activeDivisions.filter((div: ITblDivision) => div.Division.toLowerCase() === division)
+
+        if(duplicates.length > 0){
+            return {
+                success: false,
+                data: {} as ITblDivision,
+                error: {
+                    code: 400,
+                    message: 'Division name already exists.'
+                }
+            }
+        }
+    }
+
+    if(data && data.DivisionCode){
+        const divisionCode = data.DivisionCode.toLowerCase()
+        const duplicates = activeDivisions.filter((div: ITblDivision) => div.DivisionCode.toLowerCase() === divisionCode)
+
+        if(duplicates.length > 0){
+            return {
+                success: false,
+                data: {} as ITblDivision,
+                error: {
+                    code: 400,
+                    message: 'Division code already exists.'
+                }
+            }
+        }
+    }
+
+    const result = await editDivision(userId, divisionId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const deleteDivisionService = async ( userId: number, divisionId: number ): QueryResult<ITblDivision> => {
+
+    const userData = await findEmployeeUserById(userId)
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: userData.error
+        }
+    }
+
+    const result = await deleteDivision(divisionId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
 
 export const getDivisionHierarchyService = async (agentUserId: number): QueryResult<any> => {
     const result = await findAgentDetailsByUserId(agentUserId)
