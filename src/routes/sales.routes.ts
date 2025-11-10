@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
-import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController } from '../controller/sales.controller';
+import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
@@ -75,6 +75,7 @@ router.route('/:salesTransactionId').get([validateSession], getSalesTransactionD
 
 router.route('/web/division/').get([validateEmployeeSession], getDivisionSalesTotalFnController)
 router.route('/web/division/yearly/').get([validateEmployeeSession], getDivisionSalesTotalsYearlyFnController)
+router.route('/web/developers/').get([validateEmployeeSession], getSalesByDeveloperTotalsFnController)
 router.route('/web/:salesTransactionId').get([validateEmployeeSession, validateRole(['BH', 'SA', 'AL', 'ML'])], getWebSalesTransDtlController);
 router.route('/web/:salesTransactionId').patch(
     [

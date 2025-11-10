@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
@@ -1072,6 +1072,38 @@ export const getDivisionSalesTotalsYearlyFnController = async (req: Request, res
     const result = await getDivisionSalesYearlyTotalsFnService(session.userID, {
         startYear: startYear ? Number(startYear) : undefined,
         endYear: endYear ? Number(endYear) : undefined
+    });
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales totals', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales totals', data: result.data})
+}
+
+export const getSalesByDeveloperTotalsFnController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        month,
+        year
+    } = req.query
+
+    const result = await getSalesByDeveloperTotalsFnService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined
     });
 
     if(!result.success){

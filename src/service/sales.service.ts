@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -2307,5 +2307,36 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
     return {
         success: true,
         data: groupedData
+    }
+}
+
+export const getSalesByDeveloperTotalsFnService = async (userId: number, filters?: {month?: number, year?: number}): QueryResult<any> => {
+    const result = await getSalesByDeveloperTotals(
+        [
+            {field: 'DeveloperName', direction: 'desc'},
+            {field: 'NetTotalTCP', direction: 'desc'}
+        ],
+        undefined,
+        undefined,
+        {
+            month: filters?.month,
+            year: filters?.year
+        }
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Failed to get sales by developer totals.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

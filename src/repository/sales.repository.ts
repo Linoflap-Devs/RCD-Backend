@@ -708,12 +708,12 @@ export const getSalesTargetTotals = async (sorts?: SalesTargetSortOption[], take
 }
 
 type DeveloperSalesSortOption = {
-    field: 'DivisionName' | 'NetTotalTCP'
+    field: 'DeveloperName' | 'NetTotalTCP'
     direction: 'asc' | 'desc'
 }
 
 
-export const getSalesByDeveloperTotals = async (sorts?: DeveloperSalesSortOption[], take?: number, date?: Date): QueryResult<DeveloperSales[]> => {
+export const getSalesByDeveloperTotals = async (sorts?: DeveloperSalesSortOption[], take?: number, date?: Date, filters?: {month?: number, year?: number}): QueryResult<DeveloperSales[]> => {
     try {
        let base = await db.selectFrom('vw_SalesTrans')
             .select([
@@ -726,6 +726,14 @@ export const getSalesByDeveloperTotals = async (sorts?: DeveloperSalesSortOption
             const month = date.getMonth() + 1
 
             base = base.where((eb) => eb.fn('MONTH', ['ReservationDate']), '=', month)
+        }
+
+        if(filters && filters.month){
+            base = base.where((eb) => eb.fn('MONTH', ['ReservationDate']), '=', filters.month)
+        }
+
+        if(filters && filters.year){
+            base = base.where((eb) => eb.fn('YEAR', ['ReservationDate']), '=', filters.year)
         }
 
         if(sorts && sorts.length > 0){
