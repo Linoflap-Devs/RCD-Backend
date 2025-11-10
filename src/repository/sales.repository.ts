@@ -2025,6 +2025,7 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
             .set({
                 LastUpdate: new Date(),
                 LastUpdateby: agentId,
+                Remarks: null,
                 ApprovalStatus: SaleStatus.UNIT_MANAGER_APPROVED,
                 SalesStatus: SalesStatusText.PENDING_SD
             })
