@@ -1685,7 +1685,7 @@ export const approveSalesAdminService = async (webUserId: number, pendingSalesId
     }
 }
 
-export const rejectPendingSaleService = async ( user: { agentUserId?: number, webUserId?: number }, pendingSalesId: number ): QueryResult<any> => {
+export const rejectPendingSaleService = async ( user: { agentUserId?: number, webUserId?: number }, pendingSalesId: number, remarks?: string ): QueryResult<any> => {
 
     if(!user.agentUserId && !user.webUserId){
         return {
@@ -1861,7 +1861,7 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.APPROVED
     }
 
-    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM));
+    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM), remarks);
 
     if(!result.success){
         return {

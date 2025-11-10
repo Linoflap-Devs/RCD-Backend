@@ -1173,6 +1173,17 @@ export interface VwDivisionSalesTarget {
   TargetYear: number;
 }
 
+export interface VwDivisionSalesYearly {
+  CurrentMonth: number | null;
+  CurrentMonthLastYear: number | null;
+  CurrentQuarter: number | null;
+  CurrentYear: number | null;
+  LastMonth: number | null;
+  LastQuarter: number | null;
+  LastYear: number | null;
+  Year: number | null;
+}
+
 export interface VwIncentives {
   AdditionalIncentive: number | null;
   AdditionalSalesIncentive: number | null;
@@ -1581,6 +1592,7 @@ export interface DB {
   vw_DivisionDirector: VwDivisionDirector;
   vw_DivisionSalesDash: VwDivisionSalesDash;
   vw_DivisionSalesTarget: VwDivisionSalesTarget;
+  vw_DivisionSalesYearly: VwDivisionSalesYearly;
   vw_Incentives: VwIncentives;
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;

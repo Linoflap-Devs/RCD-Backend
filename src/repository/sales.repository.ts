@@ -2324,7 +2324,7 @@ export const approveNextStage = async (data: {
     }
 }
 
-export const rejectPendingSale = async (agentId: number, pendingSalesId: number, approvalStatus: number, salesStatus: string): QueryResult<any> => {
+export const rejectPendingSale = async (agentId: number, pendingSalesId: number, approvalStatus: number, salesStatus: string, remarks?: string): QueryResult<any> => {
 
     if(agentId == 0){
         return {
@@ -2342,6 +2342,7 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number,
             .set({
                 ApprovalStatus: approvalStatus || 0,
                 SalesStatus: salesStatus || 'REJECTED',
+                Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: agentId
             })
