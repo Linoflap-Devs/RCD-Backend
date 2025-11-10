@@ -14,6 +14,9 @@ import commissionRoutes from './routes/commission.routes'
 import projectRoutes from './routes/projects.routes'
 import branchRoutes from './routes/branches.routes'
 import developerRoutes from './routes/developers.routes'
+import { db } from './db/db';
+import { sql } from 'kysely';
+import { checkDatabaseHealth } from './repository/health.repository';
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
@@ -42,7 +45,15 @@ app.use('/api/branches', branchRoutes)
 app.use('/api/developers', developerRoutes)
 
 app.get('/', (async (req, res) => {
-    res.send('Hello World!')
+
+    const dbCheck = await checkDatabaseHealth()
+
+    return res.status(200).json({
+        message: 'Welcome to RCD API',
+        health: {
+            database: dbCheck ? 'healthy' : 'unhealthy'
+        }
+    })
 }))
 
 app.listen(port, '0.0.0.0', () => {
