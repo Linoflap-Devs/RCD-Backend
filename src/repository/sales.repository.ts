@@ -2352,6 +2352,7 @@ export const approveNextStage = async (data: {
             .set({
                 ApprovalStatus: data.nextApprovalStatus,
                 SalesStatus: data.nextSalesStatus,
+                Remarks: null,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: data.agentId || undefined,
                 LastUpdateByWeb:  data.userId || undefined
@@ -2434,6 +2435,7 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
                 ApprovalStatus: SaleStatus.SALES_ADMIN_APPROVED,
                 SalesStatus: SalesStatusText.APPROVED,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                Remarks: null,
                 LastUpdateby: userWebId
             })
             .outputAll('inserted')
