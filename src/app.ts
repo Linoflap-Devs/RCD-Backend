@@ -13,6 +13,7 @@ import agentRoutes from './routes/agents.routes'
 import commissionRoutes from './routes/commission.routes'
 import projectRoutes from './routes/projects.routes'
 import branchRoutes from './routes/branches.routes'
+import developerRoutes from './routes/developers.routes'
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
@@ -38,6 +39,7 @@ app.use('/api/agents', agentRoutes)
 app.use('/api/commissions', commissionRoutes)
 app.use('/api/projects', projectRoutes)
 app.use('/api/branches', branchRoutes)
+app.use('/api/developers', developerRoutes)
 
 app.get('/', (async (req, res) => {
     res.send('Hello World!')

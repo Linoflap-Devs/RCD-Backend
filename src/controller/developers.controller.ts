@@ -1,0 +1,40 @@
+import { Request, Response } from "express";
+import { getDevelopersService } from "../service/developers.service";
+
+export const getDevelopersController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        developerId,
+        page,
+        pageSize
+    } = req.query
+
+    const result = await getDevelopersService(
+        session.userID, 
+        {
+            developerId: developerId ? Number(developerId) : undefined
+        },
+        {   
+            page: page ? Number(page) : undefined,
+            pageSize: pageSize ? Number(pageSize) : undefined
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get developers', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Developers', data: result.data})
+}
