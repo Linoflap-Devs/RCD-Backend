@@ -928,8 +928,9 @@ export const rejectPendingSalesController = async (req: Request, res: Response) 
     }
 
     const { pendingSalesId } = req.params
+    const { remarks } = req.body
 
-    const result = await rejectPendingSaleService({ agentUserId: session.userID }, Number(pendingSalesId))
+    const result = await rejectPendingSaleService({ agentUserId: session.userID }, Number(pendingSalesId), remarks)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to reject sales', data: {}})
@@ -953,8 +954,9 @@ export const rejectWebPendingSalesController = async (req: Request, res: Respons
     }
 
     const { pendingSalesId } = req.params
+    const { remarks } = req.body
 
-    const result = await rejectPendingSaleService({ webUserId: session.userID }, Number(pendingSalesId))
+    const result = await rejectPendingSaleService({ webUserId: session.userID }, Number(pendingSalesId), remarks)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to reject sales', data: {}})
