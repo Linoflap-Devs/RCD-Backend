@@ -3,7 +3,7 @@ import { db } from "../db/db"
 import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnSalesTarget, IAgentPendingSale, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
@@ -2773,6 +2773,61 @@ export const editSaleImages = async (pendingSaleId?: number, transSaleId?: numbe
         return {
             success: false,
             data: {} as {newReceiptId: number, newAgreementId: number},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+
+
+type DivisionYearlyTotalSort = {
+    field: 'Division' | 'Year'
+    direction: 'asc' | 'desc'
+}
+
+export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number }) => {
+    try {
+         const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        
+        const whereConditions: any[] = []
+        
+        if (filters?.startYear !== undefined) {
+            whereConditions.push(sql`Year >= ${sql.raw(filters.startYear.toString())}`)
+        }
+        
+        if (filters?.endYear !== undefined) {
+            whereConditions.push(sql`Year <= ${sql.raw(filters.endYear.toString())}`)
+        }
+        
+        const result = await sql`
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+            FROM vw_DivisionSalesYearly
+            ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnDivisionSalesYearly[] = result.rows as FnDivisionSalesYearly[]
+        return {
+            success: true,
+            data: rows
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnDivisionSalesYearly[],
             error: {
                 code: 500,
                 message: error.message

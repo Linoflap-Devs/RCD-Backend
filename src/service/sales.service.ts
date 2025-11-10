@@ -1,10 +1,10 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, EditPendingSaleDetail, IAgentPendingSale, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
@@ -2242,5 +2242,70 @@ export const editPendingSaleImagesService = async (
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filters?: {startYear?: number, endYear?: number}): QueryResult<DivisionYearlySalesGrouped[]> => {
+    const result = await getDivisionSalesTotalsYearlyFn(
+        [
+            {field: 'Year', direction: 'desc'},
+            {field: 'Division', direction: 'asc'}
+        ],
+        undefined,
+        {
+            startYear: filters?.startYear,
+            endYear: filters?.endYear
+        }
+    )
+
+    // Group by Division
+    const groupedData = result.data.reduce((acc, item) => {
+        const existingDivision = acc.find(d => d.Division === item.Division);
+        
+        if (existingDivision) {
+            existingDivision.YearData.push({
+                Year: item.Year,
+                CurrentMonth: item.CurrentMonth,
+                LastMonth: item.LastMonth,
+                CurrentMonthLastYear: item.CurrentMonthLastYear,
+                CurrentQuarter: item.CurrentQuarter,
+                LastQuarter: item.LastQuarter,
+                LastYear: item.LastYear,
+                CurrentYear: item.CurrentYear
+            });
+        } else {
+            acc.push({
+                Division: item.Division,
+                YearData: [{
+                    Year: item.Year,
+                    CurrentMonth: item.CurrentMonth,
+                    LastMonth: item.LastMonth,
+                    CurrentMonthLastYear: item.CurrentMonthLastYear,
+                    CurrentQuarter: item.CurrentQuarter,
+                    LastQuarter: item.LastQuarter,
+                    LastYear: item.LastYear,
+                    CurrentYear: item.CurrentYear
+                }]
+            });
+        }
+        
+        return acc;
+    }, [] as Array<{Division: string, YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>}>);
+    
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Failed to get division yearly sales totals.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: groupedData
     }
 }
