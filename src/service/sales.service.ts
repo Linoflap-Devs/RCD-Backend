@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -340,6 +340,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
     }
 
     const images = await getSaleImagesByTransactionDetail(salesTransDtlId);
+    const details = await getSalesDistributionBySalesTranDtlId(salesTransDtlId)
 
     let branchName = undefined
     if(result.data.SalesBranchID){
@@ -348,6 +349,16 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             branchName = fetchBranch.data.BranchName
         }
     }
+
+    const detailArray = details.data.map((sale: VwSalesTransactions) => {
+        return {
+            SalesTranDtlId: sale.SalesTransDtlID,
+            Position: sale.PositionName?.trim() || '',
+            AgentID: sale.AgentID,
+            AgentName: sale.AgentName?.trim() || '',
+            CommissionRate: sale.CommissionRate
+        }
+    })
 
     const sales = {
         salesInfo: {
@@ -385,6 +396,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             monthlyPayment: result.data.MonthlyDP,
             downpaymentStartDate: result.data.DPStartSchedule
         },
+        details: detailArray,
         images: images.data
     }
 

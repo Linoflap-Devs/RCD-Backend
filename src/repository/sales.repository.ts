@@ -216,6 +216,61 @@ export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwS
     }
 }
 
+export const getSalesDistributionBySalesTranDtlId = async (salesTranDtlId: number): QueryResult<VwSalesTransactions[]> => {
+    try {
+        const saleTranDtl = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTransDtlID', '=', salesTranDtlId)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .executeTakeFirst()
+
+        if(!saleTranDtl){
+            return {
+                success: false,
+                data: [] as VwSalesTransactions[],
+                error: {
+                    code: 404,
+                    message: 'No sales transaction details found.'
+                }
+            }
+        }
+
+        const result = await db.selectFrom('Vw_SalesTransactions')
+            .selectAll()
+            .where('SalesTranID', '=', saleTranDtl.SalesTranID)
+            .where('SalesStatus', '<>', 'ARCHIVED')
+            .execute();
+
+        if(!result){
+            return {
+                success: false,
+                data: [] as VwSalesTransactions[],
+                error: {
+                    code: 404,
+                    message: 'No sales found.'
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getPersonalSales = async (
     agentId: number, 
     filters?: { month?: number }, 
