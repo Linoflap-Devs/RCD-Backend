@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -142,6 +142,36 @@ export const getUserPersonalSalesService = async (userId: number, filters?: { mo
         data: obj
     }
 }
+
+export const getWebDivisionSalesService = async (userId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
+
+    const result = await getDivisionSalesTotalsFn(
+        [{field: 'Division', direction: 'asc'}], 
+        undefined, 
+        filters ? new Date(
+            filters.year ? filters.year : (new Date()).getFullYear(), 
+            filters.month ? filters.month - 1 : new Date().getMonth(), 
+            1
+        ) : undefined
+    );
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
+}   
 
 export const getWebSalesTransService = async (
     userId: number,
