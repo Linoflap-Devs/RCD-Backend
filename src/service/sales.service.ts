@@ -908,6 +908,12 @@ export const getCombinedPersonalSalesService = async (
 
                 const isSubmitter = agent.data.AgentID === (sale.CreatedBy)
 
+                if(sale.AgentPendingSalesID == 189){
+                    console.log(sale)
+                    console.log('role', role)
+                    console.log('isSubmitter', isSubmitter)
+                }
+
                 return {
                     salesId: null,
                     salesTransDtlId: null,
@@ -920,7 +926,7 @@ export const getCombinedPersonalSalesService = async (
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
                     hasRemarks: sale.Remarks ? true : false,
-                    isEditable: (isSubmitter && role == sale.ApprovalStatus) || role == sale.ApprovalStatus + 1 
+                    isEditable: isSubmitter ? role == (sale.ApprovalStatus - 1) : role == sale.ApprovalStatus
                 }
             });
             combinedSales.push(...pendingSales);
