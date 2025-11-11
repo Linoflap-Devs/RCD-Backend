@@ -4,7 +4,7 @@ import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
 import { IAgentRegister, IAgentRegistration, ITblAgentUser } from "../types/auth.types";
 import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { sql } from "kysely";
-import { FnAgentSales, ITblAgentRegistration } from "../types/agent.types";
+import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents } from "../db/db-types";
 
@@ -570,6 +570,32 @@ export const getAgent = async (agentId: number): QueryResult<VwAgents> => {
     }
 }
 
+export const getAgentByCode = async (code: string): QueryResult<VwAgents> => {
+    try {
+        const result = await db.selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentCode', '=', code)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgents,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getAgentRegistration = async (filters?: {agentId?: number, agentRegistrationId?: number}): QueryResult<ITblAgentRegistration> => {
     try {
         let registrationQuery = await db.selectFrom('Tbl_AgentRegistration')
@@ -713,6 +739,64 @@ export const getAgentImages = async (ids: number[]): QueryResult<TblImageWithId[
         return {
             success: false,
             data: [] as TblImageWithId[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<ITblAgent> => {
+    try {
+        const result = await db.insertInto('Tbl_Agents')
+            .values({
+                AgentCode: agent.AgentCode,
+                FirstName: agent.FirstName,
+                MiddleName: agent.MiddleName,
+                LastName: agent.LastName,
+                Birthdate: agent.Birthdate,
+                Birthplace: agent.Birthplace || '',
+                CivilStatus: agent.CivilStatus,
+                Religion: agent.Religion || '',
+                Sex: agent.Sex,
+                Address: agent.Address,
+                ContactNumber: agent.ContactNumber,
+                PositionID: agent.PositionID,
+                ContactEmergency: agent.ContactEmergency || '',
+                PersonEmergency: agent.PersonEmergency || '',
+                AddressEmergency: agent.AddressEmergency || '',
+                EmployeeIDNumber: agent.EmployeeIDNumber || '',
+                PRCNumber: agent.PRCNumber || '',
+                PagIbigNumber: agent.PagIbigNumber || '',
+                PhilhealthNumber: agent.PhilhealthNumber || '',
+                DSHUDNumber: agent.DSHUDNumber || ' ',
+                AgentTaxRate: agent.AgentTaxRate ,
+                AffiliationDate: agent.AffiliationDate || new Date(),
+                DivisionID: agent.DivisionID,
+                ReferredByID: agent.ReferredByID,
+                ReferredCode: agent.ReferredCode,
+                TelephoneNumber: agent.TelephoneNumber,
+                TINNumber: agent.TINNumber || '',
+                SSSNumber: agent.SSSNumber || '',
+                UpdateBy: userId,
+                LastUpdate: new Date(),
+                IsActive: 1
+            })  
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgent,
             error: {
                 code: 500,
                 message: error.message
