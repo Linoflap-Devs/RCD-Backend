@@ -1,6 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAddDeveloper, ITblDevelopers } from "../types/developers.types";
+import { TblDevelopers } from "../db/db-types";
 
 export const getDevelopers = async (
     filters?: {
@@ -108,6 +109,49 @@ export const addDeveloper = async (
 
     catch(err: unknown){
         const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblDevelopers,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editDeveloper = async (
+    userId: number,
+    developerId: number,
+    editData: Partial<IAddDeveloper>
+): QueryResult<ITblDevelopers> => {
+    try {
+        const updateData: any = {
+            ...editData,
+            LastUpdate: new Date(),
+            UpdateBy: userId
+        }
+
+        console.log(updateData)
+
+        const result = await db.updateTable('Tbl_Developers')
+            .where('DeveloperID', '=', developerId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirst()
+
+        if(!result){
+            throw new Error('Failed to update developer.');
+        }
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
         return {
             success: false,
             data: {} as ITblDevelopers,

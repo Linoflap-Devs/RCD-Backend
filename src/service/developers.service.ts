@@ -1,4 +1,4 @@
-import { addDeveloper, getDevelopers } from "../repository/developers.repository";
+import { addDeveloper, editDeveloper, getDevelopers } from "../repository/developers.repository";
 import { IAddDeveloper, ITblDevelopers } from "../types/developers.types";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -56,6 +56,29 @@ export const addDeveloperService = async (userId: number, data: IAddDeveloper): 
 
     if(!result.success) {
         logger('Failed to add developer.', result.error?.message)
+        return {
+            success: false,
+            data: {} as ITblDevelopers,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editDeveloperService = async (userId: number, developerId: number, data: Partial<IAddDeveloper>): QueryResult<ITblDevelopers> => {
+
+    // check validations and transforms
+    if(data.developerCode){
+        data.developerCode = undefined
+    }
+
+    const result = await editDeveloper(userId,  developerId, data)
+
+    if(!result.success){
         return {
             success: false,
             data: {} as ITblDevelopers,
