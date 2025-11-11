@@ -1,5 +1,5 @@
-import { getAgent, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
-import { ITblAgentRegistration } from "../types/agent.types";
+import { addAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { IAddAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
@@ -130,4 +130,62 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
         success: true,
         data: result.data[0]
     }
+}
+
+export const addAgentService = async (userId: number, data: IAddAgent) => {
+
+    console.log()
+
+    const existingAgent = await getAgentByCode(data.AgentCode)
+
+    console.log(existingAgent)
+
+    if(existingAgent.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Agent code already exists.'
+            }
+        }
+    }
+
+    const result = await addAgent(userId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>) => {
+
+    if(data.AgentCode){
+        data.AgentCode = undefined
+    }
+
+    const result = await editAgent(userId, agentId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
 }
