@@ -804,3 +804,38 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
         }
     }
 }
+
+export const editAgent = async (userId: number, agentId: number, data: Partial<IAddAgent>): QueryResult<ITblAgent> => {
+    
+    console.log(userId, agentId, data)
+    try {
+        const updateData = {
+            ...data,
+            LastUpdate: new Date(),
+            UpdateBy: userId
+        }
+
+        const result = await db.updateTable('Tbl_Agents')
+            .where('AgentID', '=', agentId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

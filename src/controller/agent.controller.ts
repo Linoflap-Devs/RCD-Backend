@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { get } from "http"
-import { addAgentService, getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService, lookupAgentRegistrationService } from "../service/agents.service"
+import { addAgentService, editAgentService, getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService, lookupAgentRegistrationService } from "../service/agents.service"
 
 export const getAgentsController = async (req: Request, res: Response) => {
 
@@ -154,3 +154,95 @@ export const addNewAgentController = async (req: Request, res: Response) => {
 
     return res.status(200).json({success: true, message: 'Agent added.', data: result.data})
 }
+
+
+export const editAgentController = async (req: Request, res: Response) =>{
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        agentId
+    } = req.params
+
+    const {
+        agentCode,
+        lastName,
+        firstName,
+        middleName,
+        contactNumber,
+        divisionID,
+        agentTaxRate,
+        civilStatus,
+        sex,
+        address,
+        birthdate,
+        positionID,
+        referredByID,
+        prcNumber,
+        dshudNumber,
+        referredCode,
+        personEmergency,
+        contactEmergency,
+        addressEmergency,
+        affliationDate,
+        religion,
+        birthplace,
+        telephoneNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        employeeIdNumber
+    } = req.body
+
+    const result = await editAgentService(
+        session.userID,
+        Number(agentId),
+        {
+            AgentCode: agentCode,
+            LastName: lastName,
+            FirstName: firstName,
+            MiddleName: middleName,
+            ContactNumber: contactNumber,
+            DivisionID: divisionID,
+            AgentTaxRate: agentTaxRate,
+            CivilStatus: civilStatus,
+            Sex: sex,
+            Address: address,
+            Birthdate: birthdate,
+            PositionID: positionID,
+            ReferredByID: referredByID,
+            PRCNumber: prcNumber,
+            DSHUDNumber: dshudNumber,
+            ReferredCode: referredCode,
+            PersonEmergency: personEmergency,
+            ContactEmergency: contactEmergency,
+            AddressEmergency: addressEmergency,
+            AffiliationDate: affliationDate,
+            Religion: religion,
+            Birthplace: birthplace,
+            TelephoneNumber: telephoneNumber,
+            SSSNumber: sssNumber,
+            PhilhealthNumber: philhealthNumber,
+            PagIbigNumber: pagibigNumber,
+            TINNumber: tinNumber,
+            EmployeeIDNumber: employeeIdNumber
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit agent.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Agent edited.', data: result.data})
+}   

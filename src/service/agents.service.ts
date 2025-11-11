@@ -1,4 +1,4 @@
-import { addAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { addAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { IAddAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
@@ -165,4 +165,27 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
         success: true,
         data: result.data
     }
+}
+
+export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>) => {
+
+    if(data.AgentCode){
+        data.AgentCode = undefined
+    }
+
+    const result = await editAgent(userId, agentId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
 }
