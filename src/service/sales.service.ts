@@ -796,6 +796,7 @@ export const getPendingSalesService = async (
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
+            HasRemark: item.Remarks ? true : false,
             CreatedBy: item.CreatedBy
         }
     })
@@ -891,6 +892,7 @@ export const getCombinedPersonalSalesService = async (
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: null,
+                    hasRemarks: false,
                     isEditable: false
                 }
             });
@@ -917,6 +919,7 @@ export const getCombinedPersonalSalesService = async (
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
+                    hasRemarks: sale.Remarks ? true : false,
                     isEditable: (isSubmitter && role == sale.ApprovalStatus) || role == sale.ApprovalStatus + 1 
                 }
             });
