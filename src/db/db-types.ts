@@ -521,7 +521,7 @@ export interface TblDevelopers {
   ContactNumber: string;
   ContactPerson: string;
   DeveloperCode: string;
-  DeveloperID: number;
+  DeveloperID: Generated<number>;
   DeveloperName: string;
   LastUpdate: Date;
   PartialReleaseAmount: number;
@@ -1178,6 +1178,18 @@ export interface VwDivisionSalesYearly {
   CurrentMonthLastYear: number | null;
   CurrentQuarter: number | null;
   CurrentYear: number | null;
+  Division: string;
+  LastMonth: number | null;
+  LastQuarter: number | null;
+  LastYear: number | null;
+  Year: number | null;
+}
+
+export interface VwDivisionSalesYearly11102025 {
+  CurrentMonth: number | null;
+  CurrentMonthLastYear: number | null;
+  CurrentQuarter: number | null;
+  CurrentYear: number | null;
   LastMonth: number | null;
   LastQuarter: number | null;
   LastYear: number | null;
@@ -1593,6 +1605,7 @@ export interface DB {
   vw_DivisionSalesDash: VwDivisionSalesDash;
   vw_DivisionSalesTarget: VwDivisionSalesTarget;
   vw_DivisionSalesYearly: VwDivisionSalesYearly;
+  "vw_DivisionSalesYearly-11_10_2025": VwDivisionSalesYearly11102025;
   vw_Incentives: VwIncentives;
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getDevelopersService } from "../service/developers.service";
+import { addDeveloperService, editDeveloperService, getDevelopersService } from "../service/developers.service";
 
 export const getDevelopersController = async (req: Request, res: Response) => {
     const session = req.session
@@ -37,4 +37,116 @@ export const getDevelopersController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Developers', data: result.data})
+}
+
+export const addDeveloperController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        developerCode,
+        developerName,
+        contactPerson,
+        contactNumber,
+        position,
+        address,
+        partialReleaseType,
+        releaseAmount,
+        vatRate,
+        wTaxRate,
+        commRate,
+        releaseSchedule,
+        taxIdNumber
+    } = req.body
+
+    const result = await addDeveloperService(session.userID, {
+        developerCode,
+        developerName,
+        contactPerson,
+        contactNumber,
+        position,
+        address,
+        partialReleaseType,
+        releaseAmount: Number(releaseAmount),
+        valueAddedTaxRate: Number(vatRate),
+        withholdingTaxRate: Number(wTaxRate),
+        commissionRate: Number(commRate),
+        commissionSchedule: releaseSchedule,
+        taxIdNumber
+    })
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add developer', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Developer added', data: result.data})
+}
+
+export const editDeveloperController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { developerId } = req.params
+
+    const {
+        developerCode,
+        developerName,
+        contactPerson,
+        contactNumber,
+        position,
+        address,
+        partialReleaseType,
+        releaseAmount,
+        valueAddedTaxRate,
+        withholdingTaxRate,
+        commissionRate,
+        commissionSchedule,
+        taxIdNumber
+    } = req.body
+
+    const result = await editDeveloperService(
+        session.userID, 
+        Number(developerId),
+        {
+            developerCode,
+            developerName,
+            contactPerson,
+            contactNumber,
+            position,
+            address,
+            partialReleaseType,
+            releaseAmount: releaseAmount ? Number(releaseAmount) : undefined,
+            valueAddedTaxRate: valueAddedTaxRate ? Number(valueAddedTaxRate) : undefined,
+            withholdingTaxRate: withholdingTaxRate ? Number(withholdingTaxRate) : undefined,
+            commissionRate: commissionRate ? Number(commissionRate) : undefined,
+            commissionSchedule,
+            taxIdNumber
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit developer', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Developer edited.', data: result.data})
 }
