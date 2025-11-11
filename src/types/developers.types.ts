@@ -16,3 +16,19 @@ export interface ITblDevelopers {
     VATRate: number;
     WtaxRate: number;
 }
+
+export interface IAddDeveloper {
+    developerCode: string,
+    developerName: string
+    contactPerson?: string,
+    contactNumber?: string, 
+    position?: string,
+    address?: string,
+    partialReleaseType: boolean,
+    releaseAmount: number,
+    commissionRate: number,
+    withholdingTaxRate: number,
+    valueAddedTaxRate: number,
+    commissionSchedule: string,
+    taxIdNumber: string,
+}
