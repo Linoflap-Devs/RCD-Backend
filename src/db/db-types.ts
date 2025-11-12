@@ -599,7 +599,7 @@ export interface TblProjects {
   IsLeadProject: number;
   LastUpdate: Date;
   ProjectCode: string;
-  ProjectID: number;
+  ProjectID: Generated<number>;
   ProjectName: string;
   ProjectTypeID: number;
   SectorID: number;

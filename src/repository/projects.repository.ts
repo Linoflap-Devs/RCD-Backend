@@ -1,14 +1,21 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { VwProjects } from "../db/db-types"
-import { VwProjectDeveloper } from "../types/projects.types";
+import { IAddProject, ITblProjects, VwProjectDeveloper } from "../types/projects.types";
+import { sql } from "kysely";
 
-export const getProjectList = async (): QueryResult<VwProjects[]> => {
+export const getProjectList = async (filters?: {projectCode?: string}): QueryResult<VwProjects[]> => {
 
     try {
-        const result = await db.selectFrom('vw_Projects')
-        .selectAll()
-        .execute();
+
+        let baseQuery = await db.selectFrom('vw_Projects')
+            .selectAll()
+        
+        if(filters && filters.projectCode){
+            baseQuery = baseQuery.where('ProjectCode', '=', filters.projectCode)
+        }
+
+        const result = await baseQuery.execute()
 
         return {
             success: true,
@@ -76,6 +83,43 @@ export const getProjectById = async (projectId: number): QueryResult<VwProjectDe
         return {
             success: false,
             data: {} as VwProjectDeveloper,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addProject = async (userId: number, data: IAddProject): QueryResult<ITblProjects> => {
+    try {
+        const result = await db.insertInto('Tbl_Projects')
+            .values({
+                ProjectCode: data.ProjectCode,
+                ProjectName: data.ProjectName,
+                Address: data.Address,
+                ContactNumber: data.ContactNumber,
+                DeveloperID: data.DeveloperID,
+                IsLeadProject: data.IsLeadProject ? 1 : 0,
+                ProjectTypeID: data.ProjectTypeID,
+                SectorID: data.SectorID,
+                UpdateBy: userId,
+                LastUpdate: new Date(),
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblProjects,
             error: {
                 code: 500,
                 message: error.message
