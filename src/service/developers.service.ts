@@ -69,12 +69,14 @@ export const addDeveloperService = async (userId: number, data: IAddDeveloper): 
     }
 }
 
-export const editDeveloperService = async (userId: number, developerId: number, data: Partial<IAddDeveloper>): QueryResult<ITblDevelopers> => {
+export const editDeveloperService = async (userId: number, developerId: number, data: Partial<ITblDevelopers>): QueryResult<ITblDevelopers> => {
 
     // check validations and transforms
-    if(data.developerCode){
-        data.developerCode = undefined
+    if(data.DeveloperCode){
+        data.DeveloperCode = undefined
     }
+
+    console.log(data)
 
     const result = await editDeveloper(userId,  developerId, data)
 

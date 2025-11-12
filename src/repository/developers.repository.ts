@@ -123,10 +123,10 @@ export const addDeveloper = async (
 export const editDeveloper = async (
     userId: number,
     developerId: number,
-    editData: Partial<IAddDeveloper>
+    editData: Partial<ITblDevelopers>
 ): QueryResult<ITblDevelopers> => {
     try {
-        const updateData: any = {
+        const updateData: Partial<ITblDevelopers> = {
             ...editData,
             LastUpdate: new Date(),
             UpdateBy: userId

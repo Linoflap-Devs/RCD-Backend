@@ -116,10 +116,10 @@ export const editDeveloperController = async (req: Request, res: Response) => {
         address,
         partialReleaseType,
         releaseAmount,
-        valueAddedTaxRate,
-        withholdingTaxRate,
-        commissionRate,
-        commissionSchedule,
+        vatRate,
+        wTaxRate,
+        commRate,
+        releaseSchedule,
         taxIdNumber
     } = req.body
 
@@ -127,19 +127,19 @@ export const editDeveloperController = async (req: Request, res: Response) => {
         session.userID, 
         Number(developerId),
         {
-            developerCode,
-            developerName,
-            contactPerson,
-            contactNumber,
-            position,
-            address,
-            partialReleaseType,
-            releaseAmount: releaseAmount ? Number(releaseAmount) : undefined,
-            valueAddedTaxRate: valueAddedTaxRate ? Number(valueAddedTaxRate) : undefined,
-            withholdingTaxRate: withholdingTaxRate ? Number(withholdingTaxRate) : undefined,
-            commissionRate: commissionRate ? Number(commissionRate) : undefined,
-            commissionSchedule,
-            taxIdNumber
+            DeveloperCode: developerCode,
+            DeveloperName: developerName,
+            ContactPerson: contactPerson,
+            ContactNumber: contactNumber,
+            Position: position,
+            Address: address,
+            PartialReleaseType: partialReleaseType ? 1 : 0,
+            PartialReleaseAmount: releaseAmount ? Number(releaseAmount) : undefined,
+            VATRate: vatRate ? Number(vatRate) : undefined,
+            WtaxRate: wTaxRate ? Number(wTaxRate) : undefined,
+            CommRate: commRate ? Number(commRate) : undefined,
+            ReleaseSchedule: releaseSchedule,
+            TaxIDNumber: taxIdNumber
         }
     )
 
