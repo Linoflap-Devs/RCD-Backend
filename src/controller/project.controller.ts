@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addProjectService, getProjectDetailsService, getProjectListService } from "../service/projects.service";
+import { addProjectService, editProjectService, getProjectDetailsService, getProjectListService } from "../service/projects.service";
 
 export const getProjectListController = async (req: Request, res: Response) => {
 
@@ -72,4 +72,53 @@ export const addProjectController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Project added.', data: result.data})
+}
+
+export const editProjectController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        projectId
+    } = req.params
+
+    const {
+        projectName,
+        developerId,
+        projectTypeId,
+        sectorId,
+        contactNumber,
+        address,
+        isLeadProject
+    } = req.body
+
+    const result = await editProjectService(
+        Number(session.userID),
+        Number(projectId),
+        {
+            ProjectName: projectName,
+            DeveloperID: developerId ? Number(developerId) : undefined,
+            ProjectTypeID: projectTypeId ? Number(projectTypeId) : undefined,
+            SectorID: sectorId ?Number(sectorId) : undefined,
+            ContactNumber: contactNumber,
+            Address: address,
+            IsLeadProject: isLeadProject 
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit project.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Project edited.', data: result.data})
 }

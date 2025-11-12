@@ -1066,12 +1066,14 @@ export const getDivisionSalesTotalsYearlyFnController = async (req: Request, res
 
     const {
         startYear,
-        endYear
+        endYear,
+        month
     } = req.query
 
     const result = await getDivisionSalesYearlyTotalsFnService(session.userID, {
         startYear: startYear ? Number(startYear) : undefined,
-        endYear: endYear ? Number(endYear) : undefined
+        endYear: endYear ? Number(endYear) : undefined,
+        month: month ? Number(month) : undefined
     });
 
     if(!result.success){

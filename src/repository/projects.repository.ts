@@ -173,3 +173,40 @@ export const addProject = async (userId: number, data: IAddProject): QueryResult
         }
     }
 }
+
+export const editProject = async (userId: number, projectId: number, data: Partial<IAddProject>): QueryResult<ITblProjects> => {
+
+    console.log(userId, projectId, data)
+
+    try {
+        const updateData: Partial<ITblProjects> = {
+            ...data,
+            IsLeadProject: data.IsLeadProject === undefined ? undefined : data.IsLeadProject ? 1 : 0,  
+            LastUpdate: new Date(),
+            UpdateBy: userId
+        }
+
+        const result = await db.updateTable('Tbl_Projects')
+            .set(updateData)
+            .where('ProjectID', '=', projectId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

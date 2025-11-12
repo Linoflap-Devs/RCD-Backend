@@ -1,6 +1,6 @@
 import { TblProjects, VwProjects } from "../db/db-types";
 import { getDevelopers } from "../repository/developers.repository";
-import { addProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
+import { addProject, editProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
 import { getSectors } from "../repository/sectors.repository";
 import { QueryResult } from "../types/global.types";
 import { IAddProject, ITblProjects } from "../types/projects.types";
@@ -127,6 +127,29 @@ export const addProjectService = async (userId: number, data: IAddProject): Quer
     }
 
     const result = await addProject(userId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editProjectService = async (userId: number, projectId: number, data: Partial<IAddProject>): QueryResult<ITblProjects> => {
+
+    // check validations and transforms
+    if(data.ProjectCode){
+        data.ProjectCode = undefined
+    }
+
+    const result = await editProject(userId, projectId, data)
 
     if(!result.success){
         return {
