@@ -188,6 +188,7 @@ export interface FnDivisionSales {
 
 export interface FnDivisionSalesYearly extends FnDivisionSales {
     Year: number
+    Month: number | null
 }
 
 export interface DivisionYearlySalesGrouped {

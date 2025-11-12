@@ -2264,7 +2264,7 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
         {
             startYear: filters?.startYear,
             endYear: filters?.endYear,
-            // month: filters?.month
+            month: filters?.month
         }
     )
 
@@ -2274,7 +2274,8 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
         
         if (existingDivision) {
             existingDivision.YearData.push({
-                Year: item.Year,
+                Year: item.Year, 
+                Month: filters?.month ? filters.month : null,
                 CurrentMonth: item.CurrentMonth,
                 LastMonth: item.LastMonth,
                 CurrentMonthLastYear: item.CurrentMonthLastYear,
@@ -2288,6 +2289,7 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
                 Division: item.Division,
                 YearData: [{
                     Year: item.Year,
+                    Month: filters?.month ? filters.month : null,
                     CurrentMonth: item.CurrentMonth,
                     LastMonth: item.LastMonth,
                     CurrentMonthLastYear: item.CurrentMonthLastYear,

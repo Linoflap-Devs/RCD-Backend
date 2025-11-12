@@ -2796,7 +2796,7 @@ type DivisionYearlyTotalSort = {
     direction: 'asc' | 'desc'
 }
 
-export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number }) => {
+export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number, month?: number }) => {
     try {
          const orderParts: any[] = []
         
@@ -2816,13 +2816,36 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
         if (filters?.endYear !== undefined) {
             whereConditions.push(sql`Year <= ${sql.raw(filters.endYear.toString())}`)
         }
+
+        if(filters?.month !== undefined){
+            whereConditions.push(sql`Month = ${sql.raw(filters.month.toString())}`)
+        }
         
-        const result = await sql`
-            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
-            FROM vw_DivisionSalesYearly
-            ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
-            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
-        `.execute(db)
+        const query = filters && filters.month ? 
+            sql`
+                SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+                FROM vw_DivisionSalesYearMonth
+                ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
+                ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+            `
+            : sql`
+                SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``}
+                    Year,
+                    Division,
+                    NULL as Month,
+                    SUM(CurrentMonth) as CurrentMonth,
+                    SUM(LastMonth) as LastMonth,
+                    SUM(CurrentMonthLastYear) as CurrentMonthLastYear,
+                    SUM(CurrentQuarter) as CurrentQuarter,
+                    SUM(LastQuarter) as LastQuarter,
+                    SUM(LastYear) as LastYear,
+                    SUM(CurrentYear) as CurrentYear
+                FROM vw_DivisionSalesYearMonth
+                ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
+                GROUP BY Year, Division
+                ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+            `
+        const result = await query.execute(db)
         
         const rows: FnDivisionSalesYearly[] = result.rows as FnDivisionSalesYearly[]
         return {
