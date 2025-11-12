@@ -2254,7 +2254,7 @@ export const editPendingSaleImagesService = async (
     }
 }
 
-export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filters?: {startYear?: number, endYear?: number}): QueryResult<DivisionYearlySalesGrouped[]> => {
+export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filters?: {startYear?: number, endYear?: number, month?: number}): QueryResult<DivisionYearlySalesGrouped[]> => {
     const result = await getDivisionSalesTotalsYearlyFn(
         [
             {field: 'Year', direction: 'desc'},
@@ -2263,7 +2263,8 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
         undefined,
         {
             startYear: filters?.startYear,
-            endYear: filters?.endYear
+            endYear: filters?.endYear,
+            // month: filters?.month
         }
     )
 
