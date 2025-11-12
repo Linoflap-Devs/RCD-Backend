@@ -839,3 +839,38 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
         }
     }
 }
+
+export const deleteAgent = async (userId: number, agentId: number): QueryResult<ITblAgent> => {
+    try {
+        const result = await db.updateTable('Tbl_Agents')
+            .where('AgentID', '=', agentId)
+            .set({
+                IsActive: 0,
+                UpdateBy: userId,
+                LastUpdate: new Date()
+            })
+            .outputAll('inserted')
+            .executeTakeFirst()
+
+        if(!result){
+            throw new Error('Failed to delete agent.');
+        }
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
