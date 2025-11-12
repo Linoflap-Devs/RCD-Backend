@@ -522,13 +522,13 @@ export const getDivisionSales = async (
             // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
             // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
             logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
-            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
-            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
         }
 
-        result = result.orderBy('DateFiled', 'desc')
+        result = result.orderBy('ReservationDate', 'desc')
         
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)
