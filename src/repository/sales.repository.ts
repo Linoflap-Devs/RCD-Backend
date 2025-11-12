@@ -418,7 +418,7 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
 
         if(filters && filters.month){
 
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -508,7 +508,7 @@ export const getDivisionSales = async (
 
         if(filters && filters.month){
 
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -944,7 +944,7 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.month){
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
