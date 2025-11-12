@@ -16,6 +16,7 @@ export const getDevelopersController = async (req: Request, res: Response) => {
 
     const {
         developerId,
+        searchTerm,
         page,
         pageSize
     } = req.query
@@ -23,7 +24,8 @@ export const getDevelopersController = async (req: Request, res: Response) => {
     const result = await getDevelopersService(
         session.userID, 
         {
-            developerId: developerId ? Number(developerId) : undefined
+            developerId: developerId ? Number(developerId) : undefined,
+            search: searchTerm ? searchTerm.toString() : undefined
         },
         {   
             page: page ? Number(page) : undefined,

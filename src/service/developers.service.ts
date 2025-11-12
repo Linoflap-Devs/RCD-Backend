@@ -7,6 +7,7 @@ export const getDevelopersService = async (
     userId: number, 
     filters?: {
         developerId?: number
+        search?: string
     },
     pagination?: {
         page?: number,
