@@ -1,5 +1,7 @@
 import { TblProjects, VwProjects } from "../db/db-types";
-import { addProject, getProjectById, getProjectList } from "../repository/projects.repository";
+import { getDevelopers } from "../repository/developers.repository";
+import { addProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
+import { getSectors } from "../repository/sectors.repository";
 import { QueryResult } from "../types/global.types";
 import { IAddProject, ITblProjects } from "../types/projects.types";
 import { logger } from "../utils/logger";
@@ -70,6 +72,47 @@ export const getProjectDetailsService = async (projectId: number): QueryResult<a
 }
 
 export const addProjectService = async (userId: number, data: IAddProject): QueryResult<ITblProjects> => {
+
+    // check ids
+    const projectType = await getProjectTypes({projectTypeId: data.ProjectTypeID})
+
+    if(!projectType.success || projectType.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid project type id.'
+            }
+        }
+    }
+
+    const developer = await getDevelopers({developerId: data.DeveloperID})
+
+    if(!developer.success || developer.data.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid developer id.'
+            }
+        }
+    }
+
+    const sector = await getSectors({sectorId: data.SectorID})
+
+    if(!sector.success || sector.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid sector id.'
+            }
+        }
+    }
+
     const existing = await getProjectList({projectCode: data.ProjectCode})
 
     if(existing.data.length > 0){

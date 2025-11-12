@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { VwProjects } from "../db/db-types"
-import { IAddProject, ITblProjects, VwProjectDeveloper } from "../types/projects.types";
+import { IAddProject, ITblProjects, ITblProjectTypes, VwProjectDeveloper } from "../types/projects.types";
 import { sql } from "kysely";
 
 export const getProjectList = async (filters?: {projectCode?: string}): QueryResult<VwProjects[]> => {
@@ -83,6 +83,52 @@ export const getProjectById = async (projectId: number): QueryResult<VwProjectDe
         return {
             success: false,
             data: {} as VwProjectDeveloper,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getProjectTypes = async (filters?: { projectTypeId?: number, projectTypeCode?: string}): QueryResult<ITblProjectTypes[]> => {
+
+    try {
+        let baseQuery = await db.selectFrom('Tbl_ProjectType')
+            .selectAll()
+        
+        if(filters && filters.projectTypeId){
+            baseQuery = baseQuery.where('ProjectTypeID', '=', filters.projectTypeId)
+        }
+
+        if(filters && filters.projectTypeCode){
+            baseQuery = baseQuery.where('ProjectTypeCode', '=', filters.projectTypeCode)
+        }
+
+        const result = await baseQuery.execute()
+
+        if(!result){
+            return {
+                success: false,
+                data: [] as ITblProjectTypes[],
+                error: {
+                    code: 404,
+                    message: 'Project type not found.'
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblProjectTypes[],
             error: {
                 code: 500,
                 message: error.message

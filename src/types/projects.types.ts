@@ -39,6 +39,16 @@ export interface IAddProject {
     SectorID: number;
 }
 
+export interface ITblProjectTypes {
+    IsActive: number;
+    LastUpdate: Date;
+    ProjectTypeCode: string;
+    ProjectTypeID: number;
+    ProjectTypeName: string;
+    UpdateBy: number;
+}
+
+
 export interface ITblProjects {
   Address: string;
   ContactNumber: string;
