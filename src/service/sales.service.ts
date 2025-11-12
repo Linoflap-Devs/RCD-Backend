@@ -926,7 +926,7 @@ export const getCombinedPersonalSalesService = async (
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
                     hasRemarks: sale.Remarks ? true : false,
-                    isEditable: isSubmitter ? role == (sale.ApprovalStatus - 1) : role == sale.ApprovalStatus
+                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1)
                 }
             });
             combinedSales.push(...pendingSales);
