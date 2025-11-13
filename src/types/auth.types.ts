@@ -121,6 +121,45 @@ export interface IAgentRegister {
     }[]
 }
 
+export interface IBrokerRegister {
+    firstName: string,
+    middleName?: string | null,
+    lastName: string,
+    gender: 'Male' | 'Female',
+    civilStatus: 'Single' | 'Married',
+    religion: string,
+    birthdate: Date,
+    birthplace: string,
+    address: string,
+    telephoneNumber: string,
+    contactNumber: string,
+    sssNumber?: string | null,
+    philhealthNumber?: string | null,
+    pagibigNumber?: string | null,
+    tinNumber?: string | null,
+    prcNumber?: string | null,
+    dshudNumber?: string | null,
+    employeeIdNumber?: string | null,
+    email: string,
+    password: string,
+
+    profileImage?: Express.Multer.File,
+
+    education: {
+        school: string,
+        degree: string,
+        startDate: Date,
+        endDate?: Date | null
+    }[],
+    experience: {
+        jobTitle: string,
+        company: string,
+        startDate: Date,
+        endDate?: Date | null
+    }[]
+}
+
+
 export interface IAgentRegistrationListItem {
     AgentRegistrationID: number,
     FirstName: string,
