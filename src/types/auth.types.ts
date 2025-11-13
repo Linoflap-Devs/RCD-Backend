@@ -31,6 +31,38 @@ export interface IAgentUserSession {
     AgentUser: IAgentUser
 }
 
+// Broker
+
+export interface IBrokerSession {
+    BrokerUserID: number
+    ExpiresAt: Date
+    SessionID: number
+    SessionString: string
+}
+
+export interface IBrokerUser {
+    BrokerID: number | null
+    BrokerRegistrationID: number | null
+    BrokerUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
+export interface ITblBrokerUser {
+    BrokerID: number | null
+    BrokerRegistrationID: number | null
+    BrokerUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
+export interface IBrokerUserSession {
+    BrokerSession: IBrokerSession
+    BrokerUser: IBrokerUser
+}
+
 export interface IEmployeeSession {
     UserID: number
     ExpiresAt: Date

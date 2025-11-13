@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerSession, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
@@ -362,6 +362,182 @@ export const extendEmployeeSessionExpiry = async (sessionId: number, expiry: Dat
     }
 }
 
+// Broker Sessions
+export const insertBrokerSession =  async (sessionString: string, brokerUserId: number): QueryResult<IBrokerSession> => {
+    try {
+        const result = await db.insertInto('Tbl_BrokerSession').values({
+            SessionString: sessionString,
+            BrokerUserID: brokerUserId,
+            ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        if(!result) return {
+            success: false,
+            data: {} as IBrokerSession,
+            error: {
+                message: 'Failed to insert session.',
+                code: 500
+            }
+        }
+
+        const find = await db.selectFrom('Tbl_BrokerSession').where('SessionID', '=', Number(result.SessionID)).selectAll().executeTakeFirst();
+
+        if(!find) return {
+            success: false,
+            data: {} as IBrokerSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                SessionID: find.SessionID,
+                SessionString: find.SessionString,
+                BrokerUserID: find.BrokerUserID,
+                ExpiresAt: find.ExpiresAt
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IBrokerSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const findBrokerSession = async (sessionString: string): QueryResult<IBrokerUserSession> => {
+    try {
+
+        const result = await db.
+            selectFrom('Tbl_BrokerSession').
+            where('SessionString', '=', sessionString).
+            innerJoin('Tbl_BrokerUser', 'Tbl_BrokerSession.BrokerUserID', 'Tbl_BrokerUser.BrokerUserID').
+            innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID').
+            selectAll().
+            executeTakeFirst();
+
+        if(!result) return {
+            success: false,
+            data: {} as IBrokerUserSession,
+            error: {
+                message: 'Failed to find session.',
+                code: 500
+            }
+        }
+
+        return {
+            success: true,
+            data: {
+                BrokerSession: {
+                    SessionID: result.SessionID,
+                    SessionString: result.SessionString,
+                    BrokerUserID: result.BrokerUserID,
+                    ExpiresAt: result.ExpiresAt
+                },
+                BrokerUser: {
+                    BrokerID: result.BrokerID,
+                    BrokerRegistrationID: result.BrokerRegistrationID,
+                    BrokerUserID: result.BrokerUserID,
+                    Email: result.Email,
+                    ImageID: result.ImageID,
+                    IsVerified: result.IsVerified,
+                }
+            }
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IBrokerUserSession,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const deleteBrokerSession = async (sessionId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_BrokerSession').where('SessionID', '=', sessionId).executeTakeFirst();
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteSessionBrokerUser = async (userId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_BrokerSession').where('BrokerUserID', '=', userId).execute();
+
+        console.log(result)
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const extendBrokerSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
+    try {
+
+        const result = await db.updateTable('Tbl_BrokerSession').set({ ExpiresAt: expiry }).where('SessionID', '=', sessionId).executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
 
 export const registerAgentTransaction = async(
     data: IAgentRegister, 
