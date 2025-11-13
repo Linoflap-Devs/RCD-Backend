@@ -1,13 +1,14 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
 import { ITblAgentRegistration } from "../types/agent.types";
+import { IBroker } from "../types/brokers.types";
 
 // Agent Sessions
 
@@ -1183,6 +1184,243 @@ export const rejectAgentRegistration = async (agentRegistrationId: number): Quer
         return {
             success: false,
             data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: number, brokerId?: number): QueryResult<IBrokerUser> => {
+    try {
+
+        // get all relevant data
+        const [registration] = await Promise.all([
+            db.selectFrom('Tbl_BrokerRegistration')
+                .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                .where('IsVerified', '=', 0)
+                .selectAll()
+                .executeTakeFirstOrThrow(),
+            
+        ]);
+
+        if(!registration) {
+            logger(
+                'Failed to find agent registration or agent user account. Target registration may already be verified.', 
+                {
+                    brokerRegistrationId: brokerRegistrationId, 
+                    brokerId: brokerId
+                }
+            );
+            return {
+                success: false,
+                data: {} as IBrokerUser,
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent registration or agent user account. Target registration may already be verified.'
+                }
+            }
+        }
+
+        let brokerData: IBroker | undefined = undefined
+        if(brokerId){
+            // prepare data for linking
+            const findBroker = await db.selectFrom('Tbl_Broker').where('BrokerID', '=', brokerId).selectAll().executeTakeFirstOrThrow();
+            if(!findBroker){
+                logger('Failed to find broker registration, broker user account, or broker data.', {brokerRegistrationId: brokerRegistrationId, brokerId: brokerId});
+                return {
+                    success: false,
+                    data: {} as IBrokerUser,
+                    error: {
+                        code: 500,
+                        message: 'Failed to find agent data.'
+                    }
+                }
+            }
+            brokerData = {
+                ...findBroker,
+                BrokerID: Number(findBroker.BrokerID)
+            }
+        }
+
+        const trx = await db.startTransaction().execute();
+
+        let brokerIdInserted = 0;
+        try {
+            if(brokerData){
+                // link existing agent to agent tables
+                const updateBrokerUser = await trx.updateTable('Tbl_BrokerUser')
+                                            .set('IsVerified', 1)
+                                            .set('BrokerID', Number(brokerData.BrokerID))
+                                            .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                            .executeTakeFirstOrThrow();
+
+                const updateBrokerEducation = await trx.updateTable('Tbl_BrokerEducation')
+                                                .set('BrokerID', Number(brokerData.BrokerID))
+                                                .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                .executeTakeFirstOrThrow()
+                
+                const updateBrokerWorkExp = await trx.updateTable('Tbl_BrokerWorkExp') 
+                                                .set('BrokerID', Number(brokerData.BrokerID))
+                                                .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                .executeTakeFirstOrThrow()
+
+                const updateBrokerRegistration = await trx.updateTable('Tbl_BrokerRegistration')
+                                                    .set('IsVerified', 1)
+                                                    .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                    .executeTakeFirstOrThrow();
+
+                                                    
+                // assign broker id
+                brokerIdInserted = Number(brokerData.BrokerID);
+                console.log('Assigning broker id to existing row: ', brokerIdInserted)
+            }
+            else {
+                // push registration details to broker table
+
+                // generate 6 digit number
+                const generateBrokerCode = (): string => {
+                    const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
+                    return `0.${randomNumber}`;
+                };
+
+                const checkDuplicateBrokerCode = async (brokerCode: string): Promise<boolean> => {
+                    const broker = await trx.selectFrom('Tbl_Broker')
+                        .where('BrokerCode', '=', brokerCode)
+                        .selectAll()
+                        .executeTakeFirst();
+                    return !!broker; // Returns true if agent exists, false otherwise
+                };
+
+                const getUniqueBrokerCode = async (): Promise<string> => {
+                    let brokerCode: string;
+                    do {
+                        brokerCode = generateBrokerCode();
+                    } while (await checkDuplicateBrokerCode(brokerCode));
+                    return brokerCode;
+                };
+
+                const uniqueCode = await getUniqueBrokerCode();
+
+                // last name, firstname middlename
+                const name = registration.LastName + ', ' + registration.FirstName + ' ' + registration.MiddleName.trim();
+
+                const insertBroker = await trx.insertInto('Tbl_Broker').values({
+                    BrokerCode: uniqueCode,
+                    Broker: name.toUpperCase().trim(),
+                    RepresentativeName: name.toUpperCase().trim(),
+
+                    IsActive: 1,
+                    LastUpdate: new Date(),
+                    UpdateBy: 0
+                })
+                .output('inserted.BrokerID')
+                .executeTakeFirstOrThrow();
+                
+                // update related tables
+
+                const updateBrokerUser = await trx.updateTable('Tbl_BrokerUser')
+                                            .set('IsVerified', 1)
+                                            .set('BrokerID', Number(insertBroker.BrokerID))
+                                            .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                            .executeTakeFirstOrThrow();
+
+                const updateBrokerEducation = await trx.updateTable('Tbl_BrokerEducation')
+                                                .set('BrokerID', Number(insertBroker.BrokerID))
+                                                .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                .executeTakeFirstOrThrow()
+                
+                const updateBrokerWorkExp = await trx.updateTable('Tbl_BrokerWorkExp') 
+                                                .set('BrokerID', Number(insertBroker.BrokerID))
+                                                .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                .executeTakeFirstOrThrow()
+
+                const updateBrokerRegistration = await trx.updateTable('Tbl_BrokerRegistration')
+                                                    .set('IsVerified', 1)
+                                                    .where('BrokerRegistrationID', '=', brokerRegistrationId)
+                                                    .executeTakeFirstOrThrow();
+
+                // assign new id
+                brokerIdInserted = insertBroker.BrokerID;
+                console.log('Assigning brokerIdInserted from new row: ', brokerIdInserted)
+            }
+
+            if(brokerIdInserted > 0){
+
+                console.log('brokerIdInserted: ', brokerIdInserted)
+                await trx.commit().execute()
+
+                const checkData = await db.selectFrom('Tbl_BrokerUser')
+                    .selectAll()
+                    .where('Tbl_BrokerUser.BrokerRegistrationID', '=', registration.BrokerRegistrationID)
+                    .executeTakeFirst()
+
+                console.log(checkData)
+                
+                const data = await db.selectFrom('Tbl_BrokerUser')
+                .innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
+                .where('Tbl_BrokerUser.BrokerID', '=', brokerIdInserted)
+                .select([
+                    // From Tbl_AgentUser
+                    'Tbl_BrokerUser.BrokerUserID',
+                    'Tbl_BrokerUser.Email',
+                    'Tbl_BrokerUser.Password',
+                    'Tbl_BrokerUser.ImageID',
+                    'Tbl_BrokerUser.BrokerID',
+                    'Tbl_BrokerUser.BrokerRegistrationID',
+                    'Tbl_BrokerUser.IsVerified',
+                    
+                    // From Vw_Agents
+                    'Tbl_Broker.Broker',
+                    'Tbl_Broker.BrokerCode',
+                    'Tbl_Broker.RepresentativeName',
+
+                ])
+                .executeTakeFirstOrThrow();
+
+                return {
+                    success: true,
+                    data: {
+                        BrokerRegistrationID: data.BrokerRegistrationID,
+                        BrokerUserID: data.BrokerUserID,
+                        Email: data.Email,
+                        ImageID: data.ImageID,
+                        IsVerified: data.IsVerified,
+                        BrokerID: data.BrokerID,
+                    }
+                }
+            }
+
+            else {
+                throw new Error('AgentID not assigned properly.');
+            }
+        }
+
+        catch(err: unknown){
+            await trx.rollback().execute();
+            const error = err as Error;
+            return {
+                success: false,
+                data: {} as IBrokerUser,
+                error: {
+                    code: 500,
+                    message: error.message
+                }
+            }
+        }
+
+        return {
+            success: false,
+            data: {} as IBrokerUser
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IBrokerUser,
             error: {
                 code: 500,
                 message: error.message

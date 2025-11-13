@@ -288,7 +288,7 @@ export interface TblBranchDivision {
 export interface TblBroker {
   Broker: string;
   BrokerCode: string;
-  BrokerID: number;
+  BrokerID: Generated<number>;
   IsActive: number;
   LastUpdate: Date;
   RepresentativeName: string;

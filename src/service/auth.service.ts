@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -479,6 +479,31 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
             data: {} as {token: string, email: string},
             error: {
                 message: result.error?.message || 'Failed to approve agent registration.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            email: result.data.Email,
+            isVerified: result.data.IsVerified
+        }
+    }
+
+}
+
+export const approveBrokerRegistrationService = async (brokerRegistrationId: number, brokerId?: number) => {
+    const result = await approveBrokerRegistrationTransaction(brokerRegistrationId, brokerId)
+
+    if(!result.success){
+        logger((result.error?.message || 'Failed to approve broker registration.'), {brokerRegistrationId: brokerRegistrationId, brokerId: brokerId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: result.error?.message || 'Failed to approve broker registration.',
                 code: 500
             }
         }
