@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, approveBrokerRegistrationController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, approveBrokerRegistrationController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
@@ -19,6 +19,8 @@ router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSess
 
 router.route('/register-broker').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]), validate(registerAgentSchema)], registerBrokerController);
 router.route('/approve-broker-registration').post([validateEmployeeSession, validateRole(['SA']), validate(approveBrokerRegistrationSchema)], approveBrokerRegistrationController);
+router.route('/login-broker').post(validate(loginAgentSchema), loginBrokerController);
+
 
 router.route('/approve-registration').post([validateEmployeeSession, validate(approveRegistrationSchema)], approveAgentRegistrationController);
 router.route('/reject-registration').post([validateEmployeeSession, validate(rejectRegistrationSchema)], rejectAgentRegistrationController);

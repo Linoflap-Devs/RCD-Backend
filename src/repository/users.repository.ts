@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { ITblBroker } from "../types/brokers.types";
+import { IBrokerEmailPicture, IBrokerPicture, ITblBroker } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -258,6 +258,41 @@ export const findAgentUserByEmail = async (email: string): QueryResult<{agentUse
     }
 }
 
+export const findBrokerUserByEmail = async (email: string): QueryResult<{brokerUserId: number, email: string, isVerified: boolean, password: string}> => {
+     try {
+        const user = await db.selectFrom('Tbl_BrokerUser')
+            .where('Email', '=', email)
+            .select(['BrokerUserID', 'Email', 'IsVerified', 'Password'])
+            .executeTakeFirstOrThrow()
+
+        if(!user){
+            throw new Error('No user found.')
+        }
+
+        return {    
+            success: true,
+            data: { 
+                brokerUserId: user.BrokerUserID, 
+                email: user.Email, 
+                isVerified: user.IsVerified == 1 ? true : false, 
+                password: user.Password 
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as {brokerUserId: number, email: string,  isVerified: boolean, password: string},
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findAgentUserById = async (agentUserId: number): QueryResult<{agentUserId: number, agentRegistrationId: number | null, email: string, isVerified: boolean, password: string}> => {
     try {
         const user = await db.selectFrom('Tbl_AgentUser')
@@ -412,6 +447,62 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
         return {
             success: false,
             data: {} as VwAgentPicture,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResult<IBrokerEmailPicture> => {
+    try {
+
+        const account = await db.selectFrom('Tbl_BrokerUser')
+            .where('BrokerUserID', '=', brokerUserId)
+            .select(['BrokerID', 'ImageID'])
+            .executeTakeFirstOrThrow();
+
+        const broker: ITblBroker = await db.selectFrom('Tbl_Broker')
+            .where('BrokerID', '=', account.BrokerID)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+        
+        const picture = await db.selectFrom('Tbl_Image')
+            .where('ImageID', '=', account.ImageID)
+            .selectAll()
+            .executeTakeFirst();
+
+        let obj: IBrokerEmailPicture = {
+            ...broker
+        }
+
+        if(picture){
+            obj = {
+                ...broker,
+                Image: {
+                    ContentType: picture.ContentType,
+                    CreatedAt: picture.CreatedAt,
+                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileExtension: picture.FileExtension,
+                    Filename: picture.Filename,
+                    FileSize: picture.FileSize,
+                    ImageID: picture.ImageID
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: obj
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IBrokerEmailPicture,
             error: {
                 code: 400,
                 message: error.message

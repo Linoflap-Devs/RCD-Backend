@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -295,6 +295,33 @@ export const loginAgentController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true, 
         message: "Agent logged in successfully.", 
+        data: result.data
+    });
+}
+
+export const loginBrokerController = async (req: Request, res: Response) => {
+    const {
+        email, 
+        password
+    } = req.body
+
+    const result = await loginBrokerService(email, password);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to login broker.", 
+            data: {}
+        });
+
+        return
+    }
+
+    res.cookie('_rcd_broker_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
+    return res.status(200).json({
+        success: true, 
+        message: "Broker logged in successfully.", 
         data: result.data
     });
 }

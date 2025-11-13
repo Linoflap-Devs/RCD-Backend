@@ -4,7 +4,7 @@ import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
 import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -361,6 +361,87 @@ export const registerBrokerService = async (
     }
 
     return result
+}
+
+export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string}> => {
+    const user = await findBrokerUserByEmail(email)
+
+    if(!user.success) {
+        logger((user.error?.message || 'Failed to find user.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    if(!user.data.isVerified){
+        logger(('User is not verified.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    // compare passwords
+    const storedPw = user.data.password
+    const compare = await verifyPassword(password, storedPw)
+
+    if(!compare){
+        logger(('Password does not match.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    const token = generateSessionToken()
+    const session = await createBrokerSession(token, user.data.brokerUserId)
+
+    if(!session.success) {
+        logger(( session.error?.message || 'Failed to create session.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to create session.',
+                code: 500
+            }
+        }
+    }
+
+    const brokerDetails = await findBrokerDetailsByUserId(user.data.brokerUserId)
+
+    if(!brokerDetails.success) {
+        logger(( brokerDetails.error?.message || 'Failed to find broker details.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to find broker details.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            token: token,
+            email: email
+        }
+    }
 }
 
 export const registerEmployeeService = async (data: IEmployeeRegister): QueryResult<any> => {
