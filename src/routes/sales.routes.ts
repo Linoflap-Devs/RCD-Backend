@@ -1,5 +1,5 @@
 import express from 'express';
-import { validateEmployeeSession, validateSession } from '../middleware/auth';
+import { validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema } from '../schema/sales.schema';
@@ -67,7 +67,7 @@ router.route('/pending/approve/:pendingSalesId').patch([validateSession, validat
 router.route('/pending/approve/bh/:pendingSalesId').patch([validateEmployeeSession, validateRole(['BH'])], approvePendingSalesBHController);
 router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSession, validateRole(['SA'])], approvePendingSalesController);
 
-router.route('/combined').get([validateSession], getCombinedPersonalSalesController);
+router.route('/combined').get([validateMobileSession], getCombinedPersonalSalesController);
 
 router.route('/:salesTransactionId').get([validateSession], getSalesTransactionDetailController);
 

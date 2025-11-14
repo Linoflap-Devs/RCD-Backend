@@ -1,6 +1,6 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -11,6 +11,7 @@ import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
 import { CommissionDetailPositions } from "../types/commission.types";
 import { VwProjectDeveloper } from "../types/projects.types";
+import { IBrokerEmailPicture } from "../types/brokers.types";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -129,7 +130,7 @@ export const getUserPersonalSalesService = async (userId: number, filters?: { mo
         }
     })
 
-    const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID, { month: filters?.month, year: filters?.year });
+    const totalSalesAmount = await getTotalPersonalSales({ agentId: agent.data.AgentID}, { month: filters?.month, year: filters?.year });
 
     const obj = {
         totalPages: result.data.totalPages,
@@ -829,45 +830,82 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
 }
 
 export const getCombinedPersonalSalesService = async (
-    userId: number, 
+    user: {
+        agentUserId?: number,
+        brokerUserId?: number
+    }, 
     filters?: { month?: number, year?: number }, 
     pagination?: { page?: number, pageSize?: number }
 ): QueryResult<any> => {
+    console.log("service", user)
     try {
-        const agent = await findAgentDetailsByUserId(userId);
+
+        let agent: VwAgentPicture | undefined = undefined
+        let broker: IBrokerEmailPicture | undefined = undefined
+
+        if(user.agentUserId){
+            const agentData = await findAgentDetailsByUserId(user.agentUserId);
         
-        if (!agent.data.AgentID) {
-            return {
-                success: false,
-                data: [],
-                error: {
-                    code: 500,
-                    message: 'No agent found.'
-                }
-            };
+            if (!agentData.data.AgentID) {
+                return {
+                    success: false,
+                    data: [],
+                    error: {
+                        code: 500,
+                        message: 'No agent found.'
+                    }
+                };
+            }
+
+            if (!agentData.data.DivisionID) {
+                return {
+                    success: false,
+                    data: [],
+                    error: {
+                        code: 500,
+                        message: 'No division found.'
+                    }
+                };
+            }
+
+            agent = agentData.data
         }
 
-        if (!agent.data.DivisionID) {
-            return {
-                success: false,
-                data: [],
-                error: {
-                    code: 500,
-                    message: 'No division found.'
-                }
-            };
-        }
+        if(user.brokerUserId){
+            const brokerData = await findBrokerDetailsByUserId(user.brokerUserId);
 
+            if(!brokerData.data.BrokerID){
+                return {
+                    success: false,
+                    data: [],
+                    error: {
+                        code: 500,
+                        message: 'No broker found.'
+                    }
+                }
+            }
+
+            broker = brokerData.data
+        }
+        
         // Get both approved and pending sales
         const [approvedSalesResult, pendingSalesResult] = await Promise.all([
             // Get approved sales using existing function or create similar one
-            getPersonalSales(agent.data.AgentID, filters),
+            getPersonalSales(
+                {
+                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    brokerName: broker ? broker.RepresentativeName : undefined,
+
+                }, 
+                filters
+            ),
             // Get pending sales
             getPendingSales(
                 undefined,
                 {
                     ...filters,
-                    agentId: agent.data.AgentID,
+                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
             )
@@ -904,9 +942,11 @@ export const getCombinedPersonalSalesService = async (
         if (pendingSalesResult.success) {
             const pendingSales = pendingSalesResult.data.results.map((sale: AgentPendingSale) => {
 
-                const role = agent.data.Position ? RoleMap.get(agent.data.Position.toUpperCase()) || 0 : 0
+                let agentRole = agent ? agent.Position : undefined
 
-                const isSubmitter = agent.data.AgentID === (sale.CreatedBy)
+                const role = RoleMap.get((agent?.Position || 'BROKER').toUpperCase()) || 0
+
+                const isSubmitter = role == 0 || agent?.AgentID === (sale.CreatedBy)
 
                 if(sale.AgentPendingSalesID == 189){
                     console.log(sale)
@@ -948,7 +988,16 @@ export const getCombinedPersonalSalesService = async (
 
         // Calculate total sales amount
 
-        const totalSalesAmount = await getTotalPersonalSales(agent.data.AgentID, { month: filters?.month, year: filters?.year });
+        const totalSalesAmount = await getTotalPersonalSales(
+            {
+                agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                brokerName: broker ? broker.RepresentativeName : undefined
+            }, 
+            { 
+                month: filters?.month, 
+                year: filters?.year 
+            }
+        );
 
         const result = {
             totalPages: totalPages,

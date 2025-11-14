@@ -272,7 +272,10 @@ export const getSalesDistributionBySalesTranDtlId = async (salesTranDtlId: numbe
 }
 
 export const getPersonalSales = async (
-    agentId: number, 
+    user: {
+        agentId?: number, 
+        brokerName?: string
+    },
     filters?: { month?: number }, 
     pagination?: {
         page?: number, 
@@ -287,13 +290,24 @@ export const getPersonalSales = async (
 
         let result = await db.selectFrom('Vw_SalesTransactions')
             .selectAll()
-            .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
 
         let totalCountResult = await db.selectFrom('Vw_SalesTransactions')
             .select(({ fn }) => [fn.countAll<number>().as("count")])
-            .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(user.agentId){
+            result = result.where('AgentID', '=', user.agentId)
+            totalCountResult = totalCountResult.where('AgentID', '=', user.agentId)
+        }
+
+        if(user.brokerName){
+            result = result.where('PositionName', '=', 'BROKER')
+            result = result.where('AgentName', '=', user.brokerName)
+
+            totalCountResult = totalCountResult.where('PositionName', '=', 'BROKER')
+            totalCountResult = totalCountResult.where('AgentName', '=', user.brokerName)
+        }
 
         if(filters && filters.month){
             const year = new Date().getFullYear();
@@ -353,14 +367,22 @@ export const getPersonalSales = async (
     }
 }
 
-export const getTotalPersonalSales = async (agentId: number, filters?: { month?: number, year?: number}): QueryResult<number> => {
+export const getTotalPersonalSales = async (user: {agentId?: number, brokerName?: string}, filters?: { month?: number, year?: number}): QueryResult<number> => {
     try {
         let result = await db.selectFrom('Vw_SalesTransactions')
             .select(({fn, val, ref}) => [
                 fn.sum(ref('NetTotalTCP')).as('TotalSales')
             ])
-            .where('AgentID', '=', agentId)
             .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(user.agentId){
+            result = result.where('AgentID', '=', user.agentId)
+        }
+
+        if(user.brokerName){
+            result = result.where('PositionName', '=', 'BROKER')
+            result = result.where('AgentName', '=', user.brokerName)
+        }
 
         if(filters && filters.month){
 
@@ -891,6 +913,7 @@ export const getPendingSales = async (
         month?: number,
         year?: number,
         agentId?: number,
+        brokerName?: string,
         createdBy?: number,
         developerId?: number,
         isUnique?: boolean,
@@ -941,6 +964,14 @@ export const getPendingSales = async (
         if(filters && filters.agentId){
             result = result.where('CreatedBy', '=', filters.agentId)
             totalCountResult = totalCountResult.where('CreatedBy', '=', filters.agentId)
+        }
+
+        if(filters && filters.brokerName){
+            result = result.where('AgentName', '=', filters.brokerName)
+            totalCountResult = totalCountResult.where('AgentName', '=', filters.brokerName)
+
+            result = result.where('PositionName', '=', 'BROKER')
+            totalCountResult = totalCountResult.where('PositionName', '=', 'BROKER')
         }
 
         if(filters && filters.month){

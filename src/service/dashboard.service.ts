@@ -50,7 +50,7 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
 
     // personal sales
 
-    const personalSales = await getTotalPersonalSales(result.data.AgentID, filters)
+    const personalSales = await getTotalPersonalSales({ agentId: result.data.AgentID}, filters)
     console.log(personalSales)
 
     let divisionSales = null
