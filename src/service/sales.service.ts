@@ -946,7 +946,7 @@ export const getCombinedPersonalSalesService = async (
 
                 const role = RoleMap.get((agent?.Position || 'BROKER').toUpperCase()) || 0
 
-                const isSubmitter = role == 0 || agent?.AgentID === (sale.CreatedBy)
+                const isSubmitter = role !== 0 && agent?.AgentID === (sale.CreatedBy)
 
                 if(sale.AgentPendingSalesID == 189){
                     console.log(sale)
