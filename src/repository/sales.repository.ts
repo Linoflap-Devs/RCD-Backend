@@ -2796,7 +2796,7 @@ type DivisionYearlyTotalSort = {
     direction: 'asc' | 'desc'
 }
 
-export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number, month?: number }) => {
+export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number, months?: number[] }) => {
     try {
          const orderParts: any[] = []
         
@@ -2817,11 +2817,16 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
             whereConditions.push(sql`Year <= ${sql.raw(filters.endYear.toString())}`)
         }
 
-        if(filters?.month !== undefined){
-            whereConditions.push(sql`Month = ${sql.raw(filters.month.toString())}`)
+        // if(filters?.month !== undefined){
+        //     whereConditions.push(sql`Month = ${sql.raw(filters.month.toString())}`)
+        // }
+
+        if (filters?.months !== undefined && filters.months.length > 0) {
+            const monthList = filters.months.join(',');
+            whereConditions.push(sql`Month IN (${sql.raw(monthList)})`)
         }
         
-        const query = filters && filters.month ? 
+        const query = filters && filters.months ? 
             sql`
                 SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
                 FROM vw_DivisionSalesYearMonth

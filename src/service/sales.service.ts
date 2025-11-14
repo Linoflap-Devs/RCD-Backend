@@ -2254,7 +2254,148 @@ export const editPendingSaleImagesService = async (
     }
 }
 
-export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filters?: {startYear?: number, endYear?: number, month?: number}): QueryResult<DivisionYearlySalesGrouped[]> => {
+// export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filters?: {startYear?: number, endYear?: number, months?: number[]}): QueryResult<DivisionYearlySalesGrouped[]> => {
+//     const result = await getDivisionSalesTotalsYearlyFn(
+//         [
+//             {field: 'Year', direction: 'desc'},
+//             {field: 'Division', direction: 'asc'}
+//         ],
+//         undefined,
+//         {
+//             startYear: filters?.startYear,
+//             endYear: filters?.endYear,
+//             months: filters?.months
+//         }
+//     )
+
+//     // Group by Division
+//     const groupedData = result.data.reduce((acc, item) => {
+//         const existingDivision = acc.find(d => d.Division === item.Division);
+        
+//         if (existingDivision) {
+//             existingDivision.YearData.push({
+//                 Year: item.Year, 
+//                 Month: filters?.month ? filters.month : null,
+//                 CurrentMonth: item.CurrentMonth,
+//                 LastMonth: item.LastMonth,
+//                 CurrentMonthLastYear: item.CurrentMonthLastYear,
+//                 CurrentQuarter: item.CurrentQuarter,
+//                 LastQuarter: item.LastQuarter,
+//                 LastYear: item.LastYear,
+//                 CurrentYear: item.CurrentYear
+//             });
+//         } else {
+//             acc.push({
+//                 Division: item.Division,
+//                 YearData: [{
+//                     Year: item.Year,
+//                     Month: filters?.month ? filters.month : null,
+//                     CurrentMonth: item.CurrentMonth,
+//                     LastMonth: item.LastMonth,
+//                     CurrentMonthLastYear: item.CurrentMonthLastYear,
+//                     CurrentQuarter: item.CurrentQuarter,
+//                     LastQuarter: item.LastQuarter,
+//                     LastYear: item.LastYear,
+//                     CurrentYear: item.CurrentYear
+//                 }]
+//             });
+//         }
+        
+//         return acc;
+//     }, [] as Array<{Division: string, YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>}>);
+    
+
+//     if(!result.success){
+//         return {
+//             success: false,
+//             data: [],
+//             error: {
+//                 message: 'Failed to get division yearly sales totals.',
+//                 code: 400
+//             }
+//         }
+//     }
+
+//     return {
+//         success: true,
+//         data: groupedData
+//     }
+// }
+
+// export const getDivisionSalesYearlyTotalsFnService = async (
+//     userId: number, 
+//     filters?: {startYear?: number, endYear?: number, months?: number[]}
+// ): QueryResult<DivisionYearlySalesGrouped[]> => {
+//     const result = await getDivisionSalesTotalsYearlyFn(
+//         [
+//             {field: 'Year', direction: 'desc'},
+//             {field: 'Division', direction: 'asc'}
+//         ],
+//         undefined,
+//         {
+//             startYear: filters?.startYear,
+//             endYear: filters?.endYear,
+//             months: filters?.months
+//         }
+//     )
+    
+//     if(!result.success){
+//         return {
+//             success: false,
+//             data: [],
+//             error: {
+//                 message: 'Failed to get division yearly sales totals.',
+//                 code: 400
+//             }
+//         }
+//     }
+    
+//     // Group by Division
+//     const groupedData = result.data.reduce((acc, item) => {
+//         const existingDivision = acc.find(d => d.Division === item.Division);
+        
+//         if (existingDivision) {
+//             existingDivision.YearData.push({
+//                 Year: item.Year, 
+//                 Month: item.Month, // This is already null or a month number from the query
+//                 CurrentMonth: item.CurrentMonth,
+//                 LastMonth: item.LastMonth,
+//                 CurrentMonthLastYear: item.CurrentMonthLastYear,
+//                 CurrentQuarter: item.CurrentQuarter,
+//                 LastQuarter: item.LastQuarter,
+//                 LastYear: item.LastYear,
+//                 CurrentYear: item.CurrentYear
+//             });
+//         } else {
+//             acc.push({
+//                 Division: item.Division,
+//                 YearData: [{
+//                     Year: item.Year,
+//                     Month: item.Month, // This is already null or a month number from the query
+//                     CurrentMonth: item.CurrentMonth,
+//                     LastMonth: item.LastMonth,
+//                     CurrentMonthLastYear: item.CurrentMonthLastYear,
+//                     CurrentQuarter: item.CurrentQuarter,
+//                     LastQuarter: item.LastQuarter,
+//                     LastYear: item.LastYear,
+//                     CurrentYear: item.CurrentYear
+//                 }]
+//             });
+//         }
+        
+//         return acc;
+//     }, [] as Array<{Division: string, YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>}>);
+    
+//     return {
+//         success: true,
+//         data: groupedData
+//     }
+// }
+
+export const getDivisionSalesYearlyTotalsFnService = async (
+    userId: number, 
+    filters?: {startYear?: number, endYear?: number, months?: number[]}
+): QueryResult<any> => {
     const result = await getDivisionSalesTotalsYearlyFn(
         [
             {field: 'Year', direction: 'desc'},
@@ -2264,47 +2405,10 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
         {
             startYear: filters?.startYear,
             endYear: filters?.endYear,
-            month: filters?.month
+            months: filters?.months
         }
     )
-
-    // Group by Division
-    const groupedData = result.data.reduce((acc, item) => {
-        const existingDivision = acc.find(d => d.Division === item.Division);
-        
-        if (existingDivision) {
-            existingDivision.YearData.push({
-                Year: item.Year, 
-                Month: filters?.month ? filters.month : null,
-                CurrentMonth: item.CurrentMonth,
-                LastMonth: item.LastMonth,
-                CurrentMonthLastYear: item.CurrentMonthLastYear,
-                CurrentQuarter: item.CurrentQuarter,
-                LastQuarter: item.LastQuarter,
-                LastYear: item.LastYear,
-                CurrentYear: item.CurrentYear
-            });
-        } else {
-            acc.push({
-                Division: item.Division,
-                YearData: [{
-                    Year: item.Year,
-                    Month: filters?.month ? filters.month : null,
-                    CurrentMonth: item.CurrentMonth,
-                    LastMonth: item.LastMonth,
-                    CurrentMonthLastYear: item.CurrentMonthLastYear,
-                    CurrentQuarter: item.CurrentQuarter,
-                    LastQuarter: item.LastQuarter,
-                    LastYear: item.LastYear,
-                    CurrentYear: item.CurrentYear
-                }]
-            });
-        }
-        
-        return acc;
-    }, [] as Array<{Division: string, YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>}>);
     
-
     if(!result.success){
         return {
             success: false,
@@ -2315,7 +2419,65 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
             }
         }
     }
-
+    
+    // Group by Division, then by Year
+    const groupedData = result.data.reduce((acc, item) => {
+        const existingDivision = acc.find(d => d.Division === item.Division);
+        
+        const dataItem = {
+            Month: item.Month,
+            CurrentMonth: item.CurrentMonth,
+            LastMonth: item.LastMonth,
+            CurrentMonthLastYear: item.CurrentMonthLastYear,
+            CurrentQuarter: item.CurrentQuarter,
+            LastQuarter: item.LastQuarter,
+            LastYear: item.LastYear,
+            CurrentYear: item.CurrentYear
+        };
+        
+        if (existingDivision) {
+            // Check if year already exists
+            const existingYear = existingDivision.YearData.find(y => y.Year === item.Year);
+            
+            if (existingYear) {
+                // Add month data to existing year
+                existingYear.Months.push(dataItem);
+            } else {
+                // Create new year entry
+                existingDivision.YearData.push({
+                    Year: item.Year,
+                    Months: [dataItem]
+                });
+            }
+        } else {
+            // Create new division entry
+            acc.push({
+                Division: item.Division,
+                YearData: [{
+                    Year: item.Year,
+                    Months: [dataItem]
+                }]
+            });
+        }
+        
+        return acc;
+    }, [] as Array<{
+        Division: string, 
+        YearData: Array<{
+            Year: number,
+            Months: Array<{
+                Month: number | null,
+                CurrentMonth: number,
+                LastMonth: number,
+                CurrentMonthLastYear: number,
+                CurrentQuarter: number,
+                LastQuarter: number,
+                LastYear: number,
+                CurrentYear: number
+            }>
+        }>
+    }>);
+    
     return {
         success: true,
         data: groupedData

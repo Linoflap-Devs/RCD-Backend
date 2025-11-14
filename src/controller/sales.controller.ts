@@ -1067,14 +1067,32 @@ export const getDivisionSalesTotalsYearlyFnController = async (req: Request, res
     const {
         startYear,
         endYear,
-        month
+        months
     } = req.query
+
+    // Parse months array from query string
+    let parsedMonths: number[] | undefined = undefined;
+    
+    if (months) {
+        if (Array.isArray(months)) {
+            // If it's already an array (e.g., ?months=1&months=2&months=3)
+            parsedMonths = months.map(m => Number(m)).filter(m => !isNaN(m));
+        } else if (typeof months === 'string') {
+            // If it's a comma-separated string (e.g., ?months=1,2,3)
+            parsedMonths = months.split(',').map(m => Number(m.trim())).filter(m => !isNaN(m));
+        }
+        
+        // Only use if we have valid months
+        if (parsedMonths && parsedMonths.length === 0) {
+            parsedMonths = undefined;
+        }
+    }
 
     const result = await getDivisionSalesYearlyTotalsFnService(session.userID, {
         startYear: startYear ? Number(startYear) : undefined,
         endYear: endYear ? Number(endYear) : undefined,
-        month: month ? Number(month) : undefined
-    });
+        months: parsedMonths || undefined
+    }); 
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales totals', data: {}})
