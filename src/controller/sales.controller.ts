@@ -285,8 +285,14 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
     const { page, pageSize, month, year, } = req.query
     console.log(req.query)
 
+    const isBroker = session.userRole === 'BROKER'
+    console.log("controller session", session)
+    console.log("controller user", session.userID)
     const result = await getCombinedPersonalSalesService(
-        session.userID, 
+        {
+            agentUserId: isBroker ? undefined : session.userID,
+            brokerUserId: isBroker ? session.userID : undefined
+        }, 
         {
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined

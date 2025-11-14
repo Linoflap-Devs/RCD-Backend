@@ -363,7 +363,7 @@ export const registerBrokerService = async (
     return result
 }
 
-export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string}> => {
+export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
     const user = await findBrokerUserByEmail(email)
 
     if(!user.success) {
@@ -439,7 +439,8 @@ export const loginBrokerService = async (email: string, password: string): Query
         success: true,
         data: {
             token: token,
-            email: email
+            email: email,
+            position: 'BROKER'
         }
     }
 }

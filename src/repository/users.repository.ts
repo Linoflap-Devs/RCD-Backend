@@ -458,6 +458,8 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
 export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResult<IBrokerEmailPicture> => {
     try {
 
+        console.log("broker user id", brokerUserId)
+
         const account = await db.selectFrom('Tbl_BrokerUser')
             .where('BrokerUserID', '=', brokerUserId)
             .select(['BrokerID', 'ImageID'])
