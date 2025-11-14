@@ -2325,8 +2325,8 @@ export const getDivisionSalesYearlyTotalsFnService = async (userId: number, filt
 export const getSalesByDeveloperTotalsFnService = async (userId: number, filters?: {month?: number, year?: number}): QueryResult<any> => {
     const result = await getSalesByDeveloperTotals(
         [
-            {field: 'DeveloperName', direction: 'desc'},
-            {field: 'NetTotalTCP', direction: 'desc'}
+            {field: 'NetTotalTCP', direction: 'desc'},
+            {field: 'DeveloperName', direction: 'asc'}
         ],
         undefined,
         undefined,
