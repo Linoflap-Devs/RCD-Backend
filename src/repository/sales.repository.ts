@@ -364,7 +364,7 @@ export const getTotalPersonalSales = async (agentId: number, filters?: { month?:
 
         if(filters && filters.month){
 
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -418,7 +418,7 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
 
         if(filters && filters.month){
 
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -508,7 +508,7 @@ export const getDivisionSales = async (
 
         if(filters && filters.month){
 
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -522,13 +522,13 @@ export const getDivisionSales = async (
             // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
             // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
             logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
-            result = result.where('DateFiled', '>', firstDay)
-            result = result.where('DateFiled', '<', lastDay)
-            totalCountResult = totalCountResult.where('DateFiled', '>', firstDay)
-            totalCountResult = totalCountResult.where('DateFiled', '<', lastDay)
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
         }
 
-        result = result.orderBy('DateFiled', 'desc')
+        result = result.orderBy('ReservationDate', 'desc')
         
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)
@@ -944,7 +944,7 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.month){
-            const year = new Date().getFullYear();
+            const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -2796,7 +2796,7 @@ type DivisionYearlyTotalSort = {
     direction: 'asc' | 'desc'
 }
 
-export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number }) => {
+export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotalSort[], take?: number, filters?: { startYear?: number, endYear?: number, months?: number[] }) => {
     try {
          const orderParts: any[] = []
         
@@ -2816,13 +2816,41 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
         if (filters?.endYear !== undefined) {
             whereConditions.push(sql`Year <= ${sql.raw(filters.endYear.toString())}`)
         }
+
+        // if(filters?.month !== undefined){
+        //     whereConditions.push(sql`Month = ${sql.raw(filters.month.toString())}`)
+        // }
+
+        if (filters?.months !== undefined && filters.months.length > 0) {
+            const monthList = filters.months.join(',');
+            whereConditions.push(sql`Month IN (${sql.raw(monthList)})`)
+        }
         
-        const result = await sql`
-            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
-            FROM vw_DivisionSalesYearly
-            ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
-            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
-        `.execute(db)
+        const query = filters && filters.months ? 
+            sql`
+                SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+                FROM vw_DivisionSalesYearMonth
+                ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
+                ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+            `
+            : sql`
+                SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``}
+                    Year,
+                    Division,
+                    NULL as Month,
+                    SUM(CurrentMonth) as CurrentMonth,
+                    SUM(LastMonth) as LastMonth,
+                    SUM(CurrentMonthLastYear) as CurrentMonthLastYear,
+                    SUM(CurrentQuarter) as CurrentQuarter,
+                    SUM(LastQuarter) as LastQuarter,
+                    SUM(LastYear) as LastYear,
+                    SUM(CurrentYear) as CurrentYear
+                FROM vw_DivisionSalesYearMonth
+                ${whereConditions.length > 0 ? sql`WHERE ${sql.join(whereConditions, sql` AND `)}` : sql``}
+                GROUP BY Year, Division
+                ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+            `
+        const result = await query.execute(db)
         
         const rows: FnDivisionSalesYearly[] = result.rows as FnDivisionSalesYearly[]
         return {

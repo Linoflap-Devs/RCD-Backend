@@ -1,5 +1,5 @@
-import { addAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
-import { IAddAgent, ITblAgentRegistration } from "../types/agent.types";
+import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
@@ -188,4 +188,21 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
         data: result.data
     }
 
+}
+
+export const deleteAgentService = async (userId: number, agentId: number): QueryResult<ITblAgent> => {
+    const result = await deleteAgent(userId, agentId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }

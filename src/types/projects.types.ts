@@ -27,3 +27,38 @@ export interface VwProjectDeveloper {
     VATRate: number | null;
     WtaxRate: number | null;
 }
+
+export interface IAddProject {
+    Address: string;
+    ContactNumber: string;
+    DeveloperID: number;
+    IsLeadProject: boolean;
+    ProjectCode: string;
+    ProjectName: string;
+    ProjectTypeID: number;
+    SectorID: number;
+}
+
+export interface ITblProjectTypes {
+    IsActive: number;
+    LastUpdate: Date;
+    ProjectTypeCode: string;
+    ProjectTypeID: number;
+    ProjectTypeName: string;
+    UpdateBy: number;
+}
+
+
+export interface ITblProjects {
+  Address: string;
+  ContactNumber: string;
+  DeveloperID: number;
+  IsLeadProject: number;
+  LastUpdate: Date;
+  ProjectCode: string;
+  ProjectID: number;
+  ProjectName: string;
+  ProjectTypeID: number;
+  SectorID: number;
+  UpdateBy: number;
+}

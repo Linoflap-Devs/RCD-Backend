@@ -31,6 +31,38 @@ export interface IAgentUserSession {
     AgentUser: IAgentUser
 }
 
+// Broker
+
+export interface IBrokerSession {
+    BrokerUserID: number
+    ExpiresAt: Date
+    SessionID: number
+    SessionString: string
+}
+
+export interface IBrokerUser {
+    BrokerID: number | null
+    BrokerRegistrationID: number | null
+    BrokerUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
+export interface ITblBrokerUser {
+    BrokerID: number | null
+    BrokerRegistrationID: number | null
+    BrokerUserID: number
+    Email: string
+    ImageID: number | null,
+    IsVerified: number,
+}
+
+export interface IBrokerUserSession {
+    BrokerSession: IBrokerSession
+    BrokerUser: IBrokerUser
+}
+
 export interface IEmployeeSession {
     UserID: number
     ExpiresAt: Date
@@ -88,6 +120,45 @@ export interface IAgentRegister {
         endDate?: Date | null
     }[]
 }
+
+export interface IBrokerRegister {
+    firstName: string,
+    middleName?: string | null,
+    lastName: string,
+    gender: 'Male' | 'Female',
+    civilStatus: 'Single' | 'Married',
+    religion: string,
+    birthdate: Date,
+    birthplace: string,
+    address: string,
+    telephoneNumber: string,
+    contactNumber: string,
+    sssNumber?: string | null,
+    philhealthNumber?: string | null,
+    pagibigNumber?: string | null,
+    tinNumber?: string | null,
+    prcNumber?: string | null,
+    dshudNumber?: string | null,
+    employeeIdNumber?: string | null,
+    email: string,
+    password: string,
+
+    profileImage?: Express.Multer.File,
+
+    education: {
+        school: string,
+        degree: string,
+        startDate: Date,
+        endDate?: Date | null
+    }[],
+    experience: {
+        jobTitle: string,
+        company: string,
+        startDate: Date,
+        endDate?: Date | null
+    }[]
+}
+
 
 export interface IAgentRegistrationListItem {
     AgentRegistrationID: number,

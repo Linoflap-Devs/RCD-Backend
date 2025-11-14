@@ -1,10 +1,10 @@
-import { IAgentRegister, IEmployeeRegister } from "../types/auth.types";
+import { IAgentRegister, IBrokerRegister, IEmployeeRegister } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -36,6 +36,12 @@ export const createSession = async (token: string, userId: number) => {
 
 export const createEmployeeSession = async (token: string, userId: number) => {
     const result = await insertEmployeeSession(token, userId);
+
+    return result
+}
+
+export const createBrokerSession = async (token: string, userId: number) => {
+    const result = await insertBrokerSession(token, userId);
 
     return result
 }
@@ -88,6 +94,33 @@ export const validateEmployeeSessionToken = async (token: string) => {
         }
 
         return { session: find.data.EmployeeSession, user: find.data.EmployeeUser }
+    }
+
+    logger('Session not found', {token: token})
+    return { session: null, user: null }
+}
+
+export const validateBrokerSessionToken = async (token: string) => {   
+    const find = await findBrokerSession(token)
+    
+    if(find === null) {
+        logger('Session not found', {token: token})
+        return { session: null, user: null }
+    }
+
+    if(find !== undefined && find.data.BrokerSession !== null) {
+        console.log(find.data.BrokerSession)
+        if(Date.now() >= find.data.BrokerSession?.ExpiresAt.getTime()) {
+            await deleteSession(find.data.BrokerSession.SessionID)
+            return { session: null, user: null}
+        }
+
+        if(Date.now() >= find.data.BrokerSession?.ExpiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
+            find.data.BrokerSession.ExpiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
+            await extendEmployeeSessionExpiry(find.data.BrokerSession.SessionID, find.data.BrokerSession.ExpiresAt)
+        }
+
+        return { session: find.data.BrokerSession, user: find.data.BrokerUser }
     }
 
     logger('Session not found', {token: token})
@@ -253,6 +286,164 @@ export const loginAgentService = async (email: string, password: string): QueryR
     }
 }
 
+export const registerBrokerService = async (
+    data: IBrokerRegister, 
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File,
+    //agentId?: number
+): QueryResult<any> => {
+
+    // if(agentId){
+    //     const agent = await findAgentDetailsByAgentId(agentId)
+
+    //     if(!agent.success){
+    //         return {
+    //             success: false,
+    //             data: {},
+    //             error: {
+    //                 code: 500,
+    //                 message: 'Failed to find agent details.'
+    //             }
+    //         }
+    //     }
+    // }
+
+    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+
+    let metadata: IImage | undefined = undefined
+
+    if(image)(
+        metadata = {
+            FileName: filename,
+            ContentType: image.mimetype,
+            FileExt: path.extname(image.originalname),
+            FileSize: image.size,
+            FileContent: image.buffer
+        }
+    )
+
+    let govIdMetadata: IImage | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: govIdImage.buffer
+        }
+    )
+    
+    let selfieMetadata: IImage | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: selfieImage.buffer
+        }
+    )
+
+    const result = await registerBrokerTransaction(data, metadata, govIdMetadata, selfieMetadata, undefined)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register agent.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
+
+    return result
+}
+
+export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string}> => {
+    const user = await findBrokerUserByEmail(email)
+
+    if(!user.success) {
+        logger((user.error?.message || 'Failed to find user.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    if(!user.data.isVerified){
+        logger(('User is not verified.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    // compare passwords
+    const storedPw = user.data.password
+    const compare = await verifyPassword(password, storedPw)
+
+    if(!compare){
+        logger(('Password does not match.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
+
+    const token = generateSessionToken()
+    const session = await createBrokerSession(token, user.data.brokerUserId)
+
+    if(!session.success) {
+        logger(( session.error?.message || 'Failed to create session.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to create session.',
+                code: 500
+            }
+        }
+    }
+
+    const brokerDetails = await findBrokerDetailsByUserId(user.data.brokerUserId)
+
+    if(!brokerDetails.success) {
+        logger(( brokerDetails.error?.message || 'Failed to find broker details.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to find broker details.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            token: token,
+            email: email
+        }
+    }
+}
+
 export const registerEmployeeService = async (data: IEmployeeRegister): QueryResult<any> => {
 
     const branchName = await getSalesBranch(data.BranchID)
@@ -369,6 +560,31 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
             data: {} as {token: string, email: string},
             error: {
                 message: result.error?.message || 'Failed to approve agent registration.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            email: result.data.Email,
+            isVerified: result.data.IsVerified
+        }
+    }
+
+}
+
+export const approveBrokerRegistrationService = async (brokerRegistrationId: number, brokerId?: number) => {
+    const result = await approveBrokerRegistrationTransaction(brokerRegistrationId, brokerId)
+
+    if(!result.success){
+        logger((result.error?.message || 'Failed to approve broker registration.'), {brokerRegistrationId: brokerRegistrationId, brokerId: brokerId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: result.error?.message || 'Failed to approve broker registration.',
                 code: 500
             }
         }

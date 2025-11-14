@@ -6,7 +6,8 @@ import { TblDevelopers } from "../db/db-types";
 export const getDevelopers = async (
     filters?: {
         developerCode?: string,
-        developerId?: number
+        developerId?: number,
+        search?: string
     }, 
     pagination?: {
         page?: number, 
@@ -33,6 +34,33 @@ export const getDevelopers = async (
         if(filters && filters.developerCode){
             baseQuery = baseQuery.where('DeveloperCode', '=', filters.developerCode)
             countQuery = countQuery.where('DeveloperCode', '=', filters.developerCode)
+        }
+
+        if(filters && filters.search){
+            const searchTerm = `%${filters.search}%`;
+            console.log(    )
+            const searchAsNumber = Number(filters.search);
+            const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+            
+            baseQuery = baseQuery.where(({ or, eb }) => 
+                or([
+                    // String columns - always search these
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('DeveloperCode', 'like', searchTerm),
+                    eb('Address', 'like', searchTerm),
+                    // Numeric column - only search if valid number
+                    ...(isValidNumber ? [eb('DeveloperID', '=', searchAsNumber)] : [])
+                ])
+            );
+            
+            countQuery = countQuery.where(({ or, eb }) => 
+                or([
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('DeveloperCode', 'like', searchTerm),
+                    eb('Address', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('DeveloperID', '=', searchAsNumber)] : [])
+                ])
+            );
         }
 
         baseQuery = baseQuery.orderBy('DeveloperName', 'asc')
@@ -123,10 +151,10 @@ export const addDeveloper = async (
 export const editDeveloper = async (
     userId: number,
     developerId: number,
-    editData: Partial<IAddDeveloper>
+    editData: Partial<ITblDevelopers>
 ): QueryResult<ITblDevelopers> => {
     try {
-        const updateData: any = {
+        const updateData: Partial<ITblDevelopers> = {
             ...editData,
             LastUpdate: new Date(),
             UpdateBy: userId

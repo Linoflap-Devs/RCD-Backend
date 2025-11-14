@@ -1,6 +1,9 @@
 import { TblProjects, VwProjects } from "../db/db-types";
-import { getProjectById, getProjectList } from "../repository/projects.repository";
+import { getDevelopers } from "../repository/developers.repository";
+import { addProject, editProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
+import { getSectors } from "../repository/sectors.repository";
 import { QueryResult } from "../types/global.types";
+import { IAddProject, ITblProjects } from "../types/projects.types";
 import { logger } from "../utils/logger";
 
 export const getProjectListService = async (): QueryResult<any> => {
@@ -65,5 +68,99 @@ export const getProjectDetailsService = async (projectId: number): QueryResult<a
     return {
         success: true,
         data: formatted
+    }
+}
+
+export const addProjectService = async (userId: number, data: IAddProject): QueryResult<ITblProjects> => {
+
+    // check ids
+    const projectType = await getProjectTypes({projectTypeId: data.ProjectTypeID})
+
+    if(!projectType.success || projectType.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid project type id.'
+            }
+        }
+    }
+
+    const developer = await getDevelopers({developerId: data.DeveloperID})
+
+    if(!developer.success || developer.data.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid developer id.'
+            }
+        }
+    }
+
+    const sector = await getSectors({sectorId: data.SectorID})
+
+    if(!sector.success || sector.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 404,
+                message: 'Invalid sector id.'
+            }
+        }
+    }
+
+    const existing = await getProjectList({projectCode: data.ProjectCode})
+
+    if(existing.data.length > 0){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 400,
+                message: 'Project code already exists.'
+            }
+        }
+    }
+
+    const result = await addProject(userId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editProjectService = async (userId: number, projectId: number, data: Partial<IAddProject>): QueryResult<ITblProjects> => {
+
+    // check validations and transforms
+    if(data.ProjectCode){
+        data.ProjectCode = undefined
+    }
+
+    const result = await editProject(userId, projectId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

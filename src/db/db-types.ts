@@ -288,11 +288,85 @@ export interface TblBranchDivision {
 export interface TblBroker {
   Broker: string;
   BrokerCode: string;
-  BrokerID: number;
+  BrokerID: Generated<number>;
   IsActive: number;
   LastUpdate: Date;
   RepresentativeName: string;
   UpdateBy: number;
+}
+
+export interface TblBrokerEducation {
+  BrokerEducationID: Generated<number>;
+  BrokerID: number | null;
+  BrokerRegistrationID: number | null;
+  Degree: string;
+  EndDate: Date | null;
+  School: string;
+  StartDate: Date;
+}
+
+export interface TblBrokerRegistration {
+  Address: string;
+  AddressEmergency: string;
+  AffiliationDate: Date;
+  Birthdate: Date;
+  Birthplace: string | null;
+  BrokerCode: string;
+  BrokerRegistrationID: Generated<number>;
+  BrokerTaxRate: number;
+  CivilStatus: string;
+  ContactEmergency: string;
+  ContactNumber: string;
+  DivisionID: string | null;
+  DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
+  FirstName: string;
+  GovImageID: number | null;
+  IsVerified: Generated<number>;
+  LastName: string;
+  LastUpdate: Generated<Date>;
+  MiddleName: string;
+  PagIbigNumber: string | null;
+  PersonEmergency: string;
+  PhilhealthNumber: string | null;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number | null;
+  ReferredCode: string | null;
+  Religion: string | null;
+  SelfieImageID: number | null;
+  Sex: string;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
+  UpdateBy: number | null;
+}
+
+export interface TblBrokerSession {
+  BrokerUserID: number;
+  ExpiresAt: Date;
+  SessionID: Generated<number>;
+  SessionString: string;
+}
+
+export interface TblBrokerUser {
+  BrokerID: number | null;
+  BrokerRegistrationID: number | null;
+  BrokerUserID: Generated<number>;
+  Email: string;
+  ImageID: number | null;
+  IsVerified: Generated<number>;
+  Password: string;
+}
+
+export interface TblBrokerWorkExp {
+  BrokerID: number | null;
+  BrokerRegistrationID: number | null;
+  BrokerWorkExpID: Generated<number>;
+  Company: string;
+  EndDate: Date | null;
+  JobTitle: string;
+  StartDate: Date;
 }
 
 export interface TblBuyers {
@@ -599,7 +673,7 @@ export interface TblProjects {
   IsLeadProject: number;
   LastUpdate: Date;
   ProjectCode: string;
-  ProjectID: number;
+  ProjectID: Generated<number>;
   ProjectName: string;
   ProjectTypeID: number;
   SectorID: number;
@@ -1196,6 +1270,19 @@ export interface VwDivisionSalesYearly11102025 {
   Year: number | null;
 }
 
+export interface VwDivisionSalesYearMonth {
+  CurrentMonth: number | null;
+  CurrentMonthLastYear: number | null;
+  CurrentQuarter: number | null;
+  CurrentYear: number | null;
+  Division: string;
+  LastMonth: number | null;
+  LastQuarter: number | null;
+  LastYear: number | null;
+  Month: number | null;
+  Year: number | null;
+}
+
 export interface VwIncentives {
   AdditionalIncentive: number | null;
   AdditionalSalesIncentive: number | null;
@@ -1547,6 +1634,11 @@ export interface DB {
   Tbl_AgentWorkExp: TblAgentWorkExp;
   tbl_BranchDivision: TblBranchDivision;
   Tbl_Broker: TblBroker;
+  Tbl_BrokerEducation: TblBrokerEducation;
+  Tbl_BrokerRegistration: TblBrokerRegistration;
+  Tbl_BrokerSession: TblBrokerSession;
+  Tbl_BrokerUser: TblBrokerUser;
+  Tbl_BrokerWorkExp: TblBrokerWorkExp;
   Tbl_Buyers: TblBuyers;
   tbl_CashIncentive: TblCashIncentive;
   tbl_CashIncentiveDtl: TblCashIncentiveDtl;
@@ -1606,6 +1698,7 @@ export interface DB {
   vw_DivisionSalesTarget: VwDivisionSalesTarget;
   vw_DivisionSalesYearly: VwDivisionSalesYearly;
   "vw_DivisionSalesYearly-11_10_2025": VwDivisionSalesYearly11102025;
+  vw_DivisionSalesYearMonth: VwDivisionSalesYearMonth;
   vw_Incentives: VwIncentives;
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;

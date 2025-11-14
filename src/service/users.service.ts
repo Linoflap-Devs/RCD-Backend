@@ -9,6 +9,7 @@ import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
+import { ITblBroker } from "../types/brokers.types";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -537,7 +538,7 @@ export const editAgentWorkExpService = async (
     return { success: true, data: result.data };
 };
 
-export const getBrokersService = async (): QueryResult<TblBroker[]> => {
+export const getBrokersService = async (): QueryResult<ITblBroker[]> => {
     const result = await getBrokers();
 
     if (!result.success) {

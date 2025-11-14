@@ -24,6 +24,11 @@ export const approveRegistrationSchema = z.object({
     agentId: z.coerce.number().optional()
 })
 
+export const approveBrokerRegistrationSchema = z.object({
+    brokerRegistrationId: z.coerce.number(),
+    brokerId: z.coerce.number().optional()
+})
+
 export const rejectRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
 })
