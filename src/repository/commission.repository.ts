@@ -83,13 +83,21 @@ export const getCommissions = async (
     }
 }
 
-export const getTotalAgentCommissions = async (agentId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
+export const getTotalAgentCommissions = async (user: {brokerName?: string, agentId?: number}, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
         let result = await db.selectFrom('Vw_CommissionReleaseDeductionReport')
             .select(({fn, val, ref}) => [
                 fn.sum(ref('ReleasedAmount')).as('TotalCommission')
             ])
-            .where('AgentID', '=', agentId)
+        
+        if(user.brokerName){
+            result = result.where('PositionCode', '=', 'BROKER')
+            result = result.where('AgentName', '=', user.brokerName)
+        }
+
+        if(user.agentId){
+            result = result.where('AgentID', '=', user.agentId)
+        }
 
         if(filters?.month){
             const firstDay = new Date(filters.year || (new Date).getFullYear(), filters.month - 1, 1)

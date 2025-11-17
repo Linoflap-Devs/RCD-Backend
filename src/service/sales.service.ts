@@ -10,8 +10,9 @@ import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
 import { CommissionDetailPositions } from "../types/commission.types";
-import { VwProjectDeveloper } from "../types/projects.types";
+import { ITblProjects, VwProjectDeveloper } from "../types/projects.types";
 import { IBrokerEmailPicture } from "../types/brokers.types";
+import { getDevelopers } from "../repository/developers.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -461,7 +462,7 @@ export const addPendingSalesService = async (
             phase: string,
             lotArea: number,
             flrArea: number,
-            developerCommission: number,
+            developerCommission?: number,
             netTCP: number,
             miscFee: number,
             financingScheme: string,
@@ -672,12 +673,30 @@ export const addPendingSalesService = async (
         }
     }
 
+    if(!data.property.developerCommission) {
+        const developer = await getDevelopers({ developerId: Number(project.data.DeveloperID) })
+
+        if(!developer.success || developer.data.data.length == 0){
+            return {
+                success: false,
+                data: {} as ITblProjects,
+                error: {
+                    code: 404,
+                    message: 'Invalid developer id.'
+                }
+            }
+        }
+
+        data.property.developerCommission = developer.data.data[0].CommRate
+    }
+
     const updatedData = {
         ...data,
         divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
-            developerID: Number(project.data.DeveloperID)
+            developerID: Number(project.data.DeveloperID),
+            developerCommission: Number(data.property.developerCommission)
         },
         images: {
             receipt: receiptMetadata,

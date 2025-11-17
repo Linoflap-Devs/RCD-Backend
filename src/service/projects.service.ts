@@ -3,7 +3,7 @@ import { getDevelopers } from "../repository/developers.repository";
 import { addProject, editProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
 import { getSectors } from "../repository/sectors.repository";
 import { QueryResult } from "../types/global.types";
-import { IAddProject, ITblProjects } from "../types/projects.types";
+import { IAddProject, ITblProjects, ITblProjectTypes } from "../types/projects.types";
 import { logger } from "../utils/logger";
 
 export const getProjectListService = async (): QueryResult<any> => {
@@ -162,5 +162,28 @@ export const editProjectService = async (userId: number, projectId: number, data
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const getProjectTypesService = async (): QueryResult<Partial<ITblProjectTypes>[]> => {
+    const result = await getProjectTypes();
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as ITblProjectTypes[],
+            error: result.error
+        }
+    }
+
+    const obj = result.data.map((item: ITblProjectTypes) => ({
+        ProjectTypeID: item.ProjectTypeID,
+        ProjectTypeName: item.ProjectTypeName.trim(),
+        ProjectTypeCode: item.ProjectTypeCode.trim()
+    }))
+
+    return {
+        success: true,
+        data: obj
     }
 }
