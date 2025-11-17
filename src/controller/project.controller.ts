@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addProjectService, editProjectService, getProjectDetailsService, getProjectListService } from "../service/projects.service";
+import { addProjectService, editProjectService, getProjectDetailsService, getProjectListService, getProjectTypesService } from "../service/projects.service";
 
 export const getProjectListController = async (req: Request, res: Response) => {
 
@@ -121,4 +121,15 @@ export const editProjectController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Project edited.', data: result.data})
+}
+
+export const getProjectTypesController = async (req: Request, res: Response) => {
+    const result = await getProjectTypesService();
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get project types.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'List of project types.', data: result.data})
 }
