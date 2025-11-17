@@ -6,7 +6,7 @@ import { QueryResult } from "../types/global.types";
 import { IAddProject, ITblProjects, ITblProjectTypes } from "../types/projects.types";
 import { logger } from "../utils/logger";
 
-export const getProjectListService = async (): QueryResult<any> => {
+export const getProjectListService = async (showDetails?: boolean): QueryResult<any> => {
     const result = await getProjectList();
 
     if(!result.success){
@@ -24,6 +24,15 @@ export const getProjectListService = async (): QueryResult<any> => {
             projectName: project.ProjectName.trim(),
             projectCode: project.ProjectCode.trim(),
             developer: project.DeveloperName?.trim() || 'N/A',
+            ... showDetails && {
+                address: project.Address.trim(),
+                contactNumber: project.ContactNumber.trim(),
+                projectType: project.ProjectTypeName?.trim() || 'N/A',
+                sector: project.SectorName.trim(),
+                isLeadProject: project.IsLeadProject,
+                sectorId: project.SectorID,
+                developerId: project.DeveloperID
+            }
         }
     })
 
@@ -175,7 +184,7 @@ export const getProjectTypesService = async (): QueryResult<Partial<ITblProjectT
             error: result.error
         }
     }
-
+    
     const obj = result.data.map((item: ITblProjectTypes) => ({
         ProjectTypeID: item.ProjectTypeID,
         ProjectTypeName: item.ProjectTypeName.trim(),
