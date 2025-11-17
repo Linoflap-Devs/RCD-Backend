@@ -2,7 +2,7 @@ import { VwSalesTransactions } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
-import { findAgentDetailsByUserId } from "../repository/users.repository";
+import { findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { FnDivisionSales } from "../types/sales.types";
@@ -99,6 +99,107 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
     const commissionInfo = {
         totalCommissions: commissions.data || 0
     }
+
+    return {
+        success: true,
+        data: {
+            user: userInfo,
+            sales: salesInfo,
+            commission: commissionInfo,
+            divisionSales: divisionSalesData
+        }
+    }
+}
+
+export const getBrokerDashboardService = async (brokerUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
+
+    // user info
+
+    //const result = await findAgentDetailsByUserId(agentUserId)
+    const result = await findBrokerDetailsByUserId(brokerUserId)
+
+    if(!result.success){
+        logger('Failed to find user.', {brokerUserId: brokerUserId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 500
+            }
+        }
+    }
+
+    if(!result.data.BrokerID){
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 500
+            }
+        }
+    }
+
+    const userInfo = {
+        name: result.data.RepresentativeName,
+        position: 'BROKER',
+        profileImage: result.data.Image ? result.data.Image : null,
+    }
+
+    // personal sales
+
+    const personalSales = await getTotalPersonalSales({ brokerName: result.data.RepresentativeName}, filters)
+    console.log(personalSales)
+
+    let divisionSales = null
+    let divisionSalesData: any[] = []
+    // if(result.data.DivisionID){
+    //     const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, isUnique: true, month: filters?.month, year: filters?.year})
+
+    //     if(!getDivSales.success){
+    //         logger('Failed to find division.', {agentUserId: agentUserId})
+    //         return {
+    //             success: false,
+    //             data: {} as any,
+    //             error: {
+    //                 message: 'Failed to find division.',
+    //                 code: 500
+    //             }
+    //         }
+    //     }
+
+    //     divisionSales = getDivSales.data
+    // }
+
+    // if(divisionSales){
+    //     divisionSales.results.map((sale: VwSalesTransactions) => {
+    //         divisionSalesData.push({
+    //             salesId: sale.SalesTranID,
+    //             salesCode: sale.SalesTranCode?.trim() || '',
+    //             projectName: sale.ProjectName?.trim() || '',
+    //             developerName: sale.DeveloperName?.trim() || '',
+    //             price: sale.NetTotalTCP, 
+    //             flrArea: sale.FloorArea,
+    //             lotArea: sale.LotArea,
+    //             dateFiled: sale.DateFiled
+    //         })
+    //     })
+    // }
+
+    const salesInfo = {
+        totalSales: personalSales.data
+    }
+
+    // commission
+
+    //const commissions = await getTotalAgentCommissions(result.data.AgentID, {month: filters?.month, year: filters?.year})
+
+    const commissionInfo = {
+        //totalCommissions: commissions.data || 0
+        totalCommissions: 0
+    }
+    
 
     return {
         success: true,
