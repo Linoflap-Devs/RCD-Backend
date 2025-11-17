@@ -40,7 +40,7 @@ export const getAgentCommissionsService = async (userId: number, filters?: { mon
         }
     }
 
-    const totalCommission = await getTotalAgentCommissions(user.data.AgentID, { month: filters?.month ?? undefined, year: filters?.year ?? undefined })
+    const totalCommission = await getTotalAgentCommissions({agentId: user.data.AgentID}, { month: filters?.month ?? undefined, year: filters?.year ?? undefined })
 
     if(!totalCommission.success){
         return {
