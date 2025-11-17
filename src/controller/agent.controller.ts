@@ -13,7 +13,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
     const validPositions = ['SP', 'UM', 'SD'] as const;
     const upperPosition = position?.toString().toUpperCase();
     
-    if(!validPositions.includes(upperPosition as any)) {
+    if(position && !validPositions.includes(upperPosition as any)) {
         return res.status(400).json({
             success: false, 
             message: 'Invalid position query.', 
