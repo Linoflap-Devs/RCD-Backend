@@ -23,7 +23,7 @@ router.route('/web/pending').post(
 );
 router.route('/web/pending/:pendingSalesId').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getWebPendingSalesDetailsController);
 router.route('/pending').get([validateSession, validateRole(['UM', 'SD'])], getPendingSalesController);
-router.route('/pending/:pendingSalesId').get([validateSession], getPendingSalesDetailsController);
+router.route('/pending/:pendingSalesId').get([validateMobileSession], getPendingSalesDetailsController);
 router.route('/pending').post(
     [
         validateSession, 
@@ -69,7 +69,7 @@ router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSessi
 
 router.route('/combined').get([validateMobileSession], getCombinedPersonalSalesController);
 
-router.route('/:salesTransactionId').get([validateSession], getSalesTransactionDetailController);
+router.route('/:salesTransactionId').get([validateMobileSession], getSalesTransactionDetailController);
 
 
 

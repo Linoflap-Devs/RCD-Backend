@@ -8,7 +8,7 @@ import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../ty
 import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents } from "../db/db-types";
 
-export const getAgents = async (filters?: { showInactive?: boolean, division?: number }): QueryResult<IAgent[]> => {
+export const getAgents = async (filters?: { showInactive?: boolean, division?: number, positionId?: number }): QueryResult<IAgent[]> => {
     try {
         let result = await db.selectFrom('Vw_UniqueActiveAgents')
             .selectAll()
@@ -19,6 +19,10 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
 
         if(!filters || !filters.showInactive){
             result = result.where('IsActive', '=', 1)
+        }
+
+        if(filters && filters.positionId){
+            result = result.where('PositionID', '=', filters.positionId)
         }
 
         const queryResult = await result.execute();

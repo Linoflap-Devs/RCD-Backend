@@ -19,7 +19,8 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
     const obj = result.data.map((div: ITblDivision) => ({
         DivisionID: div.DivisionID,
         DivisionName: div.Division,
-        DivisionCode: div.DivisionCode
+        DivisionCode: div.DivisionCode,
+        DirectorID: div.DirectorID
     }))
 
     return {

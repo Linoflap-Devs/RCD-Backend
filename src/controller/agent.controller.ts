@@ -6,10 +6,28 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
     const { 
         showInactive,
-        division
-    } = req.params
+        division,
+        position
+    } = req.query
 
-    const result = await getAgentsService({showInactive: showInactive === 'true', division: Number(division)});
+    const validPositions = ['SP', 'UM', 'SD'] as const;
+    const upperPosition = position?.toString().toUpperCase();
+    
+    if(!validPositions.includes(upperPosition as any)) {
+        return res.status(400).json({
+            success: false, 
+            message: 'Invalid position query.', 
+            data: {}
+        })
+    }
+
+    console.log('params', showInactive, division, position)
+
+    const result = await getAgentsService({
+        showInactive: showInactive === 'true', 
+        division: Number(division), 
+        position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD') : undefined
+    });
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agents.', data: {}})
