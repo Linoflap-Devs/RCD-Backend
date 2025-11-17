@@ -94,7 +94,7 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
 
     // commission
 
-    const commissions = await getTotalAgentCommissions(result.data.AgentID, {month: filters?.month, year: filters?.year})
+    const commissions = await getTotalAgentCommissions({agentId: result.data.AgentID}, {month: filters?.month, year: filters?.year})
 
     const commissionInfo = {
         totalCommissions: commissions.data || 0
@@ -193,7 +193,7 @@ export const getBrokerDashboardService = async (brokerUserId: number, filters?: 
 
     // commission
 
-    //const commissions = await getTotalAgentCommissions(result.data.AgentID, {month: filters?.month, year: filters?.year})
+    const commissions = await getTotalAgentCommissions({brokerName: result.data.RepresentativeName}, {month: filters?.month, year: filters?.year})
 
     const commissionInfo = {
         //totalCommissions: commissions.data || 0
