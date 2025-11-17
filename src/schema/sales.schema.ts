@@ -14,7 +14,7 @@ export const addPendingSaleSchema = z.object({
     phase: z.string().max(10),
     lotArea: z.coerce.number(),
     flrArea: z.coerce.number(),
-    developerCommission: z.coerce.number(),
+    developerCommission: z.coerce.number().optional(),
     netTCP: z.coerce.number(),
     miscFee: z.coerce.number(),
     financingScheme: z.string().max(255),
