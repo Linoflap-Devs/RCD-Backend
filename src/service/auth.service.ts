@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -698,6 +698,27 @@ export const logoutAgentSessionService = async(sessionId: number): QueryResult<a
 
 export const logoutEmployeeSessionService = async(sessionId: number): QueryResult<any> => {
     const result = await deleteEmployeeSession(sessionId)
+
+    if(!result.success){
+        logger('Failed to delete session.', {sessionId: sessionId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to delete session.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const logoutBrokerSessionService = async(sessionId: number): QueryResult<any> => {
+    const result = await deleteBrokerSession(sessionId)
 
     if(!result.success){
         logger('Failed to delete session.', {sessionId: sessionId})
