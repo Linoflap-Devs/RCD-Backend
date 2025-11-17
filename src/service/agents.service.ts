@@ -5,8 +5,20 @@ import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
 import { IAgent } from "../types/users.types";
 
-export const getAgentsService = async (filters?: {}): QueryResult<IAgent[]> => {
-    const result = await getAgents(filters)
+export const getAgentsService = async (filters?: {showInactive?: boolean, division?: number, position?: 'SP' | 'UM' | 'SD'}): QueryResult<IAgent[]> => {
+
+    const positionMap = new Map<string, number>(
+        [
+            ['SP', 5],
+            ['UM', 85],
+            ['SD', 86]
+        ]
+    )
+
+    const result = await getAgents({
+        ...filters,
+        positionId: filters && filters.position ? positionMap.get(filters.position) : undefined
+    })
 
     if(!result.success){
         return {
