@@ -1,4 +1,5 @@
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { getPositions } from "../repository/position.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
@@ -162,6 +163,15 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
             }
         }
     }
+
+    if(!data.PositionID){
+        const position = await getPositions({positionName: 'SALES PERSON'})
+
+        if(position.success){
+            data.PositionID = position.data[0].PositionID
+        }
+    }
+
 
     const result = await addAgent(userId, data)
 

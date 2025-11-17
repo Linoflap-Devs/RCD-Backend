@@ -101,7 +101,7 @@ export interface IAddAgent {
     PagIbigNumber: string | null;
     PersonEmergency: string;
     PhilhealthNumber: string | null;
-    PositionID: number | null;
+    PositionID?: number | null;
     PRCNumber: string | null;
     ReferredByID: number | null;
     ReferredCode: string | null;

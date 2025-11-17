@@ -145,7 +145,7 @@ export const addNewAgentController = async (req: Request, res: Response) => {
             Sex: sex,
             Address: address,
             Birthdate: birthdate,
-            PositionID: positionID,
+            PositionID: positionID || undefined,
             ReferredByID: referredByID,
             PRCNumber: prcNumber,
             DSHUDNumber: dshudNumber,
