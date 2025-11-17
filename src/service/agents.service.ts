@@ -10,8 +10,8 @@ export const getAgentsService = async (filters?: {showInactive?: boolean, divisi
     const positionMap = new Map<string, number>(
         [
             ['SP', 5],
-            ['UM', 85],
-            ['SD', 86]
+            ['UM', 86],
+            ['SD', 85]
         ]
     )
 

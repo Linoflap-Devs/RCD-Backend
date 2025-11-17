@@ -1,10 +1,10 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, approveBrokerRegistrationController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, approveBrokerRegistrationController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
-import { validateEmployeeSession, validateSession } from '../middleware/auth';
+import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
 import { validateRole } from '../middleware/roles';
 
 const router = express.Router();
@@ -15,11 +15,12 @@ router.route('/logout-agent').delete(validateSession, logoutAgentSessionControll
 
 router.route('/register-employee').post(validate(registerEmployeeSchema), registerEmployeeController)
 router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmployeeController)
-router.route('/logout-employee').delete(validateEmployeeSession, logoutAgentSessionController);
+router.route('/logout-employee').delete(validateEmployeeSession, logoutEmployeeSessionController);
 
 router.route('/register-broker').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]), validate(registerAgentSchema)], registerBrokerController);
 router.route('/approve-broker-registration').post([validateEmployeeSession, validateRole(['SA']), validate(approveBrokerRegistrationSchema)], approveBrokerRegistrationController);
 router.route('/login-broker').post(validate(loginAgentSchema), loginBrokerController);
+router.route('/logout-broker').delete(validateBrokerSession, logoutBrokerSessionController)
 
 
 router.route('/approve-registration').post([validateEmployeeSession, validate(approveRegistrationSchema)], approveAgentRegistrationController);

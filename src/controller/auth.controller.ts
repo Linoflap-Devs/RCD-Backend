@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -517,6 +517,8 @@ export const logoutAgentSessionController = async (req: Request, res: Response) 
         return
     }
 
+    res.clearCookie('_rcd_agent_cookie', {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
     return res.status(200).json({
         success: true, 
         message: "Agent session logged out successfully.", 
@@ -524,7 +526,7 @@ export const logoutAgentSessionController = async (req: Request, res: Response) 
     });
 }
 
-export const logoutEmployeeSessionConroller = async (req: Request, res: Response) => {
+export const logoutEmployeeSessionController = async (req: Request, res: Response) => {
 
     const session = req.session
     if(!session) {
@@ -544,12 +546,44 @@ export const logoutEmployeeSessionConroller = async (req: Request, res: Response
         return
     }
 
+    res.clearCookie('_rcd_employee_cookie', {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
     return res.status(200).json({
         success: true, 
         message: "Employee session logged out successfully.", 
         data: result.data
     });
 }
+
+export const logoutBrokerSessionController = async (req: Request, res: Response) => {
+
+    const session = req.session
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    const result = await logoutBrokerSessionService(session.sessionID)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to logout broker session.", 
+            data: {}
+        });
+
+        return
+    }
+
+    res.clearCookie('_rcd_broker_cookie', {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+
+    return res.status(200).json({
+        success: true, 
+        message: "Broker session logged out successfully.", 
+        data: result.data
+    });
+}
+
 
 export const sendOTPController = async (req: Request, res: Response) => {
 
