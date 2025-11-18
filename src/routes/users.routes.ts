@@ -1,6 +1,6 @@
 import express from 'express';
-import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokersController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
-import { validateEmployeeSession, validateSession } from '../middleware/auth';
+import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokersController, getBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
+import { validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.route('/').get([validateSession],getUsersController);
 router.route('/user-details').get([validateSession], getAgentUserDetailsController);
+router.route('/broker-details').get([validateBrokerSession], getBrokerUserDetailsController);
 
 router.route('/user-ids').get([validateSession], getAgentGovIdsController);
 router.route('/user-details').patch([validateSession, validate(editAgentSchema)], editAgentDetailsController);
