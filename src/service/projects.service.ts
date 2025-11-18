@@ -31,7 +31,8 @@ export const getProjectListService = async (showDetails?: boolean): QueryResult<
                 sector: project.SectorName.trim(),
                 isLeadProject: project.IsLeadProject,
                 sectorId: project.SectorID,
-                developerId: project.DeveloperID
+                developerId: project.DeveloperID,
+                projectTypeId: project.ProjectTypeID
             }
         }
     })
