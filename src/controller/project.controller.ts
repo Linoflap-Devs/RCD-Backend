@@ -3,7 +3,9 @@ import { addProjectService, editProjectService, getProjectDetailsService, getPro
 
 export const getProjectListController = async (req: Request, res: Response) => {
 
-    const result = await getProjectListService();
+    const { showDetails } = req.query
+
+    const result = await getProjectListService(showDetails ? true : false);
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get project list.', data: {}})

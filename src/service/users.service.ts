@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -10,6 +10,7 @@ import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../rep
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
 import { ITblBroker } from "../types/brokers.types";
+import { getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -125,6 +126,113 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         data: obj
     }
 };
+
+export const getBrokerDetailsService = async (brokerUserId: number): QueryResult<any> => {
+    const brokerUserDetails = await findBrokerDetailsByUserId(brokerUserId)
+
+    if(!brokerUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!brokerUserDetails.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const userInfo = {
+        name: brokerUserDetails.data.RepresentativeName,
+        position: 'BROKER',
+        profileImage: brokerUserDetails.data.Image ? brokerUserDetails.data.Image : null,
+    }
+
+    const brokerDetails = await getBrokerRegistrationByUserId(brokerUserId)
+
+    if(!brokerDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No broker found',
+            code: 400
+        }
+    }
+
+    // agent details
+    const basicInfo = {
+        gender: brokerDetails.data.Sex.trim() || '',
+        civilStatus: brokerDetails.data.CivilStatus.trim() || '',
+        religion: brokerDetails.data.Religion?.trim() || '',
+        birthday: brokerDetails.data.Birthdate,
+        birthplace: brokerDetails.data.Birthplace?.trim() || '',
+        address: brokerDetails.data.Address.trim(),
+        telephoneNumber: brokerDetails.data.TelephoneNumber?.trim() || '',
+        contactNumber: brokerDetails.data.ContactNumber.trim() ,
+    }
+
+    // work experience
+
+    const workExpDetails = await getBrokerWorkExp(brokerUserId)
+
+    if(!workExpDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No work experience found',
+            code: 400
+        }
+    }
+
+    const workExp = workExpDetails.data.map(item => ({
+        workExpId: item.BrokerWorkExpID,
+        company: item.Company,
+        jobTitle: item.JobTitle,
+        startDate: item.StartDate,
+        endDate: item.EndDate
+    }))
+
+    // education
+
+    const educationDetails = await getBrokerEducation(brokerUserId)
+
+    if(!educationDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No education found',
+            code: 400
+        }
+    }
+
+    const education = educationDetails.data.map(item => ({
+        educationId: item.BrokerEducationID,
+        school: item.School,
+        degree: item.Degree,
+        startDate: item.StartDate,
+        endDate: item.EndDate
+    }))
+
+    const obj = {
+        userInfo: userInfo, 
+        basicInfo: basicInfo,
+        workExp: workExp,
+        education: education
+    }
+
+    return {
+        success: true,
+        data: obj
+    }
+}
 
 export const getUserDetailsWebService = async (userWebId: number): QueryResult<any> => {
     const userDetails = await findEmployeeUserById(userWebId)
