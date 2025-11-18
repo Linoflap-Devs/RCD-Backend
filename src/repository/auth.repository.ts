@@ -1022,6 +1022,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     ContactEmergency: '',
                     AddressEmergency: '',
                     AffiliationDate: new Date(),
+                    PositionID: 5,
 
                     IsActive: 1,
                     LastUpdate: new Date(),

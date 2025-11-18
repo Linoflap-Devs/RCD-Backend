@@ -1,3 +1,4 @@
+import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { getPositions } from "../repository/position.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
@@ -76,13 +77,28 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
         getAgentWorkExp(agentId)
     ])
 
+    console.log(agentWithUserResult, registrationResult, agentEducation, agentWork)
+
+    let backupAgentData: VwAgents | undefined = undefined
 
     if(!agentWithUserResult.success){
-        return {
-            success: false,
-            data: null,
-            error: agentWithUserResult.error
+
+        const agent = await getAgent(agentId)
+
+        if(!agent.success){
+            return {
+                success: false,
+                data: null,
+                error: agent.error
+            }
         }
+
+        backupAgentData = agent.data
+        // return {
+        //     success: false,
+        //     data: null,
+        //     error: agentWithUserResult.error
+        // }
     }
 
     const imageIds = []
@@ -101,7 +117,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     })
     
     const obj = {
-        agent: agentWithUserResult.data.agent,
+        agent: agentWithUserResult.success ? agentWithUserResult.data.agent : backupAgentData,
         registrationResult: {
             ...registrationResult.data,
             experience: agentWork.data,

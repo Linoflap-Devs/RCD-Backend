@@ -614,7 +614,7 @@ export const getAgentRegistration = async (filters?: {agentId?: number, agentReg
             registrationQuery = registrationQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId)
         }
 
-        const registration = await registrationQuery.executeTakeFirstOrThrow()
+        const registration = await registrationQuery.executeTakeFirst()
 
         if(!registration){
             return {
@@ -766,7 +766,7 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
                 Sex: agent.Sex,
                 Address: agent.Address,
                 ContactNumber: agent.ContactNumber,
-                PositionID: agent.PositionID,
+                PositionID: agent.PositionID || 5,
                 ContactEmergency: agent.ContactEmergency || '',
                 PersonEmergency: agent.PersonEmergency || '',
                 AddressEmergency: agent.AddressEmergency || '',
