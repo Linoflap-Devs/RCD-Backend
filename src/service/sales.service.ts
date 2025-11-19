@@ -2546,21 +2546,30 @@ export const getDivisionSalesYearlyTotalsFnService = async (
         }>
     }>);
 
-    // Calculate division totals
-    const divisionTotals = groupedData.map(division => ({
-        division: division.Division,
-        monthTotal: division.YearData.reduce((yearSum, yearData) => 
-            yearSum + yearData.Months.reduce((monthSum, month) => 
-                monthSum + month.CurrentMonth, 0
-            ), 0
-        )
-    }));
+    // Calculate yearly totals across all divisions
+    const yearlyTotals = result.data.reduce((acc, item) => {
+        const existingYear = acc.find(y => y.year === item.Year);
+        
+        if (existingYear) {
+            existingYear.yearTotal += item.CurrentMonth;
+        } else {
+            acc.push({
+                year: item.Year,
+                yearTotal: item.CurrentMonth
+            });
+        }
+        
+        return acc;
+    }, [] as Array<{year: number, yearTotal: number}>);
+    
+    // Sort by year descending
+    yearlyTotals.sort((a, b) => b.year - a.year);
     
     return {
         success: true,
         data: {
             divisions: groupedData,
-            totals: divisionTotals
+            totals: yearlyTotals
         }
     }
 }
