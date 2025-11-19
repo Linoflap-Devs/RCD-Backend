@@ -286,13 +286,43 @@ export interface TblBranchDivision {
 }
 
 export interface TblBroker {
+  Address: string | null;
+  AddressEmergency: string | null;
+  Affiliation: Date | null;
+  Birthdate: Date | null;
+  Birthplace: string | null;
   Broker: string;
   BrokerCode: string;
   BrokerID: Generated<number>;
+  CivilStatus: string | null;
+  ContactEmergency: string | null;
+  ContactNumber: string | null;
+  DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
+  GovImageID: number | null;
   IsActive: number;
   LastUpdate: Date;
+  PagIbigNumber: string | null;
+  PersonEmergency: string | null;
+  PhilhealthNumber: string | null;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number | null;
+  Religion: string | null;
   RepresentativeName: string;
+  SelfieImageID: number | null;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
   UpdateBy: number;
+}
+
+export interface TblBrokerDivision {
+  BrokerDivisionID: Generated<number>;
+  BrokerID: number;
+  DivisionID: number;
+  LastUpdated: Generated<Date>;
+  UpdatedBy: number;
 }
 
 export interface TblBrokerEducation {
@@ -1634,6 +1664,7 @@ export interface DB {
   Tbl_AgentWorkExp: TblAgentWorkExp;
   tbl_BranchDivision: TblBranchDivision;
   Tbl_Broker: TblBroker;
+  Tbl_BrokerDivision: TblBrokerDivision;
   Tbl_BrokerEducation: TblBrokerEducation;
   Tbl_BrokerRegistration: TblBrokerRegistration;
   Tbl_BrokerSession: TblBrokerSession;

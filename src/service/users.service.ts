@@ -849,7 +849,7 @@ export const editBrokerWorkExpService = async (
     const validEdits: Partial<ITblBrokerWorkExp>[] = [];
     for (const work of editInputs) {
         if (!work.brokerWorkExpID) {
-            return { success: false, data: {}, error: { message: 'AgenBroker work exp id not found', code: 400 } };
+            return { success: false, data: {}, error: { message: 'Broker work exp id not found', code: 400 } };
         }
 
         validEdits.push({
