@@ -2545,10 +2545,23 @@ export const getDivisionSalesYearlyTotalsFnService = async (
             }>
         }>
     }>);
+
+    // Calculate division totals
+    const divisionTotals = groupedData.map(division => ({
+        division: division.Division,
+        monthTotal: division.YearData.reduce((yearSum, yearData) => 
+            yearSum + yearData.Months.reduce((monthSum, month) => 
+                monthSum + month.CurrentMonth, 0
+            ), 0
+        )
+    }));
     
     return {
         success: true,
-        data: groupedData
+        data: {
+            divisions: groupedData,
+            totals: divisionTotals
+        }
     }
 }
 
