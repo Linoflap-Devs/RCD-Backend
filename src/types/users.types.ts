@@ -133,8 +133,24 @@ export interface IAgentEducationEditController {
     startDate?: Date;
 }
 
+export interface IBrokerEducationEditController {
+    brokerEducationID: number;
+    degree?: string;
+    endDate?: Date;
+    school?: string;
+    startDate?: Date;
+}
+
 export interface IAgentWorkExpEditController {
     agentWorkExpID: number;
+    company?: string;
+    endDate?: Date;
+    jobTitle?: string;
+    startDate?: Date;
+}
+
+export interface IBrokerWorkExpEditController {
+    brokerWorkExpID: number;
     company?: string;
     endDate?: Date;
     jobTitle?: string;

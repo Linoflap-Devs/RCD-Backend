@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { IBrokerEmailPicture, IBrokerPicture, ITblBroker } from "../types/brokers.types";
+import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -462,7 +462,7 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
 
         const account = await db.selectFrom('Tbl_BrokerUser')
             .where('BrokerUserID', '=', brokerUserId)
-            .select(['BrokerID', 'ImageID'])
+            .select(['BrokerID', 'ImageID', 'BrokerRegistrationID'])
             .executeTakeFirstOrThrow();
 
         const broker: ITblBroker = await db.selectFrom('Tbl_Broker')
@@ -476,12 +476,14 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
             .executeTakeFirst();
 
         let obj: IBrokerEmailPicture = {
-            ...broker
+            ...broker,
+            BrokerRegistrationID: account.BrokerRegistrationID,
         }
 
         if(picture){
             obj = {
                 ...broker,
+                BrokerRegistrationID: account.BrokerRegistrationID,
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
@@ -715,6 +717,98 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
         if(deletedEducation.length > 0){
             const result = await trx.deleteFrom('Tbl_AgentEducation')
                 .where('AgentEducationID', 'in', deletedEducation)
+                .outputAll('deleted')
+                .execute();
+
+            console.log('delete result:', result)
+
+            if(result) deletedEducs.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedEducs,
+                added: addedEducs,
+                deleted: deletedEducs
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editBrokerEducation = async (brokerId: number, editedEducation: Partial<ITblBrokerEducation>[], createdEducation: ITblBrokerEducation[], deletedEducation: number[]): QueryResult<any> => {
+    
+    console.log(editedEducation, createdEducation)
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedEducs = []
+        const addedEducs = []
+        const deletedEducs = []
+
+        if(editedEducation.length > 0){
+            for(const edu of editedEducation){
+
+                // const mapped = mapToEditEducation(edu);
+
+                // console.log(mapped)
+                // console.log('AgentID: ', agentId, 'AgentEducationID: ', edu.AgentEducationID)
+
+                const result = await trx.updateTable('Tbl_BrokerEducation')
+                    .where('BrokerID', '=', brokerId)
+                    .where('BrokerEducationID', '=', edu.BrokerEducationID!)
+                    .set(edu)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedEducs.push(result)
+            }
+        }
+
+        if(createdEducation.length > 0){
+            const insertValues = createdEducation.map(edu => ({
+                BrokerID: brokerId,
+                BrokerRegistrationID: edu.BrokerRegistrationID,
+                Degree: edu.Degree,
+                EndDate: edu.EndDate,
+                School: edu.School,
+                StartDate: edu.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_BrokerEducation')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedEducs.push(...result)
+        }
+
+        if(deletedEducation.length > 0){
+            const result = await trx.deleteFrom('Tbl_BrokerEducation')
+                .where('BrokerEducationID', 'in', deletedEducation)
                 .outputAll('deleted')
                 .execute();
 

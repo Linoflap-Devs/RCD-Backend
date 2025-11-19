@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerImageService, getAgentGovIdsService, getBrokerDetailsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 
@@ -230,6 +230,37 @@ export const editAgentImageController = async (req: Request, res: Response) => {
     }
 
     const result = await editAgentImageService(session.userID, profileImage.profileImage[0])
+
+    if(!result.success) {
+        res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit user image'})
+        return;
+    }
+
+    res.status(200).json({success: true, data: result.data, message: 'User image edited'})
+}
+
+export const editBrokerImageController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    if(!profileImage){
+        res.status(400).json({success: false, data: {}, message: 'Image not found'})
+        return
+    }
+
+    const result = await editBrokerImageService(session.userID, profileImage.profileImage[0])
 
     if(!result.success) {
         res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit user image'})

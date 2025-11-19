@@ -19,6 +19,7 @@ export type IBrokerPicture = IBroker & {
 }
 
 export type IBrokerEmailPicture = IBroker & {
+    BrokerRegistrationID: number | null;
     Email?: string | null;
     Image?: {
         ContentType: string;
