@@ -1,16 +1,16 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
+import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { ITblBroker } from "../types/brokers.types";
-import { getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
+import { ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
+import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -170,13 +170,17 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     // agent details
     const basicInfo = {
         gender: brokerDetails.data.Sex.trim() || '',
-        civilStatus: brokerDetails.data.CivilStatus.trim() || '',
-        religion: brokerDetails.data.Religion?.trim() || '',
-        birthday: brokerDetails.data.Birthdate,
-        birthplace: brokerDetails.data.Birthplace?.trim() || '',
-        address: brokerDetails.data.Address.trim(),
-        telephoneNumber: brokerDetails.data.TelephoneNumber?.trim() || '',
-        contactNumber: brokerDetails.data.ContactNumber.trim() ,
+        civilStatus: brokerUserDetails.data.CivilStatus || brokerDetails.data.CivilStatus.trim() || '',
+        religion: brokerUserDetails.data.Religion || brokerDetails.data.Religion?.trim() || '',
+        birthday: brokerUserDetails.data.Birthdate || brokerDetails.data.Birthdate,
+        birthplace: brokerUserDetails.data.Birthplace || brokerDetails.data.Birthplace?.trim() || '',
+        address: brokerUserDetails.data.Address || brokerDetails.data.Address.trim(),
+        telephoneNumber: brokerUserDetails.data.TelephoneNumber || brokerDetails.data.TelephoneNumber?.trim() || '',
+        contactNumber: brokerUserDetails.data.ContactNumber || brokerDetails.data.ContactNumber.trim(),
+        emergencyPerson: brokerUserDetails.data.PersonEmergency || brokerDetails.data.PersonEmergency?.trim() || '',
+        emergencyContact: brokerUserDetails.data.ContactEmergency || brokerDetails.data.ContactEmergency.trim() || '',
+        emergencyAddress: brokerUserDetails.data.AddressEmergency || brokerDetails.data.AddressEmergency.trim() || '',
+        affiliation: brokerUserDetails.data.Affiliation || brokerDetails.data.AffiliationDate || '',
     }
 
     // work experience
@@ -391,6 +395,44 @@ export const getAgentGovIdsService = async (agentUserId: number): QueryResult<an
     }
 }
 
+export const getBrokersGovIdsService = async (brokerUserId: number): QueryResult<any> => {
+    const result = await findBrokerDetailsByUserId(brokerUserId)
+    if(!result.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!result.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const govIds = await getBrokerGovIds(result.data.BrokerID)
+
+    if(!govIds.success){
+        return {
+            success: false,
+            data: {},
+            error: govIds.error
+        }
+    }
+
+    return {
+        success: true,
+        data: govIds.data
+    }
+}
+
 export const editAgentService = async (agentUserId: number, data: IAgentEdit): QueryResult<any> => {
 
     const agentUserDetails = await findAgentDetailsByUserId(agentUserId)
@@ -498,6 +540,83 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
     }
 }
 
+export const editBrokerImageService = async (brokerId: number, image: Express.Multer.File): QueryResult<any> => {
+
+    const brokerUserDetails = await findBrokerDetailsByUserId(brokerId)
+
+    if(!brokerUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!brokerUserDetails.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const name = brokerUserDetails.data.RepresentativeName
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '') // Remove anything that's not a letter or space
+        .split(' ')
+        .filter(part => part) // Remove empty strings from double spaces
+        .join('-');
+
+    const filename = `${name}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    
+    let metadata: IImage = {
+        FileName: filename,
+        ContentType: image.mimetype,
+        FileExt: path.extname(image.originalname),
+        FileSize: image.size,
+        FileContent: image.buffer
+    }
+
+    let result: IImageBase64 | undefined = undefined
+
+    if(brokerUserDetails.data.Image){
+
+        // update existing image
+        const editImage = await editBrokerImage(brokerUserDetails.data.Image?.ImageID, metadata)
+
+        if(!editImage.success) return {
+            success: false,
+            data: {},
+            error: editImage.error
+        }
+
+        result = editImage.data
+    }
+
+    else {
+        // add new image + update user agent image id
+
+        const transaction = await addBrokerImage(brokerUserDetails.data.BrokerID, metadata)
+
+        if(!transaction.success) return {
+            success: false,
+            data: {},
+            error: transaction.error
+        }
+
+        result = transaction.data
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
 export const editAgentEducationService = async (
     userId: number,
     editInputs: IAgentEducationEditController[],
@@ -572,6 +691,80 @@ export const editAgentEducationService = async (
     return { success: true, data: result.data };
 };
 
+export const editBrokerEducationService = async (
+    userId: number,
+    editInputs: IBrokerEducationEditController[],
+    createInputs: NewEducation[],
+    deleteInputs: number[]
+): QueryResult<any> => {
+    const brokerDetails = await findBrokerDetailsByUserId(userId);
+    if (!brokerDetails.success || !brokerDetails.data.BrokerID) {
+        return { success: false, data: {}, error: { message: 'No agent found', code: 400 } };
+    }
+
+    const userDetails = await findBrokerDetailsByUserId(userId);
+    if (!userDetails.success || !userDetails.data.BrokerRegistrationID) {
+        return { success: false, data: {}, error: { message: 'No broker registration found', code: 400 } };
+    }
+
+    if (editInputs.length === 0 && createInputs.length === 0 && deleteInputs.length === 0) {
+        return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
+    }
+
+    // Validate and format creates
+    const validCreates: ITblBrokerEducation[] = [];
+    for (const edu of createInputs) {
+        function isValidDate(dateString: string | Date) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        }
+        
+        if (!edu.School) return { success: false, data: {}, error: { message: 'School not found', code: 400 } };
+        if (!edu.Degree) return { success: false, data: {}, error: { message: 'Degree not found', code: 400 } };
+        if (!edu.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        if (!isValidDate(edu.StartDate)) return { success: false, data: {}, error: { message: 'Invalid start date', code: 400 } };
+        if (edu.EndDate && !isValidDate(edu.EndDate)) return { success: false, data: {}, error: { message: 'Invalid end date', code: 400 } };
+
+
+        validCreates.push({
+            BrokerID: brokerDetails.data.BrokerID,
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerEducationID: 0, // Assuming auto-gen
+            Degree: edu.Degree,
+            EndDate: edu.EndDate || null,
+            School: edu.School,
+            StartDate: edu.StartDate
+        });
+    }
+
+    // Validate and format edits (partial)
+    const validEdits: Partial<ITblBrokerEducation>[] = [];
+    for (const edu of editInputs) {
+        if (!edu.brokerEducationID) {
+            return { success: false, data: {}, error: { message: 'Agent education id not found', code: 400 } };
+        }
+
+        validEdits.push({
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerEducationID: edu.brokerEducationID,
+            Degree: edu.degree,
+            EndDate: edu.endDate || null,
+            School: edu.school,
+            StartDate: edu.startDate,
+        });
+    }
+
+    const result = await editBrokerEducation(brokerDetails.data.BrokerID, validEdits, validCreates, deleteInputs);
+
+    if (!result.success) {
+        return { success: false, data: {}, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+};
+
 export const editAgentWorkExpService = async (
     userId: number,
     editInputs: IAgentWorkExpEditController[],
@@ -638,6 +831,80 @@ export const editAgentWorkExpService = async (
     }
 
     const result = await editAgentWorkExp(agentDetails.data.AgentID, validEdits, validCreates, deleteInputs);
+
+    if (!result.success) {
+        return { success: false, data: {}, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+};
+
+export const editBrokerWorkExpService = async (
+    userId: number,
+    editInputs: IBrokerWorkExpEditController[],
+    createInputs: NewWorkExp[],
+    deleteInputs: number[]
+): QueryResult<any> => {
+    const brokerDetails = await findBrokerDetailsByUserId(userId);
+    if (!brokerDetails.success || !brokerDetails.data.BrokerID) {
+        return { success: false, data: {}, error: { message: 'No broker found', code: 400 } };
+    }
+
+    const userDetails = await findBrokerDetailsByUserId(userId);
+    if (!userDetails.success || !userDetails.data.BrokerRegistrationID) {
+        return { success: false, data: {}, error: { message: 'No broker registration found', code: 400 } };
+    }
+
+    if (editInputs.length === 0 && createInputs.length === 0 && deleteInputs.length === 0) {
+        return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
+    }
+
+    // Validate and format creates
+    const validCreates: ITblBrokerWorkExp[] = [];
+    for (const work of createInputs) {
+        function isValidDate(dateString: string | Date) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        }
+
+        if (!work.Company) return { success: false, data: {}, error: { message: 'Company not found', code: 400 } };
+        if (!work.JobTitle) return { success: false, data: {}, error: { message: 'Job Title not found', code: 400 } };
+        if (!work.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        if (!isValidDate(work.StartDate)) return { success: false, data: {}, error: { message: 'Invalid start date', code: 400 } };
+        if (work.EndDate && !isValidDate(work.EndDate)) return { success: false, data: {}, error: { message: 'Invalid end date', code: 400 } };
+
+
+        validCreates.push({
+            BrokerID: brokerDetails.data.BrokerID,
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerWorkExpID: 0, // Assuming auto-gen
+            Company: work.Company,
+            EndDate: work.EndDate || null,
+            JobTitle: work.JobTitle,
+            StartDate: work.StartDate
+        });
+    }
+
+    // Validate and format edits (partial)
+    const validEdits: Partial<ITblBrokerWorkExp>[] = [];
+    for (const work of editInputs) {
+        if (!work.brokerWorkExpID) {
+            return { success: false, data: {}, error: { message: 'Broker work exp id not found', code: 400 } };
+        }
+
+        validEdits.push({
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerWorkExpID: work.brokerWorkExpID,
+            Company: work.company,
+            EndDate: work.endDate || null,
+            JobTitle: work.jobTitle,
+            StartDate: work.startDate
+        });
+    }
+
+    const result = await editBrokerWorkExp(brokerDetails.data.BrokerID, validEdits, validCreates, deleteInputs);
 
     if (!result.success) {
         return { success: false, data: {}, error: result.error };

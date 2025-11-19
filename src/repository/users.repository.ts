@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { IBrokerEmailPicture, IBrokerPicture, ITblBroker } from "../types/brokers.types";
+import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -134,6 +134,57 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
 
         const ids = columns.map((column: string) => {
             const value = result[column as keyof TblAgents]
+
+            return {
+                IdType: column,
+                IdNumber: value?.toString() || null
+            }
+        })
+        
+        return {
+            success: true,
+            data: ids
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as {IdType: string, IdNumber: string}[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getBrokerGovIds = async (brokerId: number): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .selectAll()
+            .executeTakeFirst();
+
+        if(!result){
+            throw new Error('No agent found.')
+        }
+
+        console.log(result)
+
+        const columns = [
+            'PRCNumber',
+            'DSHUDNumber',
+            'SSSNumber',
+            'PhilhealthNumber',
+            'PagIbigNumber',
+            'TINNumber',
+            'EmployeeIDNumber'
+        ]
+
+        const ids = columns.map((column: string) => {
+            const value = result[column as keyof TblBroker]
 
             return {
                 IdType: column,
@@ -462,7 +513,7 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
 
         const account = await db.selectFrom('Tbl_BrokerUser')
             .where('BrokerUserID', '=', brokerUserId)
-            .select(['BrokerID', 'ImageID'])
+            .select(['BrokerID', 'ImageID', 'BrokerRegistrationID'])
             .executeTakeFirstOrThrow();
 
         const broker: ITblBroker = await db.selectFrom('Tbl_Broker')
@@ -476,12 +527,14 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
             .executeTakeFirst();
 
         let obj: IBrokerEmailPicture = {
-            ...broker
+            ...broker,
+            BrokerRegistrationID: account.BrokerRegistrationID,
         }
 
         if(picture){
             obj = {
                 ...broker,
+                BrokerRegistrationID: account.BrokerRegistrationID,
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
@@ -750,6 +803,114 @@ export const editAgentEducation = async (agentId: number, editedEducation: IAgen
     }
 }
 
+export const editBrokerEducation = async (brokerId: number, editedEducation: Partial<ITblBrokerEducation>[], createdEducation: ITblBrokerEducation[], deletedEducation: number[]): QueryResult<any> => {
+    
+    console.log(editedEducation, createdEducation)
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedEducs = []
+        const addedEducs = []
+        const deletedEducs = []
+
+        if(editedEducation.length > 0){
+            for(const edu of editedEducation){
+
+                // const mapped = mapToEditEducation(edu);
+
+                // console.log(mapped)
+                // console.log('AgentID: ', agentId, 'AgentEducationID: ', edu.AgentEducationID)
+
+                edu.BrokerID = undefined
+                edu.BrokerRegistrationID = undefined
+
+                const mapped: Partial<ITblBrokerEducation> = {
+                    School: edu.School,
+                    Degree: edu.Degree,
+                    StartDate: edu.StartDate,
+                    EndDate: edu.EndDate
+                }
+
+                console.log("1", mapped.School)
+                console.log("2", mapped.StartDate)
+                console.log("3", mapped.EndDate)
+                console.log(4, brokerId)
+                console.log(5, edu.BrokerEducationID)
+
+                const result = await trx.updateTable('Tbl_BrokerEducation')
+                    .where('BrokerID', '=', brokerId)
+                    .where('BrokerEducationID', '=', edu.BrokerEducationID!)
+                    .set(mapped)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedEducs.push(result)
+            }
+        }
+
+        if(createdEducation.length > 0){
+            const insertValues = createdEducation.map(edu => ({
+                BrokerID: brokerId,
+                BrokerRegistrationID: edu.BrokerRegistrationID,
+                Degree: edu.Degree,
+                EndDate: edu.EndDate,
+                School: edu.School,
+                StartDate: edu.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_BrokerEducation')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedEducs.push(...result)
+        }
+
+        if(deletedEducation.length > 0){
+            const result = await trx.deleteFrom('Tbl_BrokerEducation')
+                .where('BrokerEducationID', 'in', deletedEducation)
+                .outputAll('deleted')
+                .execute();
+
+            console.log('delete result:', result)
+
+            if(result) deletedEducs.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedEducs,
+                added: addedEducs,
+                deleted: deletedEducs
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IAgentEducation[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWorkExpEdit[], createdWorkExp: IAgentWorkExp[], deletedWorkExp: number[]): QueryResult<any> => {
     
     const trx = await db.startTransaction().execute();
@@ -831,6 +992,105 @@ export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWor
         return {
             success: false,
             data: [] as IAgentWorkExp[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editBrokerWorkExp = async (brokerId: number, editedWorkExp: Partial<ITblBrokerWorkExp>[], createdWorkExp: ITblBrokerWorkExp[], deletedWorkExp: number[]): QueryResult<any> => {
+    
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedWorks = []
+        const addedWorks = []
+        const deletedWorks = []
+
+        if(editedWorkExp.length > 0){
+            for(const work of editedWorkExp){
+
+                // const mapped = mapToEditWorkExp(work);
+
+                // console.log(mapped)
+                // console.log('AgentID: ', agentId, 'AgentWorkExpID: ', work.AgentWorkExpID)
+
+                work.BrokerID = undefined
+                work.BrokerRegistrationID = undefined
+
+                const mapped: Partial<ITblBrokerWorkExp> = {
+                    Company: work.Company,
+                    JobTitle: work.JobTitle,
+                    StartDate: work.StartDate,
+                    EndDate: work.EndDate
+                }
+
+                const result = await trx.updateTable('Tbl_BrokerWorkExp')
+                    .where('BrokerID', '=', brokerId)
+                    .where('BrokerWorkExpID', '=', work.BrokerWorkExpID!)
+                    .set(mapped)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedWorks.push(result)
+            }
+        }
+
+        if(createdWorkExp.length > 0){
+            const insertValues = createdWorkExp.map(work => ({
+                BrokerID: brokerId,
+                BrokerRegistrationID: work.BrokerRegistrationID,
+                Company: work.Company,
+                EndDate: work.EndDate,
+                JobTitle: work.JobTitle,
+                StartDate: work.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_BrokerWorkExp')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedWorks.push(...result)
+        }
+
+        if(deletedWorkExp.length > 0){
+            const result = await trx.deleteFrom('Tbl_BrokerWorkExp')
+                .where('BrokerWorkExpID', 'in', deletedWorkExp)
+                .outputAll('deleted')
+                .execute();
+            
+            if(result) deletedWorks.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedWorks,
+                added: addedWorks,
+                deleted: deletedWorks
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblBrokerWorkExp[],
             error: {
                 code: 400,
                 message: error.message

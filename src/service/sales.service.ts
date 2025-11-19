@@ -2545,10 +2545,32 @@ export const getDivisionSalesYearlyTotalsFnService = async (
             }>
         }>
     }>);
+
+    // Calculate yearly totals across all divisions
+    const yearlyTotals = result.data.reduce((acc, item) => {
+        const existingYear = acc.find(y => y.year === item.Year);
+        
+        if (existingYear) {
+            existingYear.yearTotal += item.CurrentMonth;
+        } else {
+            acc.push({
+                year: item.Year,
+                yearTotal: item.CurrentMonth
+            });
+        }
+        
+        return acc;
+    }, [] as Array<{year: number, yearTotal: number}>);
+    
+    // Sort by year descending
+    yearlyTotals.sort((a, b) => b.year - a.year);
     
     return {
         success: true,
-        data: groupedData
+        data: {
+            divisions: groupedData,
+            totals: yearlyTotals
+        }
     }
 }
 
