@@ -170,13 +170,17 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     // agent details
     const basicInfo = {
         gender: brokerDetails.data.Sex.trim() || '',
-        civilStatus: brokerDetails.data.CivilStatus.trim() || '',
-        religion: brokerDetails.data.Religion?.trim() || '',
-        birthday: brokerDetails.data.Birthdate,
-        birthplace: brokerDetails.data.Birthplace?.trim() || '',
-        address: brokerDetails.data.Address.trim(),
-        telephoneNumber: brokerDetails.data.TelephoneNumber?.trim() || '',
-        contactNumber: brokerDetails.data.ContactNumber.trim() ,
+        civilStatus: brokerUserDetails.data.CivilStatus || brokerDetails.data.CivilStatus.trim() || '',
+        religion: brokerUserDetails.data.Religion || brokerDetails.data.Religion?.trim() || '',
+        birthday: brokerUserDetails.data.Birthdate || brokerDetails.data.Birthdate,
+        birthplace: brokerUserDetails.data.Birthplace || brokerDetails.data.Birthplace?.trim() || '',
+        address: brokerUserDetails.data.Address || brokerDetails.data.Address.trim(),
+        telephoneNumber: brokerUserDetails.data.TelephoneNumber || brokerDetails.data.TelephoneNumber?.trim() || '',
+        contactNumber: brokerUserDetails.data.ContactNumber || brokerDetails.data.ContactNumber.trim(),
+        emergencyPerson: brokerUserDetails.data.PersonEmergency || brokerDetails.data.PersonEmergency?.trim() || '',
+        emergencyContact: brokerUserDetails.data.ContactEmergency || brokerDetails.data.ContactEmergency.trim() || '',
+        emergencyAddress: brokerUserDetails.data.AddressEmergency || brokerDetails.data.AddressEmergency.trim() || '',
+        affiliation: brokerUserDetails.data.Affiliation || brokerDetails.data.AffiliationDate || '',
     }
 
     // work experience
