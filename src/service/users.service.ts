@@ -1,15 +1,15 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, NewEducation, NewWorkExp } from "../types/users.types";
+import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { ITblBroker, ITblBrokerEducation } from "../types/brokers.types";
+import { ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
@@ -789,6 +789,80 @@ export const editAgentWorkExpService = async (
     }
 
     const result = await editAgentWorkExp(agentDetails.data.AgentID, validEdits, validCreates, deleteInputs);
+
+    if (!result.success) {
+        return { success: false, data: {}, error: result.error };
+    }
+
+    return { success: true, data: result.data };
+};
+
+export const editBrokerWorkExpService = async (
+    userId: number,
+    editInputs: IBrokerWorkExpEditController[],
+    createInputs: NewWorkExp[],
+    deleteInputs: number[]
+): QueryResult<any> => {
+    const brokerDetails = await findBrokerDetailsByUserId(userId);
+    if (!brokerDetails.success || !brokerDetails.data.BrokerID) {
+        return { success: false, data: {}, error: { message: 'No broker found', code: 400 } };
+    }
+
+    const userDetails = await findBrokerDetailsByUserId(userId);
+    if (!userDetails.success || !userDetails.data.BrokerRegistrationID) {
+        return { success: false, data: {}, error: { message: 'No broker registration found', code: 400 } };
+    }
+
+    if (editInputs.length === 0 && createInputs.length === 0 && deleteInputs.length === 0) {
+        return { success: false, data: {}, error: { message: 'No changes detected', code: 400 } };
+    }
+
+    // Validate and format creates
+    const validCreates: ITblBrokerWorkExp[] = [];
+    for (const work of createInputs) {
+        function isValidDate(dateString: string | Date) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        }
+
+        if (!work.Company) return { success: false, data: {}, error: { message: 'Company not found', code: 400 } };
+        if (!work.JobTitle) return { success: false, data: {}, error: { message: 'Job Title not found', code: 400 } };
+        if (!work.StartDate) return { success: false, data: {}, error: { message: 'Start date not found', code: 400 } };
+
+        if (!isValidDate(work.StartDate)) return { success: false, data: {}, error: { message: 'Invalid start date', code: 400 } };
+        if (work.EndDate && !isValidDate(work.EndDate)) return { success: false, data: {}, error: { message: 'Invalid end date', code: 400 } };
+
+
+        validCreates.push({
+            BrokerID: brokerDetails.data.BrokerID,
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerWorkExpID: 0, // Assuming auto-gen
+            Company: work.Company,
+            EndDate: work.EndDate || null,
+            JobTitle: work.JobTitle,
+            StartDate: work.StartDate
+        });
+    }
+
+    // Validate and format edits (partial)
+    const validEdits: Partial<ITblBrokerWorkExp>[] = [];
+    for (const work of editInputs) {
+        if (!work.brokerWorkExpID) {
+            return { success: false, data: {}, error: { message: 'AgenBroker work exp id not found', code: 400 } };
+        }
+
+        validEdits.push({
+            BrokerRegistrationID: userDetails.data.BrokerRegistrationID,
+            BrokerWorkExpID: work.brokerWorkExpID,
+            Company: work.company,
+            EndDate: work.endDate || null,
+            JobTitle: work.jobTitle,
+            StartDate: work.startDate
+        });
+    }
+
+    const result = await editBrokerWorkExp(brokerDetails.data.BrokerID, validEdits, validCreates, deleteInputs);
 
     if (!result.success) {
         return { success: false, data: {}, error: result.error };

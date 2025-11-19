@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation } from "../types/brokers.types";
+import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -941,6 +941,105 @@ export const editAgentWorkExp = async (agentId: number, editedWorkExp: IAgentWor
         return {
             success: false,
             data: [] as IAgentWorkExp[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const editBrokerWorkExp = async (brokerId: number, editedWorkExp: Partial<ITblBrokerWorkExp>[], createdWorkExp: ITblBrokerWorkExp[], deletedWorkExp: number[]): QueryResult<any> => {
+    
+    const trx = await db.startTransaction().execute();
+    
+    try {
+
+        const editedWorks = []
+        const addedWorks = []
+        const deletedWorks = []
+
+        if(editedWorkExp.length > 0){
+            for(const work of editedWorkExp){
+
+                // const mapped = mapToEditWorkExp(work);
+
+                // console.log(mapped)
+                // console.log('AgentID: ', agentId, 'AgentWorkExpID: ', work.AgentWorkExpID)
+
+                work.BrokerID = undefined
+                work.BrokerRegistrationID = undefined
+
+                const mapped: Partial<ITblBrokerWorkExp> = {
+                    Company: work.Company,
+                    JobTitle: work.JobTitle,
+                    StartDate: work.StartDate,
+                    EndDate: work.EndDate
+                }
+
+                const result = await trx.updateTable('Tbl_BrokerWorkExp')
+                    .where('BrokerID', '=', brokerId)
+                    .where('BrokerWorkExpID', '=', work.BrokerWorkExpID!)
+                    .set(mapped)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+
+                console.log('edit result: ',result)
+
+                if(result) editedWorks.push(result)
+            }
+        }
+
+        if(createdWorkExp.length > 0){
+            const insertValues = createdWorkExp.map(work => ({
+                BrokerID: brokerId,
+                BrokerRegistrationID: work.BrokerRegistrationID,
+                Company: work.Company,
+                EndDate: work.EndDate,
+                JobTitle: work.JobTitle,
+                StartDate: work.StartDate
+            }));
+
+            console.log(insertValues)
+
+            const result = await trx.insertInto('Tbl_BrokerWorkExp')
+                .values(insertValues)
+                .outputAll('inserted')
+                .execute();
+
+            console.log('create result:', result)
+
+            if(result) addedWorks.push(...result)
+        }
+
+        if(deletedWorkExp.length > 0){
+            const result = await trx.deleteFrom('Tbl_BrokerWorkExp')
+                .where('BrokerWorkExpID', 'in', deletedWorkExp)
+                .outputAll('deleted')
+                .execute();
+            
+            if(result) deletedWorks.push(...result)
+        }
+
+        trx.commit().execute()
+
+        return {
+            success: true,
+            data: {
+                edited: editedWorks,
+                added: addedWorks,
+                deleted: deletedWorks
+            }
+        }
+
+    }
+
+    catch (err: unknown){
+        trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblBrokerWorkExp[],
             error: {
                 code: 400,
                 message: error.message
