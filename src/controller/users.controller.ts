@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerImageService, getAgentGovIdsService, getBrokerDetailsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, getAgentGovIdsService, getBrokerDetailsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 
@@ -290,6 +290,28 @@ export const editAgentEducationController = async (req: Request, res: Response) 
     }
 
     return res.status(200).json({ success: true, data: result.data, message: 'User education edited' });
+};
+
+export const editBrokerEducationController = async (req: Request, res: Response) => {
+    const session = req.session;
+
+    if (!session || !session.userID) {
+        return res.status(401).json({ success: false, data: {}, message: 'Unauthorized' });
+    }
+
+    const { edit = [], create = [], remove = [] } = req.body; // Default to empty arrays
+
+    const result = await editBrokerEducationService(session.userID, edit, create, remove);
+
+    if (!result.success) {
+        return res.status(result.error?.code || 400).json({
+            success: false,
+            data: {},
+            message: result.error?.message || 'Failed to edit broker education'
+        });
+    }
+
+    return res.status(200).json({ success: true, data: result.data, message: 'Broker education edited' });
 };
 
 export const editAgentWorkExpController = async (req: Request, res: Response) => {

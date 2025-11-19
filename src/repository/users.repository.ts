@@ -771,10 +771,26 @@ export const editBrokerEducation = async (brokerId: number, editedEducation: Par
                 // console.log(mapped)
                 // console.log('AgentID: ', agentId, 'AgentEducationID: ', edu.AgentEducationID)
 
+                edu.BrokerID = undefined
+                edu.BrokerRegistrationID = undefined
+
+                const mapped: Partial<ITblBrokerEducation> = {
+                    School: edu.School,
+                    Degree: edu.Degree,
+                    StartDate: edu.StartDate,
+                    EndDate: edu.EndDate
+                }
+
+                console.log("1", mapped.School)
+                console.log("2", mapped.StartDate)
+                console.log("3", mapped.EndDate)
+                console.log(4, brokerId)
+                console.log(5, edu.BrokerEducationID)
+
                 const result = await trx.updateTable('Tbl_BrokerEducation')
                     .where('BrokerID', '=', brokerId)
                     .where('BrokerEducationID', '=', edu.BrokerEducationID!)
-                    .set(edu)
+                    .set(mapped)
                     .outputAll('inserted')
                     .executeTakeFirstOrThrow();
 
