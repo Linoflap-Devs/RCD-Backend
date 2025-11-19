@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -380,6 +380,44 @@ export const getAgentGovIdsService = async (agentUserId: number): QueryResult<an
     }
 
     const govIds = await getAgentGovIds(result.data.AgentID)
+
+    if(!govIds.success){
+        return {
+            success: false,
+            data: {},
+            error: govIds.error
+        }
+    }
+
+    return {
+        success: true,
+        data: govIds.data
+    }
+}
+
+export const getBrokersGovIdsService = async (brokerUserId: number): QueryResult<any> => {
+    const result = await findBrokerDetailsByUserId(brokerUserId)
+    if(!result.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!result.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const govIds = await getBrokerGovIds(result.data.BrokerID)
 
     if(!govIds.success){
         return {

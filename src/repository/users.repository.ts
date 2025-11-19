@@ -160,6 +160,57 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
     }
 }
 
+export const getBrokerGovIds = async (brokerId: number): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .selectAll()
+            .executeTakeFirst();
+
+        if(!result){
+            throw new Error('No agent found.')
+        }
+
+        console.log(result)
+
+        const columns = [
+            'PRCNumber',
+            'DSHUDNumber',
+            'SSSNumber',
+            'PhilhealthNumber',
+            'PagIbigNumber',
+            'TINNumber',
+            'EmployeeIDNumber'
+        ]
+
+        const ids = columns.map((column: string) => {
+            const value = result[column as keyof TblBroker]
+
+            return {
+                IdType: column,
+                IdNumber: value?.toString() || null
+            }
+        })
+        
+        return {
+            success: true,
+            data: ids
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as {IdType: string, IdNumber: string}[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findEmployeeUserById = async (userWebId: number): QueryResult<ITblUsersWeb> => {
     try {
         const result = await db.selectFrom('Tbl_UsersWeb')

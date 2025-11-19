@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 
@@ -111,6 +111,37 @@ export const getAgentGovIdsController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true,
         message: "Agent government IDs.",
+        data: result.data
+    })
+}
+
+export const getBrokerGovIdsController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await getBrokersGovIdsService(session.userID)
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get user gov ids.",
+            data: {}
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Broker government IDs.",
         data: result.data
     })
 }
