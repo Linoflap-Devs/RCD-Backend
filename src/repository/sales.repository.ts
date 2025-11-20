@@ -1766,8 +1766,8 @@ export const editPendingSale = async (
 
         // Build update object dynamically - only include fields that are provided
         const updateData: any = {
-            LastUpdateby: user.agentUserId || undefined,
-            LastUpdateByWeb: user.webUserId || undefined,
+            LastUpdateby: user.agentUserId ? user.agentUserId : null,
+            LastUpdateByWeb: user.webUserId ? user.webUserId : null,
             LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
         };
 
@@ -2064,6 +2064,7 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
             .set({
                 LastUpdate: new Date(),
                 LastUpdateby: agentId,
+                LastUpdateByWeb: null,
                 Remarks: null,
                 ApprovalStatus: SaleStatus.UNIT_MANAGER_APPROVED,
                 SalesStatus: SalesStatusText.PENDING_SD
@@ -2394,8 +2395,8 @@ export const approveNextStage = async (data: {
                 SalesStatus: data.nextSalesStatus,
                 Remarks: null,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: data.agentId || undefined,
-                LastUpdateByWeb:  data.userId || undefined
+                LastUpdateby: data.agentId ? data.agentId : null,
+                LastUpdateByWeb: data.userId ? data.userId : null
             })
             .where('AgentPendingSalesID', '=', data.pendingSalesId)
             .outputAll('inserted')
@@ -2440,7 +2441,8 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number,
                 SalesStatus: salesStatus || 'REJECTED',
                 Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId
+                LastUpdateby: agentId,
+                LastUpdateByWeb: null
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')
@@ -2475,8 +2477,9 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
                 ApprovalStatus: SaleStatus.SALES_ADMIN_APPROVED,
                 SalesStatus: SalesStatusText.APPROVED,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateByWeb: userWebId,
                 Remarks: null,
-                LastUpdateby: userWebId
+                LastUpdateby: null
             })
             .outputAll('inserted')
             .where('AgentPendingSalesID', '=', pendingSalesId)
