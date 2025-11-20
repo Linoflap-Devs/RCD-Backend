@@ -124,6 +124,25 @@ export interface ITblBrokerRegistration {
     UpdateBy: number | null;
 }
 
+export interface IEditBroker {
+    name: string, 
+    gender: 'Male' | 'Female',
+    civilStatus: 'Single' | 'Married',
+    religion: string,
+    birthdate: Date,
+    birthplace: string,
+    address: string,
+    telephoneNumber: string,
+    contactNumber: string,
+    sssNumber?: string | null,
+    philhealthNumber?: string | null,
+    pagibigNumber?: string | null,
+    tinNumber?: string | null,
+    prcNumber?: string | null,
+    dshudNumber?: string | null,
+    employeeIdNumber?: string | null,
+}
+
 export interface ITblBrokerWorkExp {
     BrokerID: number | null;
     BrokerRegistrationID: number | null;

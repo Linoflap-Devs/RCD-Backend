@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
+import { IEditBroker } from "../types/brokers.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
     const result = await getUsersService();
@@ -222,6 +223,62 @@ export const editAgentDetailsController = async (req: Request, res: Response) =>
     }
 
     const result = await editAgentService(session.userID, obj)
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to edit user details.",
+            data: {}
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "User details.",
+        data: result.data
+    });
+}
+
+export const editBrokerDetailsController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        name,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber
+    } = req.body
+
+    const obj: IEditBroker = {
+        name: name,
+        gender: gender,
+        civilStatus: civilStatus,
+        religion: religion,
+        birthdate: birthdate,
+        birthplace: birthplace,
+        address: address,
+        telephoneNumber: telephoneNumber,
+        contactNumber: contactNumber
+    }
+
+    const result = await editBrokerService(session.userID, obj)
 
     if(!result.success){
         res.status(400).json({ 
