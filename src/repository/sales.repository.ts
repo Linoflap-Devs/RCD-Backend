@@ -1080,6 +1080,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.FloorArea',
                 'Tbl_AgentPendingSales.LastUpdate',
                 'Tbl_AgentPendingSales.LastUpdateby',
+                'Tbl_AgentPendingSales.LastUpdateByWeb',
                 'Tbl_AgentPendingSales.Lot',
                 'Tbl_AgentPendingSales.LotArea',
                 'Tbl_AgentPendingSales.MiscFee',

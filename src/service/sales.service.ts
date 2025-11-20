@@ -314,6 +314,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         const response = await findEmployeeUserById(data.LastUpdateby)
         updatedByName = response.success ? response.data.EmpName : ''
     }
+    
 
     const obj = {
         SalesTransId: data.SalesTranID,
@@ -860,6 +861,12 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
     if(result.data.LastUpdateby){
         const response = await findAgentDetailsByUserId(result.data.LastUpdateby)
         updatedByName = response.success ? response.data.AgentName ? response.data.AgentName : '' : ''
+    }
+    else if (result.data.LastUpdateByWeb){
+        const lastUpdatedByEmployee = await findEmployeeUserById(result.data.LastUpdateByWeb)
+        if(lastUpdatedByEmployee.success && lastUpdatedByEmployee.data.UserWebID){
+            updatedByName = lastUpdatedByEmployee.data.EmpName ? lastUpdatedByEmployee.data.EmpName : ''
+        }
     }
 
     const obj = {
@@ -2250,12 +2257,17 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
     }
 
     let lastUpdatedByName = ''
-    console.log('result.data.LastUpdateby', result.data.LastUpdateby)
     if(result.data.LastUpdateby){
         const lastUpdatedByAgent = await findAgentDetailsByAgentId(result.data.LastUpdateby)
         if(lastUpdatedByAgent.success && lastUpdatedByAgent.data.AgentID){
             console.log('lastUpdatedByAgent', lastUpdatedByAgent.data)
             lastUpdatedByName = lastUpdatedByAgent.data.AgentName ? lastUpdatedByAgent.data.AgentName : ''
+        }
+    }
+    else if (result.data.LastUpdateByWeb){
+        const lastUpdatedByEmployee = await findEmployeeUserById(result.data.LastUpdateByWeb)
+        if(lastUpdatedByEmployee.success && lastUpdatedByEmployee.data.UserWebID){
+            lastUpdatedByName = lastUpdatedByEmployee.data.EmpName ? lastUpdatedByEmployee.data.EmpName : ''
         }
     }
 
