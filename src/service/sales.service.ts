@@ -1,6 +1,6 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -309,6 +309,12 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
 
     const data = result.data[0]
 
+    let updatedByName = ''
+    if(data.LastUpdateby){
+        const response = await findEmployeeUserById(data.LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+
     const obj = {
         SalesTransId: data.SalesTranID,
         SalesTranCode: data.SalesTranCode,
@@ -335,7 +341,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         DPStartSchedule: data.DPStartSchedule,
         DPTerms: data.DPTerms,
         SalesStatus: data.SalesStatus,
-        LastUpdateby: data.LastUpdateby,
+        LastUpdateby: updatedByName,
         LastUpdate: data.LastUpdate,
         SalesBranchID: data.SalesBranchID,
         DevCommType: data.DevCommType,
@@ -392,6 +398,12 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     })
 
+     let updatedByName = ''
+    if(details.data[0].LastUpdateby){
+        const response = await findEmployeeUserById(details.data[0].LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+
     const sales = {
         salesInfo: {
             salesStatus: result.data.SalesStatus,
@@ -428,6 +440,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             monthlyPayment: result.data.MonthlyDP,
             downpaymentStartDate: result.data.DPStartSchedule
         },
+        lastUpdatedBy: updatedByName,
+        lastUpdatedAt: result.data.LastUpdate,
         details: detailArray,
         images: images.data
     }
@@ -842,9 +856,21 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
+    let updatedByName = ''
+    if(result.data.LastUpdateby){
+        const response = await findAgentDetailsByUserId(result.data.LastUpdateby)
+        updatedByName = response.success ? response.data.AgentName ? response.data.AgentName : '' : ''
+    }
+
+    const obj = {
+        ...result.data,
+        LastUpdateby: updatedByName,
+        LastUpdateId: result.data.LastUpdateby
+    }
+
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
@@ -2223,10 +2249,26 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
+    let lastUpdatedByName = ''
+    console.log('result.data.LastUpdateby', result.data.LastUpdateby)
+    if(result.data.LastUpdateby){
+        const lastUpdatedByAgent = await findAgentDetailsByAgentId(result.data.LastUpdateby)
+        if(lastUpdatedByAgent.success && lastUpdatedByAgent.data.AgentID){
+            console.log('lastUpdatedByAgent', lastUpdatedByAgent.data)
+            lastUpdatedByName = lastUpdatedByAgent.data.AgentName ? lastUpdatedByAgent.data.AgentName : ''
+        }
+    }
+
+    const obj = {
+        ...result.data,
+        LastUpdateby: lastUpdatedByName,
+        LastUpdateId: result.data.LastUpdateby
+    }
+
 
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
