@@ -2422,18 +2422,18 @@ export const approveNextStage = async (data: {
     }
 }
 
-export const rejectPendingSale = async (agentId: number, pendingSalesId: number, approvalStatus: number, salesStatus: string, remarks?: string): QueryResult<any> => {
+export const rejectPendingSale = async (user: { brokerId?: number, agentId?: number }, pendingSalesId: number, approvalStatus: number, salesStatus: string, remarks?: string): QueryResult<any> => {
 
-    if(agentId == 0){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'No user found',
-                code: 400
-            }
-        }
-    }
+    // if(agentId == 0){
+    //     return {
+    //         success: false,
+    //         data: {},
+    //         error: {
+    //             message: 'No user found',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
     try {
         const result = await db.updateTable('Tbl_AgentPendingSales')
@@ -2442,8 +2442,8 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number,
                 SalesStatus: salesStatus || 'REJECTED',
                 Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId,
-                LastUpdateByWeb: null
+                LastUpdateby: user.agentId ? user.agentId : null,
+                LastUpdateByWeb: user.brokerId ? user.brokerId : null
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')

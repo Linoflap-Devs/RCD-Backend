@@ -2013,7 +2013,16 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.APPROVED
     }
 
-    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM), remarks);
+    const result = await rejectPendingSale(
+        {
+            agentId: user.agentUserId ? user.agentUserId : undefined,
+            brokerId: user.webUserId ? user.webUserId : undefined
+        }, 
+        pendingSalesId, 
+        (approvalStatus || 1), 
+        (salesStatus || SalesStatusText.PENDING_UM), 
+        remarks
+    );
 
     if(!result.success){
         return {
