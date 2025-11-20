@@ -2546,30 +2546,62 @@ export const getDivisionSalesYearlyTotalsFnService = async (
         }>
     }>);
 
+    let totals: any = {};
+
     // Calculate yearly totals across all divisions
-    const yearlyTotals = result.data.reduce((acc, item) => {
-        const existingYear = acc.find(y => y.year === item.Year);
+    if(filters && filters.months && filters.months?.length > 0){
+        const monthlyTotals = result.data.reduce((acc, item) => {
+            const existingMonth = acc.find(m => m.month === item.Month && m.year === item.Year);
+                
+            if (existingMonth) {
+                existingMonth.monthTotal += item.CurrentMonth;
+            } else {
+                acc.push({
+                    year: item.Year,
+                    month: item.Month || 0,
+                    monthTotal: item.CurrentMonth
+                });
+            }
+            
+            return acc;
+        }, [] as Array<{year: number, month: number, monthTotal: number}>);
+            
+        // Sort by year descending, then month ascending
+        monthlyTotals.sort((a, b) => {
+            if (a.year !== b.year) {
+                return b.year - a.year; // Year descending
+            }
+            return a.month - b.month; // Month ascending
+        });
+        totals = monthlyTotals;
+    }
+    else {
+        const yearlyTotals = result.data.reduce((acc, item) => {
+            const existingYear = acc.find(y => y.year === item.Year);
+            
+            if (existingYear) {
+                existingYear.yearTotal += item.CurrentMonth;
+            } else {
+                acc.push({
+                    year: item.Year,
+                    yearTotal: item.CurrentMonth
+                });
+            }
+            
+            return acc;
+        }, [] as Array<{year: number, yearTotal: number}>);
         
-        if (existingYear) {
-            existingYear.yearTotal += item.CurrentMonth;
-        } else {
-            acc.push({
-                year: item.Year,
-                yearTotal: item.CurrentMonth
-            });
-        }
-        
-        return acc;
-    }, [] as Array<{year: number, yearTotal: number}>);
-    
-    // Sort by year descending
-    yearlyTotals.sort((a, b) => b.year - a.year);
+        // Sort by year descending
+        yearlyTotals.sort((a, b) => b.year - a.year);
+
+        totals = yearlyTotals
+    }
     
     return {
         success: true,
         data: {
             divisions: groupedData,
-            totals: yearlyTotals
+            totals: totals
         }
     }
 }
