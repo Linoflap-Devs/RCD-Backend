@@ -10,7 +10,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
         position
     } = req.query
 
-    const validPositions = ['SP', 'UM', 'SD'] as const;
+    const validPositions = ['SP', 'UM', 'SD', 'BR'] as const;
     const upperPosition = position?.toString().toUpperCase();
     
     if(position && !validPositions.includes(upperPosition as any)) {
@@ -26,7 +26,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
     const result = await getAgentsService({
         showInactive: showInactive === 'true', 
         division: Number(division), 
-        position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD') : undefined
+        position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined
     });
 
     if(!result.success) {
