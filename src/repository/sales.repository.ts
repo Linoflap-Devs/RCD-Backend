@@ -276,7 +276,7 @@ export const getPersonalSales = async (
         agentId?: number, 
         brokerName?: string
     },
-    filters?: { month?: number }, 
+    filters?: { month?: number, year?: number }, 
     pagination?: {
         page?: number, 
         pageSize?: number
@@ -310,7 +310,7 @@ export const getPersonalSales = async (
         }
 
         if(filters && filters.month){
-            const year = new Date().getFullYear();
+            const year = filters.year ?? new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -320,6 +320,22 @@ export const getPersonalSales = async (
                     
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
+            
+            result = result.where('ReservationDate', '>=', firstDay)
+            result = result.where('ReservationDate', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
+        }
+
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
             
             result = result.where('ReservationDate', '>=', firstDay)
             result = result.where('ReservationDate', '<=', lastDay)
@@ -992,6 +1008,22 @@ export const getPendingSales = async (
             result = result.where('ReservationDate', '<', lastDay)
             totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
             totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
+        }
+
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
+            
+            result = result.where('ReservationDate', '>=', firstDay)
+            result = result.where('ReservationDate', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
         }
 
         result = result.orderBy('ReservationDate', 'desc')
