@@ -417,7 +417,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             division: result.data.Division,
             agentName: result.data.AgentName,
             agentCommission: result.data.CommissionRate,
-            selllerName: result.data.SellerName || ''
+            sellerName: result.data.SellerName || ''
         },
         propertyInfo: {
             projectName: result.data.ProjectName?.trim() || '',
@@ -707,6 +707,25 @@ export const addPendingSalesService = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
+    const validCommissions = []
+
+    if(role !== 'SALES PERSON' && validCommissions.length === 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'At least one commission rate is required.',
+                code: 400
+            }
+        }
+    }
+
+    for(const commission of data.commissionRates || []){
+        if(commission.agentId || commission.agentName){
+            validCommissions.push(commission)
+        }
+    }
+
     const updatedData = {
         ...data,
         divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
@@ -719,7 +738,7 @@ export const addPendingSalesService = async (
             receipt: receiptMetadata,
             agreement: agreementMetadata
         },
-        commissionRates: data.commissionRates || []
+        commissionRates: validCommissions || []
     }
 
     const result = await addPendingSale(
