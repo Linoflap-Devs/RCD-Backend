@@ -236,6 +236,7 @@ export const getWebSalesTransService = async (
             ProjectName: sale.ProjectName?.trim() || '',
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
+            ReservationDate: sale.ReservationDate
         }
     })
 
