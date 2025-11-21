@@ -110,7 +110,18 @@ export const registerBrokerController = async (req: Request, res: Response) => {
         password,
         education,
         experience,
+        brokerType,
     } = req.body
+
+    if(brokerType !== 'hands-on' && brokerType !== 'hands-off'){
+        res.status(400).json({
+            success: false, 
+            message: "Invalid broker type. Avaiable types are 'hands-on' and 'hands-off'.",
+            data: {}
+        })
+
+        return
+    }
 
 
     const obj: IBrokerRegister = {
@@ -135,10 +146,10 @@ export const registerBrokerController = async (req: Request, res: Response) => {
         email,
         password,
         education,
-        experience
+        experience,
     }
 
-    const result = await registerBrokerService(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+    const result = await registerBrokerService(obj, brokerType as "hands-on" | "hands-off", profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
 
     console.log(result)
     if(!result.success){

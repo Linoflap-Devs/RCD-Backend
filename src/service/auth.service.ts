@@ -14,6 +14,9 @@ import 'dotenv/config'
 import { verifyDESPassword } from "../utils/utils";
 import { getSalesBranch } from "../repository/sales.repository";
 import is from "zod/v4/locales/is.cjs";
+import { ITblBroker, ITblBrokerRegistration } from "../types/brokers.types";
+import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
+import { getPositions } from "../repository/position.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -288,26 +291,12 @@ export const loginAgentService = async (email: string, password: string): QueryR
 
 export const registerBrokerService = async (
     data: IBrokerRegister, 
+    brokerType: "hands-on" | "hands-off",
     image?: Express.Multer.File,
     govIdImage?: Express.Multer.File,
     selfieImage?: Express.Multer.File,
     //agentId?: number
 ): QueryResult<any> => {
-
-    // if(agentId){
-    //     const agent = await findAgentDetailsByAgentId(agentId)
-
-    //     if(!agent.success){
-    //         return {
-    //             success: false,
-    //             data: {},
-    //             error: {
-    //                 code: 500,
-    //                 message: 'Failed to find agent details.'
-    //             }
-    //         }
-    //     }
-    // }
 
     const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
     const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
@@ -347,27 +336,100 @@ export const registerBrokerService = async (
         }
     )
 
-    const result = await registerBrokerTransaction(data, metadata, govIdMetadata, selfieMetadata, undefined)
+    // check email availability
+    const [
+        agentEmailCheck,
+        brokerEmailCheck
+    ] = await Promise.all([
+        findAgentUserByEmail(data.email),
+        findBrokerUserByEmail(data.email)
+    ])
 
-    if(!result.success) {
+    console.log(agentEmailCheck, brokerEmailCheck)
+
+    if(agentEmailCheck.success || brokerEmailCheck.success){
         return {
             success: false,
             data: {},
             error: {
-                message: result.error?.message || 'Failed to register agent.',
-                code: result.error?.code || 500 
+                message: 'Email already exists.',
+                code: 400
             }
         }
     }
 
-    return result
+    let result: ITblBrokerRegistration | ITblAgentRegistration | undefined = undefined 
+
+    if(brokerType == "hands-on"){
+
+        // get position id for broker
+        const brokerPosition = await getPositions({positionName: "BROKER"})
+
+        const mappedData = {
+            ...data,
+            positionId: brokerPosition.data[0].PositionID ? brokerPosition.data[0].PositionID : 76
+        }
+
+        const response = await registerAgentTransaction(mappedData, metadata, govIdMetadata, selfieMetadata, undefined)
+
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-on broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        result = response.data
+
+    } else {
+        const response = await registerBrokerTransaction(data, metadata, govIdMetadata, selfieMetadata, undefined)
+        
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-off broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        result = response.data
+    }
+
+    if(!result) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Failed to register broker.',
+                code: 500 
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result
+    }
 }
 
 export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
-    const user = await findBrokerUserByEmail(email)
 
-    if(!user.success) {
-        logger((user.error?.message || 'Failed to find user.'), {email: email})
+    const [
+        agentUser,
+        brokerUser
+    ] = await Promise.all([
+        findAgentUserByEmail(email),
+        findBrokerUserByEmail(email)
+    ])
+
+    if(!agentUser.success && !brokerUser.success){
         return {
             success: false,
             data: {} as {token: string, email: string, position: string},
@@ -378,21 +440,98 @@ export const loginBrokerService = async (email: string, password: string): Query
         }
     }
 
-    if(!user.data.isVerified){
-        logger(('User is not verified.'), {email: email})
-        return {
-            success: false,
-            data: {} as {token: string, email: string, position: string},
-            error: {
-                message: 'Invalid credentials.',
-                code: 400
+    let storedPassword = ''
+
+    if(agentUser.success){
+        const user = await findAgentUserByEmail(email)
+
+        if(!user.success) {
+            logger((user.error?.message || 'Failed to find user.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
             }
         }
+
+        if(!user.data.isVerified){
+            logger(('User is not verified.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
+            }
+        }
+
+        const positionCheck = await findAgentDetailsByUserId(user.data.agentUserId)
+
+        if(!positionCheck.success) {
+            logger((positionCheck.error?.message || 'Failed to find agent details.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
+            }
+        }
+        
+        if(positionCheck.data.Position?.toLowerCase().includes('broker') == false){
+            logger(('User is not a broker.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
+            }
+        }
+
+        storedPassword = user.data.password
+    } else {
+        const user = await findBrokerUserByEmail(email)
+
+        if(!user.success) {
+            logger((user.error?.message || 'Failed to find user.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
+            }
+        }
+
+        if(!user.data.isVerified){
+            logger(('User is not verified.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Invalid credentials.',
+                    code: 400
+                }
+            }
+        }
+
+        storedPassword = user.data.password
     }
+
+    
 
     // compare passwords
-    const storedPw = user.data.password
-    const compare = await verifyPassword(password, storedPw)
+    //const storedPw = user.data.password
+    const compare = await verifyPassword(password, storedPassword)
+    const userId = agentUser.success ? agentUser.data.agentUserId : brokerUser.data.brokerUserId
 
     if(!compare){
         logger(('Password does not match.'), {email: email})
@@ -407,30 +546,33 @@ export const loginBrokerService = async (email: string, password: string): Query
     }
 
     const token = generateSessionToken()
-    const session = await createBrokerSession(token, user.data.brokerUserId)
+    if(agentUser.success){
+        const session = await createSession(token, userId)
 
-    if(!session.success) {
-        logger(( session.error?.message || 'Failed to create session.'), {email: email})
-        return {
-            success: false,
-            data: {} as {token: string, email: string, position: string},
-            error: {
-                message: 'Failed to create session.',
-                code: 500
+        if(!session.success) {
+            logger(( session.error?.message || 'Failed to create session.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Failed to create session.',
+                    code: 500
+                }
             }
         }
     }
+    else {
+        const session = await createBrokerSession(token, userId)
 
-    const brokerDetails = await findBrokerDetailsByUserId(user.data.brokerUserId)
-
-    if(!brokerDetails.success) {
-        logger(( brokerDetails.error?.message || 'Failed to find broker details.'), {email: email})
-        return {
-            success: false,
-            data: {} as {token: string, email: string, position: string},
-            error: {
-                message: 'Failed to find broker details.',
-                code: 500
+        if(!session.success) {
+            logger(( session.error?.message || 'Failed to create session.'), {email: email})
+            return {
+                success: false,
+                data: {} as {token: string, email: string, position: string},
+                error: {
+                    message: 'Failed to create session.',
+                    code: 500
+                }
             }
         }
     }
@@ -440,7 +582,7 @@ export const loginBrokerService = async (email: string, password: string): Query
         data: {
             token: token,
             email: email,
-            position: 'BROKER'
+            position: agentUser.success ? 'HANDS-ON BROKER' : 'HANDS-OFF BROKER'
         }
     }
 }

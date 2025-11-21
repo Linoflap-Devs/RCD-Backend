@@ -276,7 +276,7 @@ export const getPersonalSales = async (
         agentId?: number, 
         brokerName?: string
     },
-    filters?: { month?: number }, 
+    filters?: { month?: number, year?: number }, 
     pagination?: {
         page?: number, 
         pageSize?: number
@@ -310,7 +310,7 @@ export const getPersonalSales = async (
         }
 
         if(filters && filters.month){
-            const year = new Date().getFullYear();
+            const year = filters.year ?? new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
@@ -320,6 +320,22 @@ export const getPersonalSales = async (
                     
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
+            
+            result = result.where('ReservationDate', '>=', firstDay)
+            result = result.where('ReservationDate', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
+        }
+
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
             
             result = result.where('ReservationDate', '>=', firstDay)
             result = result.where('ReservationDate', '<=', lastDay)
@@ -994,6 +1010,22 @@ export const getPendingSales = async (
             totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
         }
 
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
+            
+            result = result.where('ReservationDate', '>=', firstDay)
+            result = result.where('ReservationDate', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
+        }
+
         result = result.orderBy('ReservationDate', 'desc')
         
         if(pagination && pagination.page && pagination.pageSize){
@@ -1371,7 +1403,7 @@ export const addPendingSale = async (
                 commissionDetails.broker = {
                     agentName: broker.agentName || '',
                     agentId: broker.agentId || 0,
-                    commissionRate: broker.commissionRate || 0
+                    commissionRate: Number(broker.commissionRate) || 0
                 }
             }
 
@@ -1382,7 +1414,7 @@ export const addPendingSale = async (
                 commissionDetails.salesDirector = {
                     agentName: sdAgent ? `${sdAgent.LastName?.trim()}, ${sdAgent.FirstName?.trim()} ${sdAgent.MiddleName ? sdAgent.MiddleName.trim() : ''}` : (salesDirector.agentName || ''),
                     agentId: salesDirector.agentId || 0,
-                    commissionRate: salesDirector.commissionRate || 0
+                    commissionRate: Number(salesDirector.commissionRate) || 0
                 }
             }
 
@@ -1393,7 +1425,7 @@ export const addPendingSale = async (
                 commissionDetails.unitManager = {
                     agentName: umAgent ? `${umAgent.LastName?.trim()}, ${umAgent.FirstName?.trim()} ${umAgent.MiddleName ? umAgent.MiddleName.trim() : ''}` : (unitManager.agentName || ''),
                     agentId: unitManager.agentId || 0,
-                    commissionRate: unitManager.commissionRate || 0
+                    commissionRate: Number(unitManager.commissionRate) || 0
                 }
             }
 
@@ -1404,7 +1436,7 @@ export const addPendingSale = async (
                 commissionDetails.salesPerson = {
                     agentName: spAgent ? `${spAgent.LastName?.trim()}, ${spAgent.FirstName?.trim()} ${spAgent.MiddleName ? spAgent.MiddleName.trim() : ''}` : (salesPerson.agentName || ''),
                     agentId: salesPerson.agentId || 0,
-                    commissionRate: salesPerson.commissionRate || 0
+                    commissionRate: Number(salesPerson.commissionRate) || 0
                 }
             }
 
@@ -1415,7 +1447,7 @@ export const addPendingSale = async (
                 commissionDetails.salesAssociate = {
                     agentName: sAssocAgent ? `${sAssocAgent.LastName?.trim()}, ${sAssocAgent.FirstName?.trim()} ${sAssocAgent.MiddleName ? sAssocAgent.MiddleName.trim() : ''}` : (salesAssociate.agentName || ''),
                     agentId: salesAssociate.agentId || 0,
-                    commissionRate: salesAssociate.commissionRate || 0
+                    commissionRate: Number(salesAssociate.commissionRate) || 0
                 }
             }
 
@@ -1426,7 +1458,7 @@ export const addPendingSale = async (
                 commissionDetails.assistanceFee = {
                     agentName: afAgent ? `${afAgent.LastName?.trim()}, ${afAgent.FirstName?.trim()} ${afAgent.MiddleName ? afAgent.MiddleName.trim() : ''}` : (assistanceFee.agentName || ''),
                     agentId: assistanceFee.agentId || 0,
-                    commissionRate: assistanceFee.commissionRate || 0
+                    commissionRate: Number(assistanceFee.commissionRate) || 0
                 }
             }
 
@@ -1437,7 +1469,7 @@ export const addPendingSale = async (
                 commissionDetails.referralFee = {
                     agentName: rfAgent ? `${rfAgent.LastName?.trim()}, ${rfAgent.FirstName?.trim()} ${rfAgent.MiddleName ? rfAgent.MiddleName.trim() : ''}` : (referralFee.agentName || ''),
                     agentId: referralFee.agentId || 0,
-                    commissionRate: referralFee.commissionRate || 0
+                    commissionRate: Number(referralFee.commissionRate) || 0
                 }
             }
 
@@ -1448,7 +1480,7 @@ export const addPendingSale = async (
                 commissionDetails.others = {
                     agentName: oAgent ? `${oAgent.LastName?.trim()}, ${oAgent.FirstName?.trim()} ${oAgent.MiddleName ? oAgent.MiddleName.trim() : ''}` : (others.agentName || ''),
                     agentId: others.agentId || 0,
-                    commissionRate: others.commissionRate || 0
+                    commissionRate: Number(others.commissionRate) || 0
                 }
             }
         }
@@ -1926,7 +1958,7 @@ export const editPendingSale = async (
                         ? `${agent.LastName?.trim()}, ${agent.FirstName?.trim()} ${agent.MiddleName ? agent.MiddleName.trim() : ''}`.trim()
                         : (commission.agentName || ''),
                     agentId: commission.agentId || 0,
-                    commissionRate: commission.commissionRate || 0
+                    commissionRate: Number(commission.commissionRate) || 0
                 };
             };
 
@@ -1947,7 +1979,7 @@ export const editPendingSale = async (
                     .set({
                         AgentName: detail ? (detail.agentName || '') : '',
                         AgentID: detail ? (detail.agentId || 0) : 0,
-                        CommissionRate: detail ? detail.commissionRate : 0
+                        CommissionRate: detail ? Number(detail.commissionRate) : 0
                     })
                     .execute();
             };

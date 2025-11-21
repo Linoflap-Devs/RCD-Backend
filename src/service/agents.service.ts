@@ -7,13 +7,14 @@ import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
 import { IAgent } from "../types/users.types";
 
-export const getAgentsService = async (filters?: {showInactive?: boolean, division?: number, position?: 'SP' | 'UM' | 'SD'}): QueryResult<IAgent[]> => {
+export const getAgentsService = async (filters?: {showInactive?: boolean, division?: number, position?: 'SP' | 'UM' | 'SD' | 'BR'}): QueryResult<IAgent[]> => {
 
-    const positionMap = new Map<string, number>(
+    const positionMap = new Map<string, number[]>(
         [
-            ['SP', 5],
-            ['UM', 86],
-            ['SD', 85]
+            ['SP', [5]],
+            ['UM', [86]],
+            ['SD', [85]],
+            ['BR', [72, 73, 76]]
         ]
     )
 
