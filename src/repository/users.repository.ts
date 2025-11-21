@@ -607,6 +607,41 @@ export const editAgentDetails = async (agentId: number, data: IAgentEdit): Query
     }
 }
 
+export const editBrokerDetails = async (brokerId: number, data: Partial<ITblBroker>): QueryResult<any> => {
+    try {
+
+        console.log(data)
+
+        const updateData = {
+            ...data,
+            LastUpdate: new Date()
+        }
+
+        const result = await db.updateTable('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const editAgentImage = async (imageId: number, imageData: IImage): QueryResult<IImageBase64> => {
     try {
 

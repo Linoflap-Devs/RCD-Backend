@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -9,7 +9,7 @@ import { logger } from "../utils/logger";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
-import { ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
+import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
@@ -458,6 +458,52 @@ export const editAgentService = async (agentUserId: number, data: IAgentEdit): Q
     }
 
     const result = await editAgentDetails(agentUserDetails.data.AgentID, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    return result
+}
+
+export const editBrokerService = async (brokerUserId: number, data: Partial<IEditBroker>): QueryResult<any> => {
+    const brokerUserDetails = await findBrokerDetailsByUserId(brokerUserId)
+    if(!brokerUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!brokerUserDetails.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const mappedData: Partial<ITblBroker> = {
+        RepresentativeName: data.name,
+        Address: data.address,
+        TelephoneNumber: data.telephoneNumber,
+        ContactNumber: data.contactNumber,
+        CivilStatus: data.civilStatus,
+        Religion: data.religion,
+        Birthdate: data.birthdate,
+        Birthplace: data.birthplace,
+    }
+
+    const result = await editBrokerDetails(brokerUserDetails.data.BrokerID, mappedData)
 
     if(!result.success){
         return {

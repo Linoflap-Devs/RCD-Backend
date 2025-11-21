@@ -125,6 +125,7 @@ export interface AgentPendingSalesWithDetails {
     FloorArea: number;
     LastUpdate: Date;
     LastUpdateby?: number | null;
+    LastUpdateByWeb?: number | null;
     Lot: string;
     LotArea: number;
     MiscFee: number;

@@ -1,6 +1,6 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -309,6 +309,13 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
 
     const data = result.data[0]
 
+    let updatedByName = ''
+    if(data.LastUpdateby){
+        const response = await findEmployeeUserById(data.LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+    
+
     const obj = {
         SalesTransId: data.SalesTranID,
         SalesTranCode: data.SalesTranCode,
@@ -335,7 +342,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         DPStartSchedule: data.DPStartSchedule,
         DPTerms: data.DPTerms,
         SalesStatus: data.SalesStatus,
-        LastUpdateby: data.LastUpdateby,
+        LastUpdateby: updatedByName,
         LastUpdate: data.LastUpdate,
         SalesBranchID: data.SalesBranchID,
         DevCommType: data.DevCommType,
@@ -392,6 +399,12 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     })
 
+     let updatedByName = ''
+    if(details.data[0].LastUpdateby){
+        const response = await findEmployeeUserById(details.data[0].LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+
     const sales = {
         salesInfo: {
             salesStatus: result.data.SalesStatus,
@@ -428,6 +441,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             monthlyPayment: result.data.MonthlyDP,
             downpaymentStartDate: result.data.DPStartSchedule
         },
+        lastUpdatedBy: updatedByName,
+        lastUpdatedAt: result.data.LastUpdate,
         details: detailArray,
         images: images.data
     }
@@ -842,9 +857,27 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
+    let updatedByName = ''
+    if(result.data.LastUpdateby){
+        const response = await findAgentDetailsByUserId(result.data.LastUpdateby)
+        updatedByName = response.success ? response.data.AgentName ? response.data.AgentName : '' : ''
+    }
+    else if (result.data.LastUpdateByWeb){
+        const lastUpdatedByEmployee = await findEmployeeUserById(result.data.LastUpdateByWeb)
+        if(lastUpdatedByEmployee.success && lastUpdatedByEmployee.data.UserWebID){
+            updatedByName = lastUpdatedByEmployee.data.EmpName ? lastUpdatedByEmployee.data.EmpName : ''
+        }
+    }
+
+    const obj = {
+        ...result.data,
+        LastUpdateby: updatedByName,
+        LastUpdateId: result.data.LastUpdateby
+    }
+
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
@@ -1980,7 +2013,16 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.APPROVED
     }
 
-    const result = await rejectPendingSale((user.agentUserId || user.webUserId || 0), pendingSalesId, (approvalStatus || 1), (salesStatus || SalesStatusText.PENDING_UM), remarks);
+    const result = await rejectPendingSale(
+        {
+            agentId: user.agentUserId ? user.agentUserId : undefined,
+            brokerId: user.webUserId ? user.webUserId : undefined
+        }, 
+        pendingSalesId, 
+        (approvalStatus || 1), 
+        (salesStatus || SalesStatusText.PENDING_UM), 
+        remarks
+    );
 
     if(!result.success){
         return {
@@ -2223,10 +2265,31 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
+    let lastUpdatedByName = ''
+    if(result.data.LastUpdateby){
+        const lastUpdatedByAgent = await findAgentDetailsByAgentId(result.data.LastUpdateby)
+        if(lastUpdatedByAgent.success && lastUpdatedByAgent.data.AgentID){
+            console.log('lastUpdatedByAgent', lastUpdatedByAgent.data)
+            lastUpdatedByName = lastUpdatedByAgent.data.AgentName ? lastUpdatedByAgent.data.AgentName : ''
+        }
+    }
+    else if (result.data.LastUpdateByWeb){
+        const lastUpdatedByEmployee = await findEmployeeUserById(result.data.LastUpdateByWeb)
+        if(lastUpdatedByEmployee.success && lastUpdatedByEmployee.data.UserWebID){
+            lastUpdatedByName = lastUpdatedByEmployee.data.EmpName ? lastUpdatedByEmployee.data.EmpName : ''
+        }
+    }
+
+    const obj = {
+        ...result.data,
+        LastUpdateby: lastUpdatedByName,
+        LastUpdateId: result.data.LastUpdateby
+    }
+
 
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
@@ -2546,30 +2609,62 @@ export const getDivisionSalesYearlyTotalsFnService = async (
         }>
     }>);
 
+    let totals: any = {};
+
     // Calculate yearly totals across all divisions
-    const yearlyTotals = result.data.reduce((acc, item) => {
-        const existingYear = acc.find(y => y.year === item.Year);
+    if(filters && filters.months && filters.months?.length > 0){
+        const monthlyTotals = result.data.reduce((acc, item) => {
+            const existingMonth = acc.find(m => m.month === item.Month && m.year === item.Year);
+                
+            if (existingMonth) {
+                existingMonth.monthTotal += item.CurrentMonth;
+            } else {
+                acc.push({
+                    year: item.Year,
+                    month: item.Month || 0,
+                    monthTotal: item.CurrentMonth
+                });
+            }
+            
+            return acc;
+        }, [] as Array<{year: number, month: number, monthTotal: number}>);
+            
+        // Sort by year descending, then month ascending
+        monthlyTotals.sort((a, b) => {
+            if (a.year !== b.year) {
+                return b.year - a.year; // Year descending
+            }
+            return a.month - b.month; // Month ascending
+        });
+        totals = monthlyTotals;
+    }
+    else {
+        const yearlyTotals = result.data.reduce((acc, item) => {
+            const existingYear = acc.find(y => y.year === item.Year);
+            
+            if (existingYear) {
+                existingYear.yearTotal += item.CurrentMonth;
+            } else {
+                acc.push({
+                    year: item.Year,
+                    yearTotal: item.CurrentMonth
+                });
+            }
+            
+            return acc;
+        }, [] as Array<{year: number, yearTotal: number}>);
         
-        if (existingYear) {
-            existingYear.yearTotal += item.CurrentMonth;
-        } else {
-            acc.push({
-                year: item.Year,
-                yearTotal: item.CurrentMonth
-            });
-        }
-        
-        return acc;
-    }, [] as Array<{year: number, yearTotal: number}>);
-    
-    // Sort by year descending
-    yearlyTotals.sort((a, b) => b.year - a.year);
+        // Sort by year descending
+        yearlyTotals.sort((a, b) => b.year - a.year);
+
+        totals = yearlyTotals
+    }
     
     return {
         success: true,
         data: {
             divisions: groupedData,
-            totals: yearlyTotals
+            totals: totals
         }
     }
 }

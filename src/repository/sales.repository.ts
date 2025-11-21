@@ -1080,6 +1080,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.FloorArea',
                 'Tbl_AgentPendingSales.LastUpdate',
                 'Tbl_AgentPendingSales.LastUpdateby',
+                'Tbl_AgentPendingSales.LastUpdateByWeb',
                 'Tbl_AgentPendingSales.Lot',
                 'Tbl_AgentPendingSales.LotArea',
                 'Tbl_AgentPendingSales.MiscFee',
@@ -1766,8 +1767,8 @@ export const editPendingSale = async (
 
         // Build update object dynamically - only include fields that are provided
         const updateData: any = {
-            LastUpdateby: user.agentUserId || undefined,
-            LastUpdateByWeb: user.webUserId || undefined,
+            LastUpdateby: user.agentUserId ? user.agentUserId : null,
+            LastUpdateByWeb: user.webUserId ? user.webUserId : null,
             LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
         };
 
@@ -2064,6 +2065,7 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
             .set({
                 LastUpdate: new Date(),
                 LastUpdateby: agentId,
+                LastUpdateByWeb: null,
                 Remarks: null,
                 ApprovalStatus: SaleStatus.UNIT_MANAGER_APPROVED,
                 SalesStatus: SalesStatusText.PENDING_SD
@@ -2394,8 +2396,8 @@ export const approveNextStage = async (data: {
                 SalesStatus: data.nextSalesStatus,
                 Remarks: null,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: data.agentId || undefined,
-                LastUpdateByWeb:  data.userId || undefined
+                LastUpdateby: data.agentId ? data.agentId : null,
+                LastUpdateByWeb: data.userId ? data.userId : null
             })
             .where('AgentPendingSalesID', '=', data.pendingSalesId)
             .outputAll('inserted')
@@ -2420,18 +2422,18 @@ export const approveNextStage = async (data: {
     }
 }
 
-export const rejectPendingSale = async (agentId: number, pendingSalesId: number, approvalStatus: number, salesStatus: string, remarks?: string): QueryResult<any> => {
+export const rejectPendingSale = async (user: { brokerId?: number, agentId?: number }, pendingSalesId: number, approvalStatus: number, salesStatus: string, remarks?: string): QueryResult<any> => {
 
-    if(agentId == 0){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'No user found',
-                code: 400
-            }
-        }
-    }
+    // if(agentId == 0){
+    //     return {
+    //         success: false,
+    //         data: {},
+    //         error: {
+    //             message: 'No user found',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
     try {
         const result = await db.updateTable('Tbl_AgentPendingSales')
@@ -2440,7 +2442,8 @@ export const rejectPendingSale = async (agentId: number, pendingSalesId: number,
                 SalesStatus: salesStatus || 'REJECTED',
                 Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
-                LastUpdateby: agentId
+                LastUpdateby: user.agentId ? user.agentId : null,
+                LastUpdateByWeb: user.brokerId ? user.brokerId : null
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')
@@ -2475,8 +2478,9 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
                 ApprovalStatus: SaleStatus.SALES_ADMIN_APPROVED,
                 SalesStatus: SalesStatusText.APPROVED,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+                LastUpdateByWeb: userWebId,
                 Remarks: null,
-                LastUpdateby: userWebId
+                LastUpdateby: null
             })
             .outputAll('inserted')
             .where('AgentPendingSalesID', '=', pendingSalesId)
