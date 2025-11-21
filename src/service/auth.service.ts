@@ -14,6 +14,9 @@ import 'dotenv/config'
 import { verifyDESPassword } from "../utils/utils";
 import { getSalesBranch } from "../repository/sales.repository";
 import is from "zod/v4/locales/is.cjs";
+import { ITblBroker, ITblBrokerRegistration } from "../types/brokers.types";
+import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
+import { getPositions } from "../repository/position.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -288,26 +291,12 @@ export const loginAgentService = async (email: string, password: string): QueryR
 
 export const registerBrokerService = async (
     data: IBrokerRegister, 
+    brokerType: "hands-on" | "hands-off",
     image?: Express.Multer.File,
     govIdImage?: Express.Multer.File,
     selfieImage?: Express.Multer.File,
     //agentId?: number
 ): QueryResult<any> => {
-
-    // if(agentId){
-    //     const agent = await findAgentDetailsByAgentId(agentId)
-
-    //     if(!agent.success){
-    //         return {
-    //             success: false,
-    //             data: {},
-    //             error: {
-    //                 code: 500,
-    //                 message: 'Failed to find agent details.'
-    //             }
-    //         }
-    //     }
-    // }
 
     const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
     const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
@@ -347,20 +336,87 @@ export const registerBrokerService = async (
         }
     )
 
-    const result = await registerBrokerTransaction(data, metadata, govIdMetadata, selfieMetadata, undefined)
+    // check email availability
+    const [
+        agentEmailCheck,
+        brokerEmailCheck
+    ] = await Promise.all([
+        findAgentUserByEmail(data.email),
+        findBrokerUserByEmail(data.email)
+    ])
 
-    if(!result.success) {
+    console.log(agentEmailCheck, brokerEmailCheck)
+
+    if(agentEmailCheck.success || brokerEmailCheck.success){
         return {
             success: false,
             data: {},
             error: {
-                message: result.error?.message || 'Failed to register agent.',
-                code: result.error?.code || 500 
+                message: 'Email already exists.',
+                code: 400
             }
         }
     }
 
-    return result
+    let result: ITblBrokerRegistration | ITblAgentRegistration | undefined = undefined 
+
+    if(brokerType == "hands-on"){
+
+        // get position id for broker
+        const brokerPosition = await getPositions({positionName: "BROKER"})
+
+        const mappedData = {
+            ...data,
+            positionId: brokerPosition.data[0].PositionID ? brokerPosition.data[0].PositionID : 76
+        }
+
+        const response = await registerAgentTransaction(mappedData, metadata, govIdMetadata, selfieMetadata, undefined)
+
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-on broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        result = response.data
+
+    } else {
+        const response = await registerBrokerTransaction(data, metadata, govIdMetadata, selfieMetadata, undefined)
+        
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-off broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        result = response.data
+    }
+
+    if(!result) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Failed to register broker.',
+                code: 500 
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result
+    }
 }
 
 export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {

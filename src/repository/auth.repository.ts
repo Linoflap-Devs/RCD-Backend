@@ -7,8 +7,8 @@ import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
-import { ITblAgentRegistration } from "../types/agent.types";
-import { IBroker } from "../types/brokers.types";
+import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
+import { IBroker, ITblBrokerRegistration } from "../types/brokers.types";
 
 // Agent Sessions
 
@@ -546,7 +546,7 @@ export const registerAgentTransaction = async(
     govIdImageMetadata?: IImage,
     selfieImageMetadata?: IImage,
     agentId?: number
-): QueryResult<any> => {
+): QueryResult<ITblAgentRegistration> => {
 
     const registerTransaction = await db.startTransaction().execute();
 
@@ -606,6 +606,7 @@ export const registerAgentTransaction = async(
             CivilStatus: data.civilStatus,
             Sex: data.gender,
             Address: data.address,
+            PositionID: data.positionId || undefined,
             Birthdate: data.birthdate,
             Birthplace: data.birthplace ?? '',
             Religion: data.religion ?? '',
@@ -691,7 +692,7 @@ export const registerAgentTransaction = async(
 
         return {
             success: false,
-            data: null,
+            data: {} as ITblAgentRegistration,
             error: {
                 code: code,
                 message: message
@@ -706,7 +707,7 @@ export const registerBrokerTransaction = async(
     govIdImageMetadata?: IImage,
     selfieImageMetadata?: IImage,
     brokerId?: number
-): QueryResult<any> => {
+): QueryResult<ITblBrokerRegistration> => {
 
     const registerTransaction = await db.startTransaction().execute();
 
@@ -851,7 +852,7 @@ export const registerBrokerTransaction = async(
 
         return {
             success: false,
-            data: null,
+            data: {} as ITblBrokerRegistration,
             error: {
                 code: code,
                 message: message

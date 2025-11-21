@@ -104,6 +104,7 @@ export interface IAgentRegister {
     employeeIdNumber?: string | null,
     email: string,
     password: string,
+    positionId?: number,
 
     profileImage?: Express.Multer.File,
 
