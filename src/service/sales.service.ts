@@ -415,7 +415,8 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
             sector: result.data.SectorName || '',
             division: result.data.Division,
             agentName: result.data.AgentName,
-            agentCommission: result.data.CommissionRate
+            agentCommission: result.data.CommissionRate,
+            selllerName: result.data.SellerName || ''
         },
         propertyInfo: {
             projectName: result.data.ProjectName?.trim() || '',
