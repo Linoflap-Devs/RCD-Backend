@@ -1553,6 +1553,7 @@ export interface VwSalesTransactions {
   SalesTranID: number | null;
   SalesTransDtlID: number | null;
   SectorName: string | null;
+  SellerName: string | null;
 }
 
 export interface VwSalesTransAgentTaxRates {
