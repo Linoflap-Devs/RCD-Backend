@@ -105,6 +105,22 @@ export const getSalesTrans = async (
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
         }
 
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
+            
+            result = result.where('ReservationDateFormatted', '>=', firstDay)
+            result = result.where('ReservationDateFormatted', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '<=', lastDay)
+        }
+
         if(filters && filters.search) {
         const searchTerm = `%${filters.search}%`;
         console.log(    )
