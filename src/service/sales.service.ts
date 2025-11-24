@@ -13,6 +13,7 @@ import { CommissionDetailPositions } from "../types/commission.types";
 import { ITblProjects, VwProjectDeveloper } from "../types/projects.types";
 import { IBrokerEmailPicture } from "../types/brokers.types";
 import { getDevelopers } from "../repository/developers.repository";
+import { getAgent, getAgents } from "../repository/agents.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -710,9 +711,30 @@ export const addPendingSalesService = async (
     const validCommissions = []
 
     for(const commission of data.commissionRates || []){
+
         if(commission.agentId || commission.agentName){
+            if(commission.position.toLowerCase() == 'broker') {
+                if(commission.agentName){
+                    const findAgent = await getAgents({ name: commission.agentName })
+
+                    if(findAgent.success && findAgent.data[0]){
+                        commission.agentId = findAgent.data[0].AgentID
+                    }
+                }
+
+                if(commission.agentId){
+                    const agent = await getAgent(commission.agentId)
+                    
+                    if(agent.success && agent.data){
+                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                    }
+                }
+            }
+
+
             validCommissions.push(commission)
         }
+        
     }
 
     if(role !== 'SALES PERSON' && validCommissions.length === 0){
@@ -1349,6 +1371,35 @@ export const editPendingSaleService = async (
         }
     }
 
+     const validCommissions = []
+
+    for(const commission of data.commissionRates || []){
+
+        if(commission.agentId || commission.agentName){
+            if(commission.position.toLowerCase() == 'broker') {
+                if(commission.agentName){
+                    const findAgent = await getAgents({ name: commission.agentName })
+
+                    if(findAgent.success && findAgent.data[0]){
+                        commission.agentId = findAgent.data[0].AgentID
+                    }
+                }
+
+                if(commission.agentId){
+                    const agent = await getAgent(commission.agentId)
+                    
+                    if(agent.success && agent.data){
+                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                    }
+                }
+            }
+
+
+            validCommissions.push(commission)
+        }
+        
+    }
+
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
@@ -1357,7 +1408,7 @@ export const editPendingSaleService = async (
             receipt: receiptMetadata,
             agreement: agreementMetadata
         },
-        commissionRates: data.commissionRates || []
+        commissionRates: validCommissions
     }
 
     const updatePendingSale = await editPendingSale(

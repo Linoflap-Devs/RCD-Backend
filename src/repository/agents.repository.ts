@@ -6,15 +6,20 @@ import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../type
 import { sql } from "kysely";
 import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentUser } from "../types/auth.types";
-import { TblAgentUser, VwAgents } from "../db/db-types";
+import { TblAgentUser, VwAgents, VwUniqueActiveAgents } from "../db/db-types";
+import { it } from "zod/v4/locales/index.cjs";
 
-export const getAgents = async (filters?: { showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
+export const getAgents = async (filters?: { name?: string, showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
     try {
         let result = await db.selectFrom('Vw_UniqueActiveAgents')
             .selectAll()
 
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())
+        }
+
+        if(filters && filters.name){
+            result = result.where('AgentName', 'like', `%${filters.name}%`)
         }
 
         if(!filters || !filters.showInactive){
@@ -31,9 +36,16 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
             throw new Error('No agents found.');
         }
 
+        const obj: IAgent[] = queryResult.map((item: VwUniqueActiveAgents) => {
+            return {
+                ...item,
+                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim()
+            }
+        })
+
         return {
             success: true,
-            data: queryResult
+            data: obj
         }
     }
 

@@ -265,6 +265,33 @@ export const editAgentController = async (req: Request, res: Response) =>{
     return res.status(200).json({success: true, message: 'Agent edited.', data: result.data})
 }   
 
+export const promoteAgentController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { agentId } = req.params
+
+    const { positionID } = req.body
+
+    const result = await editAgentService(session.userID, Number(agentId), { PositionID: positionID });
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to promote agent.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Agent promoted.', data: result.data})
+}
+
 export const deleteAgentController = async (req: Request, res: Response) => {
     const session = req.session
 

@@ -1577,6 +1577,7 @@ export interface VwUniqueActiveAgents {
   AffiliationDate: Date;
   AgentCode: string;
   AgentID: number;
+  AgentName: string | null;
   AgentTaxRate: number;
   Birthdate: Date;
   Birthplace: string | null;

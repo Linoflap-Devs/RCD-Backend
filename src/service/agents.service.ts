@@ -1,6 +1,7 @@
 import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { getPositions } from "../repository/position.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
@@ -211,6 +212,111 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
     if(data.AgentCode){
         data.AgentCode = undefined
     }
+
+    console.log('edit data', data)
+
+    // verify position ID
+
+    if(data.PositionID){
+        
+        const agentData = await findAgentDetailsByAgentId(agentId)
+    
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: agentData.error
+            }
+        }
+    
+        if(!agentData.data.PositionID && !data.PositionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Position is required.'
+                }
+            }
+        }
+
+        const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
+
+        if(positionName?.includes('broker')) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Broker agents cannot be promoted.'
+                }
+            }
+        }
+
+        if(positionName == 'salesperson'){
+            const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
+
+            console.log(umPosition)
+
+            if(umPosition.success){
+                // check if position id is for unit manager
+                if(data.PositionID != umPosition.data[0].PositionID){
+                    return {
+                        success: false,
+                        data: {},
+                        error: {
+                            code: 400,
+                            message: 'Position ID does not match for Unit Manager.'
+                        }
+                    }
+                }
+            } else {
+                data.PositionID = undefined
+            }
+
+            
+        }
+
+        else if(positionName == 'unitmanager'){
+            // check if position id is for sales director
+            const sdPosition = await getPositions({positionName: 'SALES DIRECTOR'})
+
+            console.log(sdPosition)
+
+            if(sdPosition.success){
+                if(data.PositionID != sdPosition.data[0].PositionID){
+                    return {
+                        success: false,
+                        data: {},
+                        error: {
+                            code: 400,
+                            message: 'Position ID does not match for Sales Director.'
+                        }
+                    }
+                }
+            }
+
+            else {
+                data.PositionID = undefined
+            }
+            
+            
+        }
+
+        else {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: "Agent's position cannot be edited."
+                }
+            }
+        }
+
+    }
+
+    
 
     const result = await editAgent(userId, agentId, data)
 

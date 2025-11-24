@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateEmployeeSession, validateSession } from '../middleware/auth';
-import { addNewAgentController, deleteAgentController, editAgentController, getAgentDetailsController, getAgentRegistrationController, getAgentRegistrationsController, getAgentsController } from '../controller/agent.controller';
+import { addNewAgentController, deleteAgentController, editAgentController, getAgentDetailsController, getAgentRegistrationController, getAgentRegistrationsController, getAgentsController, promoteAgentController } from '../controller/agent.controller';
 import { validate } from '../middleware/zod';
 import { validateRole } from '../middleware/roles';
 import { addAgentController } from '../controller/auth.controller';
@@ -12,6 +12,7 @@ router.route('/registrations').get([validateEmployeeSession], getAgentRegistrati
 router.route('/registrations/:agentRegistrationId').get([validateEmployeeSession], getAgentRegistrationController);
 router.route('/new').post([validateEmployeeSession, validateRole(['BH', 'SA']), validate(addAgentSchema)], addNewAgentController);
 router.route('/new/:agentId').patch([validateEmployeeSession, validateRole(['BH', 'SA'])], editAgentController);
+router.route('/new/:agentId/promote').patch([validateEmployeeSession, validateRole(['BH', 'SA'])], promoteAgentController);
 router.route('/:agentId').delete([validateEmployeeSession, validateRole(['BH', 'SA'])], deleteAgentController);
 router.route('/').get([validateEmployeeSession], getAgentsController);
 router.route('/').post([validateEmployeeSession, validateRole(['BH','SA'])], addAgentController);
