@@ -709,6 +709,12 @@ export const addPendingSalesService = async (
 
     const validCommissions = []
 
+    for(const commission of data.commissionRates || []){
+        if(commission.agentId || commission.agentName){
+            validCommissions.push(commission)
+        }
+    }
+
     if(role !== 'SALES PERSON' && validCommissions.length === 0){
         return {
             success: false,
@@ -720,11 +726,7 @@ export const addPendingSalesService = async (
         }
     }
 
-    for(const commission of data.commissionRates || []){
-        if(commission.agentId || commission.agentName){
-            validCommissions.push(commission)
-        }
-    }
+    
 
     const updatedData = {
         ...data,
