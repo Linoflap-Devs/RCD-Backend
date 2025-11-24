@@ -9,13 +9,17 @@ import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents, VwUniqueActiveAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
 
-export const getAgents = async (filters?: { showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
+export const getAgents = async (filters?: { name?: string, showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
     try {
         let result = await db.selectFrom('Vw_UniqueActiveAgents')
             .selectAll()
 
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())
+        }
+
+        if(filters && filters.name){
+            result = result.where('AgentName', 'like', `%${filters.name}%`)
         }
 
         if(!filters || !filters.showInactive){
@@ -35,7 +39,7 @@ export const getAgents = async (filters?: { showInactive?: boolean, division?: n
         const obj: IAgent[] = queryResult.map((item: VwUniqueActiveAgents) => {
             return {
                 ...item,
-                FullName: ( `${item.LastName}, ${item.FirstName} ${item.MiddleName}` ).trim()
+                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim()
             }
         })
 
