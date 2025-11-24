@@ -460,7 +460,7 @@ export const getBrokersController = async (req: Request, res: Response) => {
 
     return res.status(200).json({
         success: true,
-        message: "Brokers.",
+        message: "List of brokers.",
         data: result.data
     });
 }

@@ -1,16 +1,17 @@
 import { format } from "date-fns";
-import { TblBroker, TblUsers, TblUsersWeb } from "../db/db-types";
+import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { ITblUsersWeb } from "../types/auth.types";
 import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
+import { getPositions } from "../repository/position.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -959,14 +960,60 @@ export const editBrokerWorkExpService = async (
     return { success: true, data: result.data };
 };
 
-export const getBrokersService = async (): QueryResult<ITblBroker[]> => {
-    const result = await getBrokers();
+export const getBrokersService = async (): QueryResult<{
+    BrokerID?: number | null, 
+    AgentID?: number | null, 
+    BrokerCode?: string | null,
+    AgentCode?: string | null,
+    Broker: string
+}[]> => {
 
-    if (!result.success) {
-        return { success: false, data: [], error: result.error };
+    const brokerPosId = await getPositions({ positionName: 'BROKER' })
+
+    if(!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error }
+
+    const [
+        extBrokers,
+        intBrokers
+    ] = await Promise.all([
+        getBrokers(),
+        getAgents({ positionId: [brokerPosId.data[0].PositionID]})
+    ])
+
+    if (!extBrokers.success) {
+        return { success: false, data: [], error: extBrokers.error };
     }
 
-    return { success: true, data: result.data };
+    if(!intBrokers.success) {
+        return { success: false, data: [], error: intBrokers.error };
+    }
+
+    const formatted: { 
+        BrokerID?: number | null, 
+        AgentID?: number | null, 
+        BrokerCode?: string | null,
+        AgentCode?: string | null,
+        Broker: string }[] = []
+
+    extBrokers.data.map((broker: ITblBroker) => {
+        formatted.push({
+            BrokerID: broker.BrokerID,
+            AgentID: null,
+            BrokerCode: broker.BrokerCode,
+            Broker: broker.RepresentativeName
+        })
+    })
+
+    intBrokers.data.map((agent: IAgent) => {
+        formatted.push({
+            BrokerID: null,
+            AgentID: agent.AgentID,
+            BrokerCode: agent.AgentCode,
+            Broker: agent.FullName || ( `${agent.LastName}, ${agent.FirstName} ${agent.MiddleName}` ).trim()
+        })
+    })
+
+    return { success: true, data: formatted };
 }
 
 export const top10UMsService = async (date?: Date): QueryResult<any> => {
