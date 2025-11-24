@@ -27,6 +27,7 @@ router.route('/pending/:pendingSalesId').get([validateMobileSession], getPending
 router.route('/pending').post(
     [
         validateSession, 
+        validateRole(['SP', 'UM', 'SD']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
         validate(addPendingSaleSchema),
     ], 
