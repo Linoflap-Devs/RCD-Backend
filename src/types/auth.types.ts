@@ -31,6 +31,39 @@ export interface IAgentUserSession {
     AgentUser: IAgentUser
 }
 
+export interface IVwAgents {
+  Address: string | null;
+  AddressEmergency: string | null;
+  AgentCode: string | null;
+  AgentID: number | null;
+  AgentName: string | null;
+  AgentTaxRate: number;
+  AgentTaxRateName: string;
+  Birthdate: Date | null;
+  CivilStatus: string | null;
+  ContactEmergency: string | null;
+  ContactNumber: string | null;
+  Division: string | null;
+  DivisionCode: string | null;
+  DivisionID: string | null;
+  DSHUDNumber: string | null;
+  FirstName: string | null;
+  IsActive: number | null;
+  LastName: string | null;
+  LastUpdate: Date | null;
+  MiddleName: string | null;
+  PersonEmergency: string | null;
+  Position: string | null;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number;
+  ReferredCode: string | null;
+  ReferredName: string | null;
+  Sex: string | null;
+  UpdateBy: number | null;
+  Religion?: string | null
+}
+
 // Broker
 
 export interface IBrokerSession {
