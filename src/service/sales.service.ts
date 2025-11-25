@@ -2744,20 +2744,23 @@ export const getDivisionSalesYearlyTotalsFnService = async (
 }
 
 export const getSalesByDeveloperTotalsFnService = async (userId: number, filters?: {month?: number, year?: number}): QueryResult<any> => {
-    const result = await getSalesByDeveloperTotals(
-        [
-            {field: 'NetTotalTCP', direction: 'desc'},
-            {field: 'DeveloperName', direction: 'asc'}
-        ],
-        undefined,
-        undefined,
-        {
-            month: filters?.month,
-            year: filters?.year
-        }
-    )
+    const [salesResult, devsResult] = await Promise.all([
+        getSalesByDeveloperTotals(
+            [
+                {field: 'NetTotalTCP', direction: 'desc'},
+                {field: 'DeveloperName', direction: 'asc'}
+            ],
+            undefined,
+            undefined,
+            {
+                month: filters?.month,
+                year: filters?.year
+            }
+        ),
+        getDevelopers()
+    ]);
 
-    if(!result.success){
+    if(!salesResult.success){
         return {
             success: false,
             data: [],
@@ -2768,8 +2771,38 @@ export const getSalesByDeveloperTotalsFnService = async (userId: number, filters
         }
     }
 
+    if(!devsResult.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Failed to get developers.',
+                code: 400
+            }
+        }
+    }
+
+    // Create a map of sales by developer name for quick lookup
+    const salesMap = new Map(
+        salesResult.data.map(sale => [sale.DeveloperName, sale.NetTotalTCP])
+    );
+
+    // Combine developers with their sales data
+    const combinedData = devsResult.data.data.map(dev => ({
+        DeveloperName: dev.DeveloperName,
+        NetTotalTCP: salesMap.get(dev.DeveloperName) ?? 0
+    }));
+
+    // Sort by NetTotalTCP descending, then by DeveloperName ascending
+    combinedData.sort((a, b) => {
+        if (b.NetTotalTCP !== a.NetTotalTCP) {
+            return b.NetTotalTCP - a.NetTotalTCP;
+        }
+        return a.DeveloperName.localeCompare(b.DeveloperName);
+    });
+
     return {
         success: true,
-        data: result.data
+        data: combinedData
     }
 }

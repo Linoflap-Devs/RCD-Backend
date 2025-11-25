@@ -17,7 +17,7 @@ router.route('/user-image').patch([validateSession, multerUpload.fields([{name: 
 router.route('/user-education').patch([validateSession], editAgentEducationController);
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 
-router.route('/brokers').get([validateSession], getBrokersController);
+router.route('/brokers').get([validateMobileSession], getBrokersController);
 router.route('/broker-ids').get([validateBrokerSession], getBrokerGovIdsController);
 router.route('/broker-details').patch([validateBrokerSession], editBrokerDetailsController);
 router.route('/broker-image').patch([validateBrokerSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editBrokerImageController)
