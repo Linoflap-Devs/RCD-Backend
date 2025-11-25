@@ -19,7 +19,7 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         }
 
         if(filters && filters.name){
-            result = result.where('AgentName', 'like', `%${filters.name}%`)
+            result = result.where('AgentName', '=', `${filters.name}`)
         }
 
         if(!filters || !filters.showInactive){
