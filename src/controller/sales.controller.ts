@@ -282,10 +282,15 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
         return;
     }
 
+    if(!session.userRole) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
     const { page, pageSize, month, year, } = req.query
     console.log(req.query)
 
-    const isBroker = session.userRole === 'BROKER'
+    const isBroker = session.userRole.toLowerCase().includes('broker')
     console.log("controller session", session)
     console.log("controller user", session.userID)
     const result = await getCombinedPersonalSalesService(
@@ -293,6 +298,7 @@ export const getCombinedPersonalSalesController = async (req: Request, res: Resp
             agentUserId: isBroker ? undefined : session.userID,
             brokerUserId: isBroker ? session.userID : undefined
         }, 
+        session.userRole,
         {
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined

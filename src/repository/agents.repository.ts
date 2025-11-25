@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
-import { IAgentRegister, IAgentRegistration, ITblAgentUser } from "../types/auth.types";
+import { IAgentRegister, IAgentRegistration, ITblAgentUser, IVwAgents } from "../types/auth.types";
 import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { sql } from "kysely";
 import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
@@ -19,7 +19,7 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         }
 
         if(filters && filters.name){
-            result = result.where('AgentName', 'like', `%${filters.name}%`)
+            result = result.where('AgentName', '=', `${filters.name}`)
         }
 
         if(!filters || !filters.showInactive){
@@ -522,12 +522,14 @@ export const getAgentWithRegistration = async (agentId: number): QueryResult<IAg
     }
 }
 
-export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: VwAgents, user: ITblAgentUser }> => {
+export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: IVwAgents, user: ITblAgentUser }> => {
     try {
         const result = await db.selectFrom('Vw_Agents')
             .innerJoin('Tbl_AgentUser', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .innerJoin('Tbl_Agents', 'Vw_Agents.AgentID', 'Tbl_Agents.AgentID')
             .selectAll('Vw_Agents')
             .select([
+                'Tbl_Agents.Religion',
                 'Tbl_AgentUser.AgentUserID',
                 'Tbl_AgentUser.AgentID',
                 'Tbl_AgentUser.AgentRegistrationID',
@@ -560,11 +562,13 @@ export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: Vw
 }
 
 
-export const getAgent = async (agentId: number): QueryResult<VwAgents> => {
+export const getAgent = async (agentId: number): QueryResult<IVwAgents> => {
     try {
         const result = await db.selectFrom('Vw_Agents')
-            .selectAll()
-            .where('AgentID', '=', agentId)
+            .innerJoin('Tbl_Agents', 'Vw_Agents.AgentID', 'Tbl_Agents.AgentID')
+            .selectAll('Vw_Agents')
+            .select(['Tbl_Agents.Religion'])
+            .where('Vw_Agents.AgentID', '=', agentId)
             .executeTakeFirstOrThrow()
 
         return {

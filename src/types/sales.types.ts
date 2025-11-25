@@ -290,6 +290,7 @@ export enum Roles {
 
 export const RoleMap = new Map<string, number>([
     ["BROKER", 0],
+    ["HANDS-OFF BROKER", 0],
     ["SALES PERSON", 1], 
     ["UNIT MANAGER", 2], 
     ["SALES DIRECTOR", 3], 

@@ -50,7 +50,7 @@ export const validateMobileSession = async (req: Request, res: Response, next: N
         req.session = {
             sessionID: result.session.SessionID,
             userID: result.user.BrokerUserID,
-            userRole: 'BROKER',
+            userRole: 'HANDS-OFF BROKER',
             isVerified: 1
         }
 
@@ -135,7 +135,7 @@ export const validateBrokerSession = async (req: Request, res: Response, next: N
     req.session = {
         sessionID: result.session.SessionID,
         userID: result.user.BrokerUserID,
-        userRole: 'BROKER',
+        userRole: 'HANDS-OFF BROKER',
         isVerified: result.user.IsVerified
     }
 

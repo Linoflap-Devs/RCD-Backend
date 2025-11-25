@@ -931,6 +931,7 @@ export const getCombinedPersonalSalesService = async (
         agentUserId?: number,
         brokerUserId?: number
     }, 
+    userPosition: string,
     filters?: { month?: number, year?: number }, 
     pagination?: { page?: number, pageSize?: number }
 ): QueryResult<any> => {
@@ -969,20 +970,39 @@ export const getCombinedPersonalSalesService = async (
         }
 
         if(user.brokerUserId){
-            const brokerData = await findBrokerDetailsByUserId(user.brokerUserId);
-
-            if(!brokerData.data.BrokerID){
-                return {
-                    success: false,
-                    data: [],
-                    error: {
-                        code: 500,
-                        message: 'No broker found.'
+            if(userPosition.toLowerCase().includes('hands-off')){
+                const brokerData = await findBrokerDetailsByUserId(user.brokerUserId);
+    
+                if(!brokerData.data.BrokerID){
+                    return {
+                        success: false,
+                        data: [],
+                        error: {
+                            code: 500,
+                            message: 'No broker found.'
+                        }
                     }
                 }
+    
+                broker = brokerData.data
             }
 
-            broker = brokerData.data
+            else {
+                const agentData = await findAgentDetailsByUserId(user.brokerUserId);
+        
+                if (!agentData.data.AgentID) {
+                    return {
+                        success: false,
+                        data: [],
+                        error: {
+                            code: 500,
+                            message: 'No agent found.'
+                        }
+                    };
+                }
+
+                agent = agentData.data
+            }
         }
         
         // Get both approved and pending sales
