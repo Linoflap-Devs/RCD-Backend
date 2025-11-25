@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -711,6 +711,42 @@ export const changeEmployeePasswordController = async (req: Request, res: Respon
     }
 
     const result = await changeEmployeePasswordService(session.userID, oldPassword, newPassword)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
+        data: result.data
+    });
+}
+
+export const changeEmployeePasswordAdminController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+    
+    const {
+        userID,
+        newPassword
+    } = req.body
+
+    const result = await changeEmployeePasswordAdminService(session.userID, userID, newPassword)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({

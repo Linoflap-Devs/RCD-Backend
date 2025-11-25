@@ -936,6 +936,48 @@ export const changeEmployeePasswordService = async (userId: number, oldPassword:
     }
 }
 
+export const changeEmployeePasswordAdminService = async (userId: number, employeeUserId: number, newPassword: string): QueryResult<any> => {
+    const user = await findEmployeeUserById(employeeUserId)
+
+    if(!user.success){
+        logger('Failed to find user.', {userId: employeeUserId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    const hash = await hashPassword(newPassword)
+
+    const updatePassword = await changeEmployeePassword(user.data.UserWebID, hash)
+
+    if(!updatePassword.success){
+        logger('Failed to update password.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to update password.',
+                code: 500
+            }
+        }
+    }
+
+    // delete sessions
+
+    const deleteSessions = await deleteEmployeeAllSessions(employeeUserId)
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+
 export const findEmailSendOTP = async (email: string): QueryResult<null> => {
     const findEmail = await findAgentEmail(email)
 
