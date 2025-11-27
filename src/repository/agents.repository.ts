@@ -29,6 +29,9 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         if(filters && filters.positionId){
             result = result.where('PositionID', 'in', filters.positionId)
         }
+        else {
+            result = result.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-'])
+        }
 
         const queryResult = await result.execute();
 
