@@ -1596,6 +1596,7 @@ export interface VwUniqueActiveAgents {
   PagIbigNumber: string | null;
   PersonEmergency: string;
   PhilhealthNumber: string | null;
+  Position: string;
   PositionID: number | null;
   PRCNumber: string | null;
   ReferredByID: number | null;

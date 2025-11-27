@@ -39,7 +39,8 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         const obj: IAgent[] = queryResult.map((item: VwUniqueActiveAgents) => {
             return {
                 ...item,
-                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim()
+                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim(),
+                Position: item.Position.trim()
             }
         })
 
