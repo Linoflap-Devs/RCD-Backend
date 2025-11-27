@@ -2071,11 +2071,15 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
 
     // check for agent first
     
-    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
-
     const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
 
-    const createdUserId = createdBy.data || createdByWeb.data
+    const createdByWebObj = {
+        ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
+    }
+
+    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+
+    const createdUserId = createdByWebObj || createdBy.data
 
     if(!createdBy.success && !createdByWeb.success){
         approvalStatus = SaleStatus.NEWLY_SUBMITTED,
