@@ -500,6 +500,8 @@ export const addPendingSalesService = async (
     }
 ): QueryResult<any> => {
 
+    console.log("commrates", data.commissionRates)
+
     if(!user.agentUserId && !user.webUserId){
         return {
             success: false,
@@ -710,7 +712,20 @@ export const addPendingSalesService = async (
 
     const validCommissions = []
 
-    for(const commission of data.commissionRates || []){
+    const modifiedCommissionRates = data.commissionRates?.map((commission: any) => {
+        return {
+            agentName: commission.agentName || undefined,
+            agentId: Number(commission.agentId) || undefined,
+            commissionRate: commission.commissionRate,
+            position: commission.position
+        }
+    })
+
+    console.log('modified comm rate', modifiedCommissionRates)
+
+    for(const commission of modifiedCommissionRates || []){
+
+        console.log("comm loop", commission)
 
         if(commission.agentId || commission.agentName){
             if(commission.position.toLowerCase() == 'broker') {
@@ -718,15 +733,15 @@ export const addPendingSalesService = async (
                     const findAgent = await getAgents({ name: commission.agentName })
 
                     if(findAgent.success && findAgent.data[0]){
-                        commission.agentId = findAgent.data[0].AgentID
+                        commission.agentId = Number(findAgent.data[0].AgentID)
                     }
                 }
 
                 if(commission.agentId){
-                    const agent = await getAgent(commission.agentId)
+                    const agent = await getAgent(Number(commission.agentId))
                     
                     if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
                     }
                 }
             }

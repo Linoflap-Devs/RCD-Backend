@@ -364,6 +364,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
     if (commissionRates) {
         try {
             parsedCommissionRates = JSON.parse(commissionRates);
+            
         } catch (error) {
             // Try parsing double-escaped JSON
             try {
