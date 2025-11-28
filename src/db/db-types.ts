@@ -103,6 +103,7 @@ export interface TblAgentPendingSales {
   DPTerms: string;
   FinancingScheme: string;
   FloorArea: number;
+  IsRejected: Generated<number>;
   LastUpdate: Date;
   LastUpdateby: number | null;
   LastUpdateByWeb: number | null;
@@ -1579,6 +1580,7 @@ export interface VwUniqueActiveAgents {
   AgentID: number;
   AgentName: string | null;
   AgentTaxRate: number;
+  AgentUserID: number | null;
   Birthdate: Date;
   Birthplace: string | null;
   CivilStatus: string;

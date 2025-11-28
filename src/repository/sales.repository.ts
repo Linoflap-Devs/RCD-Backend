@@ -2491,7 +2491,8 @@ export const rejectPendingSale = async (user: { brokerId?: number, agentId?: num
                 Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: user.agentId ? user.agentId : null,
-                LastUpdateByWeb: user.brokerId ? user.brokerId : null
+                LastUpdateByWeb: user.brokerId ? user.brokerId : null,
+                IsRejected: 1
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')
