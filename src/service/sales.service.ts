@@ -617,12 +617,12 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(!data.images?.agreement){
+        if(!data.images?.receipt){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Agreement images are required.',
+                    message: 'Receipt images are required.',
                     code: 400
                 }
             }
