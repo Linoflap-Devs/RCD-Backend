@@ -81,8 +81,9 @@ export interface AgentPendingSale {
     Expr1: number | null;
     FinancingScheme: string;
     FloorArea: number;
+    IsRejected: number;
     LastUpdate: Date;
-    LastUpdateby: number;
+    LastUpdateby: number | null;
     Lot: string;
     LotArea: number;
     MiscFee: number;

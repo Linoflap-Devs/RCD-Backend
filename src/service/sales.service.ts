@@ -892,6 +892,7 @@ export const getPendingSalesService = async (
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
             HasRemark: item.Remarks ? true : false,
+            IsRejected: item.IsRejected,
             CreatedBy: item.CreatedBy
         }
     })
