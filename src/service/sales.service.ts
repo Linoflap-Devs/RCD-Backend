@@ -500,6 +500,8 @@ export const addPendingSalesService = async (
     }
 ): QueryResult<any> => {
 
+    console.log("commrates", data.commissionRates)
+
     if(!user.agentUserId && !user.webUserId){
         return {
             success: false,
@@ -710,7 +712,20 @@ export const addPendingSalesService = async (
 
     const validCommissions = []
 
-    for(const commission of data.commissionRates || []){
+    const modifiedCommissionRates = data.commissionRates?.map((commission: any) => {
+        return {
+            agentName: commission.agentName || undefined,
+            agentId: Number(commission.agentId) || undefined,
+            commissionRate: commission.commissionRate,
+            position: commission.position
+        }
+    })
+
+    console.log('modified comm rate', modifiedCommissionRates)
+
+    for(const commission of modifiedCommissionRates || []){
+
+        console.log("comm loop", commission)
 
         if(commission.agentId || commission.agentName){
             if(commission.position.toLowerCase() == 'broker') {
@@ -718,15 +733,15 @@ export const addPendingSalesService = async (
                     const findAgent = await getAgents({ name: commission.agentName })
 
                     if(findAgent.success && findAgent.data[0]){
-                        commission.agentId = findAgent.data[0].AgentID
+                        commission.agentId = Number(findAgent.data[0].AgentID)
                     }
                 }
 
                 if(commission.agentId){
-                    const agent = await getAgent(commission.agentId)
+                    const agent = await getAgent(Number(commission.agentId))
                     
                     if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
                     }
                 }
             }
@@ -1043,7 +1058,8 @@ export const getCombinedPersonalSalesService = async (
                     pendingSalesDtlId: null,
                     projectName: sale.ProjectName?.trim() || '',
                     projectCode: sale.SalesTranCode?.trim() || '',
-                    agentName: sale.AgentName || '',
+                    // agentName: sale.AgentName || '',
+                    agentName: sale.SellerName || sale.AgentName || '',
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: null,
@@ -1078,7 +1094,8 @@ export const getCombinedPersonalSalesService = async (
                     pendingSalesDtlId: null,
                     projectName: sale.ProjectName?.trim() || '',
                     projectCode: sale.PendingSalesTranCode?.trim() || '',
-                    agentName: sale.AgentName || sale.CreatedByName || '',
+                    // agentName: sale.AgentName || sale.CreatedByName || '',
+                    agentName: sale.SellerName || sale.AgentName || sale.CreatedBy || '',
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
@@ -2071,11 +2088,15 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
 
     // check for agent first
     
-    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
-
     const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
 
-    const createdUserId = createdBy.data || createdByWeb.data
+    const createdByWebObj = {
+        ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
+    }
+
+    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+
+    const createdUserId = createdByWebObj || createdBy.data
 
     if(!createdBy.success && !createdByWeb.success){
         approvalStatus = SaleStatus.NEWLY_SUBMITTED,

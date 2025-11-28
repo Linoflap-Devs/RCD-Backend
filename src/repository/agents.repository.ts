@@ -29,6 +29,9 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         if(filters && filters.positionId){
             result = result.where('PositionID', 'in', filters.positionId)
         }
+        else {
+            result = result.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
+        }
 
         const queryResult = await result.execute();
 
@@ -39,7 +42,8 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         const obj: IAgent[] = queryResult.map((item: VwUniqueActiveAgents) => {
             return {
                 ...item,
-                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim()
+                FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim(),
+                Position: item.Position.trim()
             }
         })
 
