@@ -617,12 +617,12 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(!data.images?.receipt || !data.images?.agreement){
+        if(!data.images?.agreement){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Receipt and agreement images are required.',
+                    message: 'Agreement images are required.',
                     code: 400
                 }
             }
@@ -2094,9 +2094,9 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
     }
 
-    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+    const createdBy = await findAgentDetailsByAgentId(pendingSale.data.CreatedBy)
 
-    const createdUserId = createdByWebObj || createdBy.data
+    const createdUserId = createdByWebObj.Position ? createdByWebObj : createdBy.data
 
     if(!createdBy.success && !createdByWeb.success){
         approvalStatus = SaleStatus.NEWLY_SUBMITTED,
