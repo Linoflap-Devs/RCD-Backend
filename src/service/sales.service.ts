@@ -2033,6 +2033,8 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
 
     const pendingSale = await getPendingSaleById(pendingSalesId)
 
+    console.log('pending sale', pendingSale)
+
     if(!pendingSale.success){
         return {
             success: false,
@@ -2087,6 +2089,8 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
     let salesStatus: string | undefined = undefined
 
     // check for agent first
+
+    console.log("created by pending sale", pendingSale.data.CreatedBy)
     
     const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
 
@@ -2094,9 +2098,15 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
     }
 
-    const createdBy = await findAgentDetailsByUserId(pendingSale.data.CreatedBy)
+    const createdBy = await findAgentDetailsByAgentId(pendingSale.data.CreatedBy)
 
-    const createdUserId = createdByWebObj || createdBy.data
+    const createdUserId = createdByWebObj.Position ? createdByWebObj : createdBy.data
+
+    console.log("web obj", createdByWebObj)
+
+    console.log("createdby", createdBy)
+
+    console.log('created user id', createdUserId)
 
     if(!createdBy.success && !createdByWeb.success){
         approvalStatus = SaleStatus.NEWLY_SUBMITTED,
