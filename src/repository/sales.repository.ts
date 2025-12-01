@@ -1351,7 +1351,8 @@ export const addPendingSale = async (
                 DPTerms: data.payment.dpTerms.toString(),
                 MonthlyDP: data.payment.monthlyPayment,
                 DPStartSchedule: data.payment.dpStartDate,
-                CreatedBy: user.agentUserId ? user.agentUserId : user.webUserId || 0,
+                CreatedBy: user.agentUserId ? user.agentUserId : null,
+                CreatedByWeb: user.webUserId ? user.webUserId : null,
                 SellerName: data.payment.sellerName,
 
                 LastUpdateby: user.agentUserId || undefined,
