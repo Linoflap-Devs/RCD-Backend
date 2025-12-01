@@ -3,6 +3,7 @@ import { editAgentEducationService, editAgentImageService, editAgentService, edi
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker } from "../types/brokers.types";
+import { ITblUsersWeb } from "../types/auth.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
     const result = await getUsersService();
@@ -16,10 +17,20 @@ export const getUsersController = async (req: Request, res: Response) => {
         return
     }
 
+    const obj: Partial<ITblUsersWeb>[] = result.data.map((user: ITblUsersWeb) => ({
+        UserWebID: user.UserWebID,
+        UserCode: user.UserCode,
+        UserName: user.UserName,
+        EmpName: user.EmpName,
+        Role: user.Role,
+        BranchName: user.BranchName,
+        BranchID: user.BranchID
+    }))
+
     return res.status(200).json({
         success: true,
         message: "List of users.",
-        data: result
+        data: obj
     });
 };
 
