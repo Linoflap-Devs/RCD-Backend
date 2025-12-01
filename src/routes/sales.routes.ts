@@ -11,23 +11,23 @@ const router = express.Router();
 router.route('/division').get([validateSession], getDivisionSalesController);
 router.route('/personal').get([validateSession], getPersonalSalesController);
 
-router.route('/web/pending').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getWebPendingSalesController);
+router.route('/web/pending').get([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], getWebPendingSalesController);
 router.route('/web/pending').post(
     [
         validateEmployeeSession, 
-        validateRole(['BH', 'SA']),
+        validateRole(['AD','BH', 'SA']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
         validate(addPendingSaleSchema),
     ], 
     addWebPendingSaleController
 );
-router.route('/web/pending/:pendingSalesId').get([validateEmployeeSession, validateRole(['BH', 'SA'])], getWebPendingSalesDetailsController);
-router.route('/pending').get([validateSession, validateRole(['UM', 'SD'])], getPendingSalesController);
+router.route('/web/pending/:pendingSalesId').get([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], getWebPendingSalesDetailsController);
+router.route('/pending').get([validateSession, validateRole(['AD','UM', 'SD'])], getPendingSalesController);
 router.route('/pending/:pendingSalesId').get([validateMobileSession], getPendingSalesDetailsController);
 router.route('/pending').post(
     [
         validateSession, 
-        validateRole(['SP', 'UM', 'SD']),
+        validateRole(['AD','SP', 'UM', 'SD']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
         validate(addPendingSaleSchema),
     ], 
@@ -55,18 +55,18 @@ router.route('/pending/edit/:pendingSalesId').patch(
 router.route('/pending/web/edit/:pendingSalesId').patch(
     [
         validateEmployeeSession, 
-        validateRole(['BH', 'SA']),
+        validateRole(['AD','BH', 'SA']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
     ], 
     editWebPendingSalesControllerV2
 );
 
 router.route('/pending/reject/:pendingSalesId').patch([validateSession, validateRole(['UM', 'SD'])], rejectPendingSalesController);
-router.route('/pending/web/reject/:pendingSalesId').patch([validateEmployeeSession, validateRole(['BH', 'SA'])], rejectWebPendingSalesController);
+router.route('/pending/web/reject/:pendingSalesId').patch([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], rejectWebPendingSalesController);
 router.route('/pending/approve/:pendingSalesId').patch([validateSession, validateRole(['SD'])], approvePendingSalesSDController);
 
-router.route('/pending/approve/bh/:pendingSalesId').patch([validateEmployeeSession, validateRole(['BH'])], approvePendingSalesBHController);
-router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSession, validateRole(['SA'])], approvePendingSalesController);
+router.route('/pending/approve/bh/:pendingSalesId').patch([validateEmployeeSession, validateRole(['AD','BH'])], approvePendingSalesBHController);
+router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSession, validateRole(['AD','SA'])], approvePendingSalesController);
 
 router.route('/combined').get([validateMobileSession], getCombinedPersonalSalesController);
 
@@ -77,7 +77,7 @@ router.route('/:salesTransactionId').get([validateMobileSession], getSalesTransa
 router.route('/web/division/').get([validateEmployeeSession], getDivisionSalesTotalFnController)
 router.route('/web/division/yearly/').get([validateEmployeeSession], getDivisionSalesTotalsYearlyFnController)
 router.route('/web/developers/').get([validateEmployeeSession], getSalesByDeveloperTotalsFnController)
-router.route('/web/:salesTransactionId').get([validateEmployeeSession, validateRole(['BH', 'SA', 'AL', 'ML'])], getWebSalesTransDtlController);
+router.route('/web/:salesTransactionId').get([validateEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getWebSalesTransDtlController);
 router.route('/web/:salesTransactionId').patch(
     [
         validateEmployeeSession, 
@@ -88,6 +88,6 @@ router.route('/web/:salesTransactionId').patch(
 );
 
 
-router.route('/').get([validateEmployeeSession, validateRole(['BH', 'SA', 'AL', 'ML'])], getWebSalesTransController);
+router.route('/').get([validateEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getWebSalesTransController);
 
 export default router;
