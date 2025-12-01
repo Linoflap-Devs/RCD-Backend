@@ -893,7 +893,9 @@ export const getPendingSalesService = async (
             ApprovalStatus: item.ApprovalStatus,
             HasRemark: item.Remarks ? true : false,
             IsRejected: item.IsRejected,
-            CreatedBy: item.CreatedBy
+            CreatedBy: item.CreatedBy || item.CreatedByWeb,
+            CreatedByName: (item.CreatedByName || item.CreatedByWebName || '').trim(),
+            CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim()
         }
     })
 
@@ -2088,21 +2090,31 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
     let salesStatus: string | undefined = undefined
 
     // check for agent first
+
+    let createdUserId: VwAgentPicture | (ITblUsersWeb & { Position?: string }) = {} as VwAgentPicture | (ITblUsersWeb & { Position?: string })
+
+    if(pendingSale.data.CreatedByWeb){
+        const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedByWeb)
     
-    const createdByWeb = await findEmployeeUserById(pendingSale.data.CreatedBy)
+        const createdByWebObj = {
+            ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
+        }
 
-    const createdByWebObj = {
-        ...createdByWeb.data && { ...createdByWeb.data, Position: createdByWeb.data.Role }
+        createdUserId = createdByWebObj
     }
 
-    const createdBy = await findAgentDetailsByAgentId(pendingSale.data.CreatedBy)
-
-    const createdUserId = createdByWebObj.Position ? createdByWebObj : createdBy.data
-
-    if(!createdBy.success && !createdByWeb.success){
-        approvalStatus = SaleStatus.NEWLY_SUBMITTED,
-        salesStatus = SalesStatusText.PENDING_UM
+    else if (pendingSale.data.CreatedBy){
+        const createdBy = await findAgentDetailsByAgentId(pendingSale.data.CreatedBy)
+        
+        createdUserId = createdBy.data
     }
+    
+    // const createdUserId = createdByWebObj.Position ? createdByWebObj : createdBy.data
+
+    // if(!createdBy.success && !createdByWeb.success){
+    //     approvalStatus = SaleStatus.NEWLY_SUBMITTED,
+    //     salesStatus = SalesStatusText.PENDING_UM
+    // }
 
     if(createdUserId.Position == 'SALES PERSON'){
         approvalStatus = SaleStatus.NEWLY_SUBMITTED,

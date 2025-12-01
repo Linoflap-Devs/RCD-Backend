@@ -23,7 +23,8 @@ export interface IAgentPendingSale {
     BuyersName: string | null;
     BuyersOccupation: string | null;
     CommStatus: string | null;
-    CreatedBy: number;
+    CreatedBy: number | null;
+    CreatedByWeb: number | null;
     DateFiled: Date | null;
     DevCommType: string;
     DeveloperID: number | null;
@@ -67,8 +68,12 @@ export interface AgentPendingSale {
     BuyersName: string | null;
     BuyersOccupation: string | null;
     CommissionRate: number | null;
-    CreatedBy: number;
+    CreatedBy: number | null;
     CreatedByName: string | null;
+    CreatedByWeb: number | null;
+    CreatedByWebName: string | null;
+    CreatorAgentPosition: string | null;
+    CreatorEmployeePosition: string | null;
     DateFiled: Date | null;
     DevCommType: string;
     DeveloperID: number | null;
@@ -114,7 +119,8 @@ export interface AgentPendingSalesWithDetails {
     BuyersName: string | null;
     BuyersOccupation: string | null;
     CommStatus: string | null;
-    CreatedBy: number;
+    CreatedBy: number | null;
+    CreatedByWeb: number | null;
     DateFiled: Date | null;
     DevCommType: string;
     DeveloperID: number | null;
