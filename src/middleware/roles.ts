@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express"
 
 const roleMap = new Map<string, string>([
+    ["ADMIN", "AD"],
+
     ["SALES PERSON", "SP"],
     ["UNIT MANAGER", "UM"],
     ["SALES DIRECTOR", "SD"],

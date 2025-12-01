@@ -18,7 +18,7 @@ router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmploye
 router.route('/logout-employee').delete(validateEmployeeSession, logoutEmployeeSessionController);
 
 router.route('/register-broker').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]), validate(registerBrokerSchema)], registerBrokerController);
-router.route('/approve-broker-registration').post([validateEmployeeSession, validateRole(['SA']), validate(approveBrokerRegistrationSchema)], approveBrokerRegistrationController);
+router.route('/approve-broker-registration').post([validateEmployeeSession, validateRole(['AD','SA']), validate(approveBrokerRegistrationSchema)], approveBrokerRegistrationController);
 router.route('/login-broker').post(validate(loginAgentSchema), loginBrokerController);
 router.route('/logout-broker').delete(validateBrokerSession, logoutBrokerSessionController)
 
@@ -36,7 +36,7 @@ router.route('/forgot-password').post(validate(changeForgottonPasswordSchema), u
 
 router.route('/change-employee-password').post([validateEmployeeSession, validate(changeEmployeePasswordSchema)], changeEmployeePasswordController)
 
-router.route('/change-password-admin').post([validateEmployeeSession, validateRole(['SA'])], changeEmployeePasswordAdminController)
-router.route('/change-agent-password-admin').post([validateEmployeeSession, validateRole(['SA'])], changeAgentUserPasswordAdminController)
+router.route('/change-password-admin').post([validateEmployeeSession, validateRole(['AD','SA'])], changeEmployeePasswordAdminController)
+router.route('/change-agent-password-admin').post([validateEmployeeSession, validateRole(['AD','SA'])], changeAgentUserPasswordAdminController)
 
 export default router;
