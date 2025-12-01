@@ -893,7 +893,8 @@ export const getPendingSalesService = async (
             ApprovalStatus: item.ApprovalStatus,
             HasRemark: item.Remarks ? true : false,
             IsRejected: item.IsRejected,
-            CreatedBy: item.CreatedBy || item.CreatedByWeb,
+            CreatedBy: item.CreatedBy,
+            CreatedByWeb: item.CreatedByWeb,
             CreatedByName: (item.CreatedByName || item.CreatedByWebName || '').trim(),
             CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim()
         }
