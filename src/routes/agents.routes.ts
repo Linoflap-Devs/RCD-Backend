@@ -10,12 +10,12 @@ const router = express.Router();
 
 router.route('/registrations').get([validateEmployeeSession], getAgentRegistrationsController);
 router.route('/registrations/:agentRegistrationId').get([validateEmployeeSession], getAgentRegistrationController);
-router.route('/new').post([validateEmployeeSession, validateRole(['BH', 'SA']), validate(addAgentSchema)], addNewAgentController);
-router.route('/new/:agentId').patch([validateEmployeeSession, validateRole(['BH', 'SA'])], editAgentController);
-router.route('/new/:agentId/promote').patch([validateEmployeeSession, validateRole(['BH', 'SA'])], promoteAgentController);
-router.route('/:agentId').delete([validateEmployeeSession, validateRole(['BH', 'SA'])], deleteAgentController);
+router.route('/new').post([validateEmployeeSession, validateRole(['AD', 'BH', 'SA']), validate(addAgentSchema)], addNewAgentController);
+router.route('/new/:agentId').patch([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], editAgentController);
+router.route('/new/:agentId/promote').patch([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], promoteAgentController);
+router.route('/:agentId').delete([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], deleteAgentController);
 router.route('/').get([validateEmployeeSession], getAgentsController);
-router.route('/').post([validateEmployeeSession, validateRole(['BH','SA'])], addAgentController);
+router.route('/').post([validateEmployeeSession, validateRole(['AD', 'BH','SA'])], addAgentController);
 router.route('/:agentId').get([validateEmployeeSession], getAgentDetailsController);
 
 export default router;
