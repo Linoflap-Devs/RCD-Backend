@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker } from "../types/brokers.types";
@@ -33,6 +33,25 @@ export const getUsersController = async (req: Request, res: Response) => {
         data: obj
     });
 };
+
+export const getAgentUsersController = async (req: Request, res: Response) => {
+    const result = await getAgentUsersService()
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get agent users.",
+            data: []
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "List of agent users.",
+        data: result.data
+    });
+}
 
 export const getAgentUserDetailsController = async (req: Request, res: Response) => {
     const session = req.session

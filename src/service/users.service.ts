@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -8,7 +8,7 @@ import path from "path";
 import { logger } from "../utils/logger";
 import { getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
-import { ITblUsersWeb } from "../types/auth.types";
+import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
@@ -1071,3 +1071,24 @@ export const top10SPsService = async (date?: Date): QueryResult<any> => {
 
 }
 
+export const getAgentUsersService = async (): QueryResult<Partial<ITblAgentUser>[]> => {
+
+    const result = await getAgentUsers()
+
+    if (!result.success) {
+        return { success: false, data: [], error: result.error };
+    }
+
+    const obj: Partial<ITblAgentUser>[] = result.data.map((user: ITblAgentUser) => {
+        return {
+            AgentUserID: user.AgentUserID,
+            Email: user.Email,
+            IsVerified: user.IsVerified,
+            ImageID: user.ImageID,
+            AgentID: user.AgentID,
+            AgentRegistrationID: user.AgentRegistrationID
+        }
+    });
+
+    return { success: true, data: obj };
+}

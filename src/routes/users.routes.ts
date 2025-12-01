@@ -1,5 +1,5 @@
 import express from 'express';
-import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getBrokerGovIdsController, getBrokersController, getBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
+import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokersController, getBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
 import { validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -8,6 +8,7 @@ import { multerUpload } from '../middleware/multer';
 const router = express.Router();
 
 router.route('/').get([validateSession],getUsersController);
+router.route('/agents').get([validateSession], getAgentUsersController)
 router.route('/user-details').get([validateSession], getAgentUserDetailsController);
 router.route('/broker-details').get([validateBrokerSession], getBrokerUserDetailsController);
 

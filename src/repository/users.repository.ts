@@ -1,6 +1,6 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { ITblUsersWeb } from "../types/auth.types";
+import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
@@ -30,6 +30,32 @@ export const getUsers = async (): QueryResult<ITblUsersWeb[]> => {
     }
     
 };
+
+export const getAgentUsers = async (): QueryResult<ITblAgentUser[]> => {
+    try {   
+        const baseQuery = await db.selectFrom('Tbl_AgentUser')
+            .selectAll()
+
+        const result = await baseQuery.execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblAgentUser[],
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
 
 export const getAgentDetails = async (agentId: number): QueryResult<IAgent> => {
     try {
