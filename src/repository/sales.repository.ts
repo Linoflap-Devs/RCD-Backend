@@ -1117,6 +1117,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.BuyersOccupation',
                 'Tbl_AgentPendingSales.CommStatus',
                 'Tbl_AgentPendingSales.CreatedBy',
+                'Tbl_AgentPendingSales.CreatedByWeb',
                 'Tbl_AgentPendingSales.DateFiled',
                 'Tbl_AgentPendingSales.DevCommType',
                 'Tbl_AgentPendingSales.DeveloperID',
@@ -1350,7 +1351,8 @@ export const addPendingSale = async (
                 DPTerms: data.payment.dpTerms.toString(),
                 MonthlyDP: data.payment.monthlyPayment,
                 DPStartSchedule: data.payment.dpStartDate,
-                CreatedBy: user.agentUserId ? user.agentUserId : user.webUserId || 0,
+                CreatedBy: user.agentUserId ? user.agentUserId : null,
+                CreatedByWeb: user.webUserId ? user.webUserId : null,
                 SellerName: data.payment.sellerName,
 
                 LastUpdateby: user.agentUserId || undefined,
@@ -2491,7 +2493,8 @@ export const rejectPendingSale = async (user: { brokerId?: number, agentId?: num
                 Remarks: remarks || undefined,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: user.agentId ? user.agentId : null,
-                LastUpdateByWeb: user.brokerId ? user.brokerId : null
+                LastUpdateByWeb: user.brokerId ? user.brokerId : null,
+                IsRejected: 1
             })
             .where('AgentPendingSalesID', '=', pendingSalesId)
             .outputAll('inserted')
