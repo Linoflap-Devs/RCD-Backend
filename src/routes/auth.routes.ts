@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema, registerBrokerSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, approveBrokerRegistrationController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, approveBrokerRegistrationController, changeAgentUserPasswordAdminController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, rejectAgentRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
@@ -37,5 +37,6 @@ router.route('/forgot-password').post(validate(changeForgottonPasswordSchema), u
 router.route('/change-employee-password').post([validateEmployeeSession, validate(changeEmployeePasswordSchema)], changeEmployeePasswordController)
 
 router.route('/change-password-admin').post([validateEmployeeSession, validateRole(['SA'])], changeEmployeePasswordAdminController)
+router.route('/change-agent-password-admin').post([validateEmployeeSession, validateRole(['SA'])], changeAgentUserPasswordAdminController)
 
 export default router;
