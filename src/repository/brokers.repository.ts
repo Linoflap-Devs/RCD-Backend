@@ -1,6 +1,6 @@
 import { db } from "../db/db"
 import { TblBrokerRegistration, TblBrokerWorkExp } from "../db/db-types"
-import { ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types"
+import { IAddBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types"
 import { QueryResult } from "../types/global.types"
 import { IImage, IImageBase64 } from "../types/image.types"
 import { bufferToBase64 } from "../utils/utils"
@@ -198,6 +198,85 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
                 code: 400,
                 message: error.message
             },
+        }
+    }
+}
+
+export const addBroker = async (userId: number, broker: IAddBroker): QueryResult<ITblBroker> => {
+    try {
+        const result = await db.insertInto('Tbl_Broker')
+            .values({
+                BrokerCode: broker.BrokerCode,
+                Broker: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
+                RepresentativeName: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
+                Birthdate: broker.Birthdate,
+                Birthplace: broker.Birthplace || '',
+                CivilStatus: broker.CivilStatus,
+                Religion: broker.Religion || '',
+                Address: broker.Address,
+                Sex: broker.Sex,
+                ContactNumber: broker.ContactNumber,
+                PositionID: broker.PositionID || 5,
+                ContactEmergency: broker.ContactEmergency || '',
+                PersonEmergency: broker.PersonEmergency || '',
+                AddressEmergency: broker.AddressEmergency || '',
+                EmployeeIDNumber: broker.EmployeeIDNumber || '',
+                PRCNumber: broker.PRCNumber || '',
+                PagIbigNumber: broker.PagIbigNumber || '',
+                PhilhealthNumber: broker.PhilhealthNumber || '',
+                DSHUDNumber: broker.DSHUDNumber || ' ',
+                ReferredByID: broker.ReferredByID,
+                TelephoneNumber: broker.TelephoneNumber,
+                TINNumber: broker.TINNumber || '',
+                SSSNumber: broker.SSSNumber || '',
+                UpdateBy: userId,
+                LastUpdate: new Date(),
+                IsActive: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getBrokerByCode = async (code: string): QueryResult<ITblBroker> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .selectAll()
+            .where('BrokerCode', '=', code)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 500,
+                message: error.message
+            }
         }
     }
 }

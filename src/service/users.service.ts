@@ -6,11 +6,11 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducati
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
-import { FnAgentSales } from "../types/agent.types";
+import { addAgent, getAgentByCode, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
-import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
+import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
+import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -1116,4 +1116,95 @@ export const getAgentUsersService = async (): QueryResult<Partial<ITblAgentUser>
     });
 
     return { success: true, data: obj };
+}
+
+export const addBrokerService = async (userId: number, data: IAddBroker) => {
+
+    let result: ITblBroker | ITblAgent | undefined = undefined 
+
+    if(data.BrokerType === 'hands-on'){
+
+        const mappedData = {
+            ...data,
+            AgentCode: data.BrokerCode,
+            AgentTaxRate: data.BrokerTaxRate
+        }
+
+        const existingAgent = await getAgentByCode(mappedData.AgentCode)
+    
+        if(existingAgent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Agent broker code already exists.'
+                }
+            }
+        }
+    
+        if(!data.PositionID){
+            const position = await getPositions({positionName: 'BROKER'})
+    
+            if(position.success){
+                data.PositionID = position.data[0].PositionID
+            }
+        }
+    
+    
+        const agentResult = await addAgent(userId, mappedData)
+    
+        if(!agentResult.success){
+            return {
+                success: false,
+                data: {},
+                error: agentResult.error
+            }
+        }
+
+        result = agentResult.data
+    }
+
+    else if (data.BrokerType === 'hands-off'){
+        
+        const existingBroker = await getBrokerByCode(data.BrokerCode)
+    
+        if(existingBroker.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Broker code already exists.'
+                }
+            }
+        }
+    
+        if(!data.PositionID){
+            const position = await getPositions({positionName: 'BROKER'})
+    
+            if(position.success){
+                data.PositionID = position.data[0].PositionID
+            }
+        }
+    
+    
+        const brokerResult = await addBroker(userId, data)
+    
+        if(!brokerResult.success){
+            return {
+                success: false,
+                data: {},
+                error: brokerResult.error
+            }
+        }
+
+        result = brokerResult.data
+    }
+
+
+    return {
+        success: true,
+        data: result
+    }
 }

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { addBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker } from "../types/brokers.types";
@@ -556,4 +556,89 @@ export const getTop10SPsController = async (req: Request, res: Response) => {
         message: "Top 10 SPs.",
         data: result.data
     });
+}
+
+export const addBrokerController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        brokerType,
+        brokerCode,
+        lastName,
+        firstName,
+        middleName,
+        contactNumber,
+        brokerTaxRate,
+        civilStatus,
+        sex,
+        address,
+        birthdate,
+        referredByID,
+        prcNumber,
+        dshudNumber,
+        referredCode,
+        personEmergency,
+        contactEmergency,
+        addressEmergency,
+        affliationDate,
+        religion,
+        birthplace,
+        telephoneNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        employeeIdNumber
+    } = req.body
+
+    const result = await addBrokerService(session.userID,
+        {
+            BrokerType: brokerType,
+            BrokerCode: brokerCode,
+            LastName: lastName,
+            FirstName: firstName,
+            MiddleName: middleName,
+            ContactNumber: contactNumber,
+            DivisionID: null,
+            BrokerTaxRate: brokerTaxRate,
+            CivilStatus: civilStatus,
+            Sex: sex,
+            Address: address,
+            Birthdate: birthdate,
+            PositionID: undefined,
+            ReferredByID: referredByID,
+            PRCNumber: prcNumber,
+            DSHUDNumber: dshudNumber,
+            ReferredCode: referredCode,
+            PersonEmergency: personEmergency,
+            ContactEmergency: contactEmergency,
+            AddressEmergency: addressEmergency,
+            AffiliationDate: affliationDate,
+            Religion: religion,
+            Birthplace: birthplace,
+            TelephoneNumber: telephoneNumber,
+            SSSNumber: sssNumber,
+            PhilhealthNumber: philhealthNumber,
+            PagIbigNumber: pagibigNumber,
+            TINNumber: tinNumber,
+            EmployeeIDNumber: employeeIdNumber
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add broker.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Broker added.', data: result.data})
 }
