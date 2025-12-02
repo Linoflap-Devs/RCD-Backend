@@ -313,6 +313,7 @@ export interface TblBroker {
   Religion: string | null;
   RepresentativeName: string;
   SelfieImageID: number | null;
+  Sex: string | null;
   SSSNumber: string | null;
   TelephoneNumber: string | null;
   TINNumber: string | null;

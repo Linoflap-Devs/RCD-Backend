@@ -1,17 +1,18 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
-import { FnAgentSales } from "../types/agent.types";
-import { ITblUsersWeb } from "../types/auth.types";
-import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { FnAgentSales, ITblAgent } from "../types/agent.types";
+import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
+import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
+import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
+import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -231,6 +232,75 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
         basicInfo: basicInfo,
         workExp: workExp,
         education: education
+    }
+
+    return {
+        success: true,
+        data: obj
+    }
+}
+
+export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<any> => {
+
+    const [
+        brokerWithUserResult,
+        registrationResult,
+        brokerEducation,
+        brokerWork
+    ] = await Promise.all([
+        getBrokerWithUser(brokerId),
+        getBrokerRegistration({brokerId: brokerId}),
+        getBrokerEducation(brokerId),
+        getBrokerWorkExp(brokerId)
+    ])
+
+    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
+
+    let backupBrokerData: ITblBroker | undefined = undefined
+
+    if(!brokerWithUserResult.success){
+
+        const broker = await getBrokers({brokerId: brokerId})
+
+        if(!broker.success){
+            return {
+                success: false,
+                data: null,
+                error: broker.error
+            }
+        }
+
+        backupBrokerData = broker.data[0]
+        // return {
+        //     success: false,
+        //     data: null,
+        //     error: brokerWithUserResult.error
+        // }
+    }
+
+    const imageIds = []
+    imageIds.push(brokerWithUserResult.data.user.ImageID || null)
+    imageIds.push(registrationResult.data.SelfieImageID || null)
+    imageIds.push(registrationResult.data.GovImageID || null)
+
+    // images
+
+    const brokerImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
+    const formattedImages = brokerImages.data.map((img: TblImageWithId) => {
+            return {
+                ...img,
+                FileContent: img.FileContent.toString('base64')
+            }
+    })
+    
+    const obj = {
+        broker: brokerWithUserResult.success ? brokerWithUserResult.data.broker : backupBrokerData,
+        registrationResult: {
+            ...registrationResult.data,
+            experience: brokerWork.data,
+            education: brokerEducation.data,
+        },
+        images: formattedImages
     }
 
     return {
@@ -960,61 +1030,85 @@ export const editBrokerWorkExpService = async (
     return { success: true, data: result.data };
 };
 
-export const getBrokersService = async (): QueryResult<{
-    BrokerID?: number | null, 
-    AgentID?: number | null, 
-    BrokerCode?: string | null,
-    AgentCode?: string | null,
-    Broker: string
+export const getBrokersService = async (
+  showSales: boolean = false, 
+  filters?: { month?: number; year?: number }
+): QueryResult<{
+  BrokerID?: number | null;
+  AgentID?: number | null;
+  BrokerCode?: string | null;
+  AgentCode?: string | null;
+  Broker: string;
 }[]> => {
+    // Get broker position ID
+    const brokerPosId = await getPositions({ positionName: 'BROKER' });
+    if (!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error };
 
-    const brokerPosId = await getPositions({ positionName: 'BROKER' })
-
-    if(!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error }
-
-    const [
-        extBrokers,
-        intBrokers
-    ] = await Promise.all([
+    // Fetch brokers and agents in parallel
+    const [extBrokers, intBrokers] = await Promise.all([
         getBrokers(),
-        getAgents({ positionId: [brokerPosId.data[0].PositionID]})
-    ])
+        getAgentBrokers()
+    ]);
 
-    if (!extBrokers.success) {
-        return { success: false, data: [], error: extBrokers.error };
+    // Early return on errors
+    if (!extBrokers.success) return { success: false, data: [], error: extBrokers.error };
+    if (!intBrokers.success) return { success: false, data: [], error: intBrokers.error };
+
+    // Conditionally fetch sales data only if showSales is true
+    let extBrokerSalesMap = new Map<string, number>();
+    let intBrokerSalesMap = new Map<number, number>();
+
+    if (showSales) {
+        const [extBrokerSales, intBrokerSales] = await Promise.all([
+            getMultipleTotalPersonalSales(
+                { brokerNames: extBrokers.data.map((b: any) => b.RepresentativeName) },
+                filters
+            ),
+            getMultipleTotalPersonalSales(
+                { agentIds: intBrokers.data.map((a: any) => a.AgentID) },
+                filters
+            )
+        ]);
+
+        console.log(extBrokerSales, intBrokerSales);
+
+        // Create lookup maps for O(1) access
+        if (extBrokerSales.success) {
+            extBrokerSalesMap = new Map(
+                extBrokerSales.data.map((s: any) => [s.AgentName, s.TotalSales || 0])
+            );
+        }
+
+        if (intBrokerSales.success) {
+            intBrokerSalesMap = new Map(
+                intBrokerSales.data.map((s: any) => [s.AgentID, s.TotalSales || 0])
+            );
+        }
     }
 
-    if(!intBrokers.success) {
-        return { success: false, data: [], error: intBrokers.error };
-    }
+    // Format external brokers
+    const extFormatted = extBrokers.data.map((broker: ITblBroker) => ({
+        BrokerID: broker.BrokerID,
+        AgentID: null,
+        BrokerCode: broker.BrokerCode,
+        Broker: broker.RepresentativeName,
+        ...showSales && {PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0}
+    }));
 
-    const formatted: { 
-        BrokerID?: number | null, 
-        AgentID?: number | null, 
-        BrokerCode?: string | null,
-        AgentCode?: string | null,
-        Broker: string }[] = []
+    // Format internal brokers
+    const intFormatted = intBrokers.data.map((agent: IAgent) => ({
+        BrokerID: null,
+        AgentID: agent.AgentID,
+        BrokerCode: agent.AgentCode,
+        Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
+        ...showSales && {PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0}
+    }));
 
-    extBrokers.data.map((broker: ITblBroker) => {
-        formatted.push({
-            BrokerID: broker.BrokerID,
-            AgentID: null,
-            BrokerCode: broker.BrokerCode,
-            Broker: broker.RepresentativeName
-        })
-    })
-
-    intBrokers.data.map((agent: IAgent) => {
-        formatted.push({
-            BrokerID: null,
-            AgentID: agent.AgentID,
-            BrokerCode: agent.AgentCode,
-            Broker: agent.FullName || ( `${agent.LastName}, ${agent.FirstName} ${agent.MiddleName}` ).trim()
-        })
-    })
-
-    return { success: true, data: formatted };
-}
+    return { 
+        success: true, 
+        data: [...extFormatted, ...intFormatted] 
+    };
+};
 
 export const top10UMsService = async (date?: Date): QueryResult<any> => {
     // top 10 unit managers
@@ -1071,3 +1165,112 @@ export const top10SPsService = async (date?: Date): QueryResult<any> => {
 
 }
 
+export const getAgentUsersService = async (): QueryResult<Partial<ITblAgentUser>[]> => {
+
+    const result = await getAgentUsers()
+
+    if (!result.success) {
+        return { success: false, data: [], error: result.error };
+    }
+
+    const obj: Partial<ITblAgentUser>[] = result.data.map((user: ITblAgentUser) => {
+        return {
+            AgentUserID: user.AgentUserID,
+            Email: user.Email,
+            IsVerified: user.IsVerified,
+            ImageID: user.ImageID,
+            AgentID: user.AgentID,
+            AgentRegistrationID: user.AgentRegistrationID
+        }
+    });
+
+    return { success: true, data: obj };
+}
+
+export const addBrokerService = async (userId: number, data: IAddBroker) => {
+
+    let result: ITblBroker | ITblAgent | undefined = undefined 
+
+    if(data.BrokerType === 'hands-on'){
+
+        const mappedData = {
+            ...data,
+            AgentCode: data.BrokerCode,
+            AgentTaxRate: data.BrokerTaxRate
+        }
+
+        const existingAgent = await getAgentByCode(mappedData.AgentCode)
+    
+        if(existingAgent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Agent broker code already exists.'
+                }
+            }
+        }
+    
+        const position = await getPositions({positionName: 'BROKER'})
+
+        if(position.success){
+            mappedData.PositionID = position.data[0].PositionID
+        }
+    
+        const agentResult = await addAgent(userId, mappedData)
+    
+        if(!agentResult.success){
+            return {
+                success: false,
+                data: {},
+                error: agentResult.error
+            }
+        }
+
+        result = agentResult.data
+    }
+
+    else if (data.BrokerType === 'hands-off'){
+        
+        const existingBroker = await getBrokerByCode(data.BrokerCode)
+    
+        if(existingBroker.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Broker code already exists.'
+                }
+            }
+        }
+    
+        if(!data.PositionID){
+            const position = await getPositions({positionName: 'BROKER'})
+    
+            if(position.success){
+                data.PositionID = position.data[0].PositionID
+            }
+        }
+    
+    
+        const brokerResult = await addBroker(userId, data)
+    
+        if(!brokerResult.success){
+            return {
+                success: false,
+                data: {},
+                error: brokerResult.error
+            }
+        }
+
+        result = brokerResult.data
+    }
+
+
+    return {
+        success: true,
+        data: result
+    }
+}

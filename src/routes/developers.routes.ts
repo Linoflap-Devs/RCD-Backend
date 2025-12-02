@@ -6,7 +6,7 @@ import { validateRole } from '../middleware/roles';
 const router = express.Router();
 
 router.route('/web').get([validateEmployeeSession], getDevelopersController);
-router.route('/web').post([validateEmployeeSession, validateRole(['SA'])], addDeveloperController);
-router.route('/web/:developerId').patch([validateEmployeeSession, validateRole(['SA'])], editDeveloperController);
+router.route('/web').post([validateEmployeeSession, validateRole(['AD', 'SA'])], addDeveloperController);
+router.route('/web/:developerId').patch([validateEmployeeSession, validateRole(['AD', 'SA'])], editDeveloperController);
 
 export default router;

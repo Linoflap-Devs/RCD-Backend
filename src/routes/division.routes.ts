@@ -9,12 +9,12 @@ router.route('/agents').get([validateMobileSession], getAgentHierarchyController
 
 router.route('/top-10').get([validateEmployeeSession], getTop10DivisionsController);
 
-router.route('/:divisionId').delete([validateEmployeeSession, validateRole(['SA'])], deleteDivisionController);
+router.route('/:divisionId').delete([validateEmployeeSession, validateRole(['AD','SA'])], deleteDivisionController);
 
-router.route('/:divisionId').patch([validateEmployeeSession, validateRole(['SA'])], editDivisionController);
+router.route('/:divisionId').patch([validateEmployeeSession, validateRole(['AD','SA'])], editDivisionController);
 
 router.route('/').get([validateAgentEmployeeSession], getDivisionsController)
 
-router.route('/').post([validateEmployeeSession, validateRole(['SA'])], addDivisionController)
+router.route('/').post([validateEmployeeSession, validateRole(['AD','SA'])], addDivisionController)
 
 export default router;

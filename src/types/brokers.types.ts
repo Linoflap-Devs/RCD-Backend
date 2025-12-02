@@ -81,6 +81,7 @@ export interface ITblBroker {
       Religion: string | null;
       RepresentativeName: string;
       SelfieImageID: number | null;
+      Sex: string | null;
       SSSNumber: string | null;
       TelephoneNumber: string | null;
       TINNumber: string | null;
@@ -161,4 +162,36 @@ export interface ITblBrokerEducation {
   EndDate: Date | null;
   School: string;
   StartDate: Date;
+}
+
+export interface IAddBroker {
+    BrokerType: 'hands-on' | 'hands-off';
+    Address: string;
+    AddressEmergency: string;
+    AffiliationDate: Date;
+    BrokerCode: string;
+    BrokerTaxRate: number;
+    Birthdate: Date;
+    Birthplace: string | null;
+    CivilStatus: string;
+    ContactEmergency: string;
+    ContactNumber: string;
+    DivisionID: string | null;
+    DSHUDNumber: string | null;
+    EmployeeIDNumber: string | null;
+    FirstName: string;
+    LastName: string;
+    MiddleName: string;
+    PagIbigNumber: string | null;
+    PersonEmergency: string;
+    PhilhealthNumber: string | null;
+    PositionID?: number | null;
+    PRCNumber: string | null;
+    ReferredByID: number | null;
+    ReferredCode: string | null;
+    Religion: string | null;
+    Sex: string;
+    SSSNumber: string | null;
+    TelephoneNumber: string | null;
+    TINNumber: string | null;
 }

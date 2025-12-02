@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
-import { editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, top10SPsService, top10UMsService } from "../service/users.service";
+import { addBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker } from "../types/brokers.types";
+import { ITblUsersWeb } from "../types/auth.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
     const result = await getUsersService();
@@ -16,12 +17,41 @@ export const getUsersController = async (req: Request, res: Response) => {
         return
     }
 
+    const obj: Partial<ITblUsersWeb>[] = result.data.map((user: ITblUsersWeb) => ({
+        UserWebID: user.UserWebID,
+        UserCode: user.UserCode,
+        UserName: user.UserName,
+        EmpName: user.EmpName,
+        Role: user.Role,
+        BranchName: user.BranchName,
+        BranchID: user.BranchID
+    }))
+
     return res.status(200).json({
         success: true,
         message: "List of users.",
-        data: result
+        data: obj
     });
 };
+
+export const getAgentUsersController = async (req: Request, res: Response) => {
+    const result = await getAgentUsersService()
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get agent users.",
+            data: []
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "List of agent users.",
+        data: result.data
+    });
+}
 
 export const getAgentUserDetailsController = async (req: Request, res: Response) => {
     const session = req.session
@@ -83,6 +113,39 @@ export const getBrokerUserDetailsController = async (req: Request, res: Response
         message: "Broker details.",
         data: result.data
     });
+}
+
+export const getOtherBrokerUserDetailsController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { brokerId } = req.params
+
+    const result = await lookupBrokerDetailsService(Number(brokerId))
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get broker details.",
+            data: {}
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Broker details.",
+        data: result.data
+    })
 }
 
 export const getAgentGovIdsController = async (req: Request, res: Response) => {
@@ -447,7 +510,10 @@ export const editBrokerWorkExpController = async (req: Request, res: Response) =
 };
 
 export const getBrokersController = async (req: Request, res: Response) => {
-    const result = await getBrokersService()
+
+    const { showSales, month, year } = req.query
+
+    const result = await getBrokersService(showSales ? true : false, { month: month ? Number(month) : undefined, year: year ? Number(year) : undefined })
 
     if(!result.success){
         res.status(400).json({ 
@@ -523,4 +589,89 @@ export const getTop10SPsController = async (req: Request, res: Response) => {
         message: "Top 10 SPs.",
         data: result.data
     });
+}
+
+export const addBrokerController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        brokerType,
+        brokerCode,
+        lastName,
+        firstName,
+        middleName,
+        contactNumber,
+        brokerTaxRate,
+        civilStatus,
+        sex,
+        address,
+        birthdate,
+        referredByID,
+        prcNumber,
+        dshudNumber,
+        referredCode,
+        personEmergency,
+        contactEmergency,
+        addressEmergency,
+        affliationDate,
+        religion,
+        birthplace,
+        telephoneNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        employeeIdNumber
+    } = req.body
+
+    const result = await addBrokerService(session.userID,
+        {
+            BrokerType: brokerType,
+            BrokerCode: brokerCode,
+            LastName: lastName,
+            FirstName: firstName,
+            MiddleName: middleName,
+            ContactNumber: contactNumber,
+            DivisionID: null,
+            BrokerTaxRate: brokerTaxRate,
+            CivilStatus: civilStatus,
+            Sex: sex,
+            Address: address,
+            Birthdate: birthdate,
+            PositionID: undefined,
+            ReferredByID: referredByID,
+            PRCNumber: prcNumber,
+            DSHUDNumber: dshudNumber,
+            ReferredCode: referredCode,
+            PersonEmergency: personEmergency,
+            ContactEmergency: contactEmergency,
+            AddressEmergency: addressEmergency,
+            AffiliationDate: affliationDate,
+            Religion: religion,
+            Birthplace: birthplace,
+            TelephoneNumber: telephoneNumber,
+            SSSNumber: sssNumber,
+            PhilhealthNumber: philhealthNumber,
+            PagIbigNumber: pagibigNumber,
+            TINNumber: tinNumber,
+            EmployeeIDNumber: employeeIdNumber
+        }
+    )
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add broker.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Broker added.', data: result.data})
 }

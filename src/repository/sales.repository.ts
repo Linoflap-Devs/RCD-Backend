@@ -461,6 +461,86 @@ export const getTotalPersonalSales = async (user: {agentId?: number, brokerName?
     }
 }
 
+export const getMultipleTotalPersonalSales = async (
+    user: {
+        agentIds?: number[], 
+        brokerNames?: string[]
+    }, 
+    filters?: { 
+        month?: number, 
+        year?: number
+    }
+): QueryResult<{TotalSales: number, AgentID?: number, AgentName: string}[]> => {
+    try {
+        let result = await db.selectFrom('Vw_SalesTransactions')
+            .select(({fn, val, ref}) => [
+                fn.sum(ref('NetTotalTCP')).as('TotalSales')
+            ])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(user.agentIds && user.agentIds.length > 0){
+            result = result.where('AgentID', 'in', user.agentIds)
+
+            result = result.groupBy('AgentName')
+            result = result.groupBy('AgentID')
+
+            result = result.select(['AgentID', 'AgentName'])
+        }
+
+        if(user.brokerNames){
+            result = result.where('PositionName', '=', 'BROKER')
+            result = result.where('AgentName', 'in', user.brokerNames)
+
+            result = result.groupBy('AgentName')
+
+            result = result.select(['AgentName'])
+        }
+
+        if(filters && filters.month){
+
+            const year = filters.year || new Date().getFullYear();
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            // const firstDay = new Date( filters.year ||(new Date).getFullYear(), filters.month - 1, 1)
+            // const lastDay = new Date( filters.year ||(new Date).getFullYear(), filters.month, 1)
+
+            result = result.where('ReservationDate', '>', firstDay)
+            result = result.where('ReservationDate', '<', lastDay)
+        }
+
+        const queryResult = await result.execute()
+
+        if(!queryResult){
+            throw new Error('No sales found.')
+        }
+
+        return {
+            success: true,
+            data: queryResult as {TotalSales: number, AgentID?: number, AgentName: string}[]
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as {TotalSales: number, AgentID?: number, AgentName: string}[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getTotalDivisionSales = async (divisionId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
         let result = await db.selectFrom('vw_SalesTrans')
@@ -957,6 +1037,10 @@ export const getPendingSales = async (
         pageSize?: number
     }
 ): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+
+    console.log(filters)
+    
+
     try {
         const page = pagination?.page ?? 1;
         const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
@@ -994,8 +1078,8 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.agentId){
-            result = result.where('CreatedBy', '=', filters.agentId)
-            totalCountResult = totalCountResult.where('CreatedBy', '=', filters.agentId)
+            result = result.where('AgentID', '=', filters.agentId)
+            totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
         }
 
         if(filters && filters.brokerName){

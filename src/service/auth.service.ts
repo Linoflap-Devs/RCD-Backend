@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -970,6 +970,47 @@ export const changeEmployeePasswordAdminService = async (userId: number, employe
     // delete sessions
 
     const deleteSessions = await deleteEmployeeAllSessions(employeeUserId)
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const changeAgentUserPasswordAdminService = async (userId: number, agentUserId: number, newPassword: string): QueryResult<any> => {
+    const agentUser = await findAgentUserById(agentUserId)
+
+    if(!agentUser.success){
+        logger('Failed to find user.', {userId: agentUserId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    const hash = await hashPassword(newPassword)
+
+    const updatePassword = await changePassword(agentUser.data.agentUserId, hash)
+
+    if(!updatePassword.success){
+        logger('Failed to update password.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to update password.',
+                code: 500
+            }
+        }
+    }
+
+    // delete sessions
+
+    const deleteSessionsAgent = await deleteSessionUser(agentUser.data.agentUserId)
 
     return {
         success: true,
