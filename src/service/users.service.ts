@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getBrokers, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
@@ -10,7 +10,7 @@ import { addAgent, getAgentByCode, getAgents, getSalesPersonSalesTotalsFn, getUn
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistrationByUserId, getBrokers, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -239,6 +239,75 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
         data: obj
     }
 }
+
+// export const lookupBrokerDetailsService = async (agentId: number): QueryResult<any> => {
+
+//     const [
+//         agentWithUserResult,
+//         registrationResult,
+//         agentEducation,
+//         agentWork
+//     ] = await Promise.all([
+//         getAgentWithUser(agentId),
+//         getAgentRegistration({agentId: agentId}),
+//         getBrokerEducation(agentId),
+//         getBrokerWorkExp(agentId)
+//     ])
+
+//     console.log(agentWithUserResult, registrationResult, agentEducation, agentWork)
+
+//     let backupAgentData: VwAgents | undefined = undefined
+
+//     if(!agentWithUserResult.success){
+
+//         const agent = await getBrokers(agentId)
+
+//         if(!agent.success){
+//             return {
+//                 success: false,
+//                 data: null,
+//                 error: agent.error
+//             }
+//         }
+
+//         backupAgentData = agent.data
+//         // return {
+//         //     success: false,
+//         //     data: null,
+//         //     error: agentWithUserResult.error
+//         // }
+//     }
+
+//     const imageIds = []
+//     imageIds.push(agentWithUserResult.data.user.ImageID || null)
+//     imageIds.push(registrationResult.data.SelfieImageID || null)
+//     imageIds.push(registrationResult.data.GovImageID || null)
+
+//     // images
+
+//     const agentImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
+//     const formattedImages = agentImages.data.map((img: TblImageWithId) => {
+//             return {
+//                 ...img,
+//                 FileContent: img.FileContent.toString('base64')
+//             }
+//     })
+    
+//     const obj = {
+//         agent: agentWithUserResult.success ? agentWithUserResult.data.agent : backupAgentData,
+//         registrationResult: {
+//             ...registrationResult.data,
+//             experience: agentWork.data,
+//             education: agentEducation.data,
+//         },
+//         images: formattedImages
+//     }
+
+//     return {
+//         success: true,
+//         data: obj
+//     }
+// }
 
 export const getUserDetailsWebService = async (userWebId: number): QueryResult<any> => {
     const userDetails = await findEmployeeUserById(userWebId)
@@ -992,11 +1061,11 @@ export const getBrokersService = async (
     if (showSales) {
         const [extBrokerSales, intBrokerSales] = await Promise.all([
             getMultipleTotalPersonalSales(
-                { brokerNames: extBrokers.data.map(b => b.RepresentativeName) },
+                { brokerNames: extBrokers.data.map((b: any) => b.RepresentativeName) },
                 filters
             ),
             getMultipleTotalPersonalSales(
-                { agentIds: intBrokers.data.map(a => a.AgentID) },
+                { agentIds: intBrokers.data.map((a: any) => a.AgentID) },
                 filters
             )
         ]);
@@ -1143,14 +1212,11 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             }
         }
     
-        if(!data.PositionID){
-            const position = await getPositions({positionName: 'BROKER'})
-    
-            if(position.success){
-                data.PositionID = position.data[0].PositionID
-            }
+        const position = await getPositions({positionName: 'BROKER'})
+
+        if(position.success){
+            mappedData.PositionID = position.data[0].PositionID
         }
-    
     
         const agentResult = await addAgent(userId, mappedData)
     
