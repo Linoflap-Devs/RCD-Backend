@@ -1037,6 +1037,10 @@ export const getPendingSales = async (
         pageSize?: number
     }
 ): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+
+    console.log(filters)
+    
+
     try {
         const page = pagination?.page ?? 1;
         const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
@@ -1074,8 +1078,8 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.agentId){
-            result = result.where('CreatedBy', '=', filters.agentId)
-            totalCountResult = totalCountResult.where('CreatedBy', '=', filters.agentId)
+            result = result.where('AgentID', '=', filters.agentId)
+            totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
         }
 
         if(filters && filters.brokerName){

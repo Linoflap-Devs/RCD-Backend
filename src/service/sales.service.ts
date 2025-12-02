@@ -1026,6 +1026,8 @@ export const getCombinedPersonalSalesService = async (
                 agent = agentData.data
             }
         }
+
+
         
         // Get both approved and pending sales
         const [approvedSalesResult, pendingSalesResult] = await Promise.all([
@@ -1078,7 +1080,7 @@ export const getCombinedPersonalSalesService = async (
         }
 
         // Process pending sales
-        console.log(pendingSalesResult.data)
+        //console.log(pendingSalesResult.data)
         if (pendingSalesResult.success) {
             const pendingSales = pendingSalesResult.data.results.map((sale: AgentPendingSale) => {
 
@@ -1087,12 +1089,6 @@ export const getCombinedPersonalSalesService = async (
                 const role = RoleMap.get((agent?.Position || 'BROKER').toUpperCase()) || 0
 
                 const isSubmitter = role !== 0 && agent?.AgentID === (sale.CreatedBy)
-
-                if(sale.AgentPendingSalesID == 189){
-                    console.log(sale)
-                    console.log('role', role)
-                    console.log('isSubmitter', isSubmitter)
-                }
 
                 return {
                     salesId: null,
