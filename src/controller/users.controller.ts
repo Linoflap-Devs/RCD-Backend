@@ -477,7 +477,10 @@ export const editBrokerWorkExpController = async (req: Request, res: Response) =
 };
 
 export const getBrokersController = async (req: Request, res: Response) => {
-    const result = await getBrokersService()
+
+    const { showSales, month, year } = req.query
+
+    const result = await getBrokersService(showSales ? true : false, { month: month ? Number(month) : undefined, year: year ? Number(year) : undefined })
 
     if(!result.success){
         res.status(400).json({ 

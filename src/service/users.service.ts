@@ -12,6 +12,7 @@ import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBrokerImage, editBrokerImage, getBrokerEducation, getBrokerRegistrationByUserId, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
+import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -960,61 +961,85 @@ export const editBrokerWorkExpService = async (
     return { success: true, data: result.data };
 };
 
-export const getBrokersService = async (): QueryResult<{
-    BrokerID?: number | null, 
-    AgentID?: number | null, 
-    BrokerCode?: string | null,
-    AgentCode?: string | null,
-    Broker: string
+export const getBrokersService = async (
+  showSales: boolean = false, 
+  filters?: { month?: number; year?: number }
+): QueryResult<{
+  BrokerID?: number | null;
+  AgentID?: number | null;
+  BrokerCode?: string | null;
+  AgentCode?: string | null;
+  Broker: string;
 }[]> => {
+    // Get broker position ID
+    const brokerPosId = await getPositions({ positionName: 'BROKER' });
+    if (!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error };
 
-    const brokerPosId = await getPositions({ positionName: 'BROKER' })
-
-    if(!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error }
-
-    const [
-        extBrokers,
-        intBrokers
-    ] = await Promise.all([
+    // Fetch brokers and agents in parallel
+    const [extBrokers, intBrokers] = await Promise.all([
         getBrokers(),
-        getAgents({ positionId: [brokerPosId.data[0].PositionID]})
-    ])
+        getAgents({ positionId: [brokerPosId.data[0].PositionID] })
+    ]);
 
-    if (!extBrokers.success) {
-        return { success: false, data: [], error: extBrokers.error };
+    // Early return on errors
+    if (!extBrokers.success) return { success: false, data: [], error: extBrokers.error };
+    if (!intBrokers.success) return { success: false, data: [], error: intBrokers.error };
+
+    // Conditionally fetch sales data only if showSales is true
+    let extBrokerSalesMap = new Map<string, number>();
+    let intBrokerSalesMap = new Map<number, number>();
+
+    if (showSales) {
+        const [extBrokerSales, intBrokerSales] = await Promise.all([
+            getMultipleTotalPersonalSales(
+                { brokerNames: extBrokers.data.map(b => b.RepresentativeName) },
+                filters
+            ),
+            getMultipleTotalPersonalSales(
+                { agentIds: intBrokers.data.map(a => a.AgentID) },
+                filters
+            )
+        ]);
+
+        console.log(extBrokerSales, intBrokerSales);
+
+        // Create lookup maps for O(1) access
+        if (extBrokerSales.success) {
+            extBrokerSalesMap = new Map(
+                extBrokerSales.data.map((s: any) => [s.AgentName, s.TotalSales || 0])
+            );
+        }
+
+        if (intBrokerSales.success) {
+            intBrokerSalesMap = new Map(
+                intBrokerSales.data.map((s: any) => [s.AgentID, s.TotalSales || 0])
+            );
+        }
     }
 
-    if(!intBrokers.success) {
-        return { success: false, data: [], error: intBrokers.error };
-    }
+    // Format external brokers
+    const extFormatted = extBrokers.data.map((broker: ITblBroker) => ({
+        BrokerID: broker.BrokerID,
+        AgentID: null,
+        BrokerCode: broker.BrokerCode,
+        Broker: broker.RepresentativeName,
+        ...showSales && {PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0}
+    }));
 
-    const formatted: { 
-        BrokerID?: number | null, 
-        AgentID?: number | null, 
-        BrokerCode?: string | null,
-        AgentCode?: string | null,
-        Broker: string }[] = []
+    // Format internal brokers
+    const intFormatted = intBrokers.data.map((agent: IAgent) => ({
+        BrokerID: null,
+        AgentID: agent.AgentID,
+        BrokerCode: agent.AgentCode,
+        Broker: agent.FullName || `${agent.LastName}, ${agent.FirstName} ${agent.MiddleName}`.trim(),
+        ...showSales && {PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0}
+    }));
 
-    extBrokers.data.map((broker: ITblBroker) => {
-        formatted.push({
-            BrokerID: broker.BrokerID,
-            AgentID: null,
-            BrokerCode: broker.BrokerCode,
-            Broker: broker.RepresentativeName
-        })
-    })
-
-    intBrokers.data.map((agent: IAgent) => {
-        formatted.push({
-            BrokerID: null,
-            AgentID: agent.AgentID,
-            BrokerCode: agent.AgentCode,
-            Broker: agent.FullName || ( `${agent.LastName}, ${agent.FirstName} ${agent.MiddleName}` ).trim()
-        })
-    })
-
-    return { success: true, data: formatted };
-}
+    return { 
+        success: true, 
+        data: [...extFormatted, ...intFormatted] 
+    };
+};
 
 export const top10UMsService = async (date?: Date): QueryResult<any> => {
     // top 10 unit managers
