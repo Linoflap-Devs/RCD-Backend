@@ -1160,27 +1160,27 @@ export const editBrokerWorkExp = async (brokerId: number, editedWorkExp: Partial
     }
 }
 
-export const getBrokers = async (): QueryResult<ITblBroker[]> => {
-    try {
-        const result = await db.selectFrom('Tbl_Broker')
-            .selectAll()
-            .execute();
+// export const getBrokers = async (): QueryResult<ITblBroker[]> => {
+//     try {
+//         const result = await db.selectFrom('Tbl_Broker')
+//             .selectAll()
+//             .execute();
         
-        return {
-            success: true,
-            data: result
-        }
-    }
+//         return {
+//             success: true,
+//             data: result
+//         }
+//     }
 
-    catch (err: unknown) {
-        const error = err as Error;
-        return {
-            success: false,
-            data: [] as ITblBroker[],
-            error: {
-                code: 500,
-                message: error.message
-            }
-        }
-    }
-}
+//     catch (err: unknown) {
+//         const error = err as Error;
+//         return {
+//             success: false,
+//             data: [] as ITblBroker[],
+//             error: {
+//                 code: 500,
+//                 message: error.message
+//             }
+//         }
+//     }
+// }

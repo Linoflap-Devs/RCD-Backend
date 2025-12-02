@@ -3,14 +3,14 @@ import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistrationByUserId, getBrokers, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -240,74 +240,74 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     }
 }
 
-// export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<any> => {
+export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<any> => {
 
-//     const [
-//         agentWithUserResult,
-//         registrationResult,
-//         agentEducation,
-//         agentWork
-//     ] = await Promise.all([
-//         getAgentWithUser(agentId),
-//         getAgentRegistration({agentId: agentId}),
-//         getBrokerEducation(agentId),
-//         getBrokerWorkExp(agentId)
-//     ])
+    const [
+        brokerWithUserResult,
+        registrationResult,
+        brokerEducation,
+        brokerWork
+    ] = await Promise.all([
+        getBrokerWithUser(brokerId),
+        getBrokerRegistration({brokerId: brokerId}),
+        getBrokerEducation(brokerId),
+        getBrokerWorkExp(brokerId)
+    ])
 
-//     console.log(agentWithUserResult, registrationResult, agentEducation, agentWork)
+    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
 
-//     let backupAgentData: VwAgents | undefined = undefined
+    let backupBrokerData: ITblBroker | undefined = undefined
 
-//     if(!agentWithUserResult.success){
+    if(!brokerWithUserResult.success){
 
-//         const agent = await getBrokers({brokerId: brokerId})
+        const broker = await getBrokers({brokerId: brokerId})
 
-//         if(!agent.success){
-//             return {
-//                 success: false,
-//                 data: null,
-//                 error: agent.error
-//             }
-//         }
+        if(!broker.success){
+            return {
+                success: false,
+                data: null,
+                error: broker.error
+            }
+        }
 
-//         backupAgentData = agent.data
-//         // return {
-//         //     success: false,
-//         //     data: null,
-//         //     error: agentWithUserResult.error
-//         // }
-//     }
+        backupBrokerData = broker.data[0]
+        // return {
+        //     success: false,
+        //     data: null,
+        //     error: brokerWithUserResult.error
+        // }
+    }
 
-//     const imageIds = []
-//     imageIds.push(agentWithUserResult.data.user.ImageID || null)
-//     imageIds.push(registrationResult.data.SelfieImageID || null)
-//     imageIds.push(registrationResult.data.GovImageID || null)
+    const imageIds = []
+    imageIds.push(brokerWithUserResult.data.user.ImageID || null)
+    imageIds.push(registrationResult.data.SelfieImageID || null)
+    imageIds.push(registrationResult.data.GovImageID || null)
 
-//     // images
+    // images
 
-//     const agentImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
-//     const formattedImages = agentImages.data.map((img: TblImageWithId) => {
-//             return {
-//                 ...img,
-//                 FileContent: img.FileContent.toString('base64')
-//             }
-//     })
+    const brokerImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
+    const formattedImages = brokerImages.data.map((img: TblImageWithId) => {
+            return {
+                ...img,
+                FileContent: img.FileContent.toString('base64')
+            }
+    })
     
-//     const obj = {
-//         agent: agentWithUserResult.success ? agentWithUserResult.data.agent : backupAgentData,
-//         registrationResult: {
-//             ...registrationResult.data,
-//             experience: agentWork.data,
-//             education: agentEducation.data,
-//         },
-//         images: formattedImages
-//     }
+    const obj = {
+        broker: brokerWithUserResult.success ? brokerWithUserResult.data.broker : backupBrokerData,
+        registrationResult: {
+            ...registrationResult.data,
+            experience: brokerWork.data,
+            education: brokerEducation.data,
+        },
+        images: formattedImages
+    }
 
-//     return {
-//         success: true,
-//         data: obj
-//     }
-// }
+    return {
+        success: true,
+        data: obj
+    }
+}
 
 export const getUserDetailsWebService = async (userWebId: number): QueryResult<any> => {
     const userDetails = await findEmployeeUserById(userWebId)

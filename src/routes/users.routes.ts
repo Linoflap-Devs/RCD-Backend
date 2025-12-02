@@ -1,5 +1,5 @@
 import express from 'express';
-import { addBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokersController, getBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
+import { addBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokersController, getBrokerUserDetailsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
 import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -21,6 +21,7 @@ router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 
 router.route('/brokers').get([validateAllSessions], getBrokersController);
 router.route('/brokers').post([validateEmployeeSession, validateRole(['AD', 'SA']), validate(addBrokerSchema)], addBrokerController);
+router.route('/brokers/:brokerId').get([validateAllSessions], getOtherBrokerUserDetailsController);
 router.route('/broker-ids').get([validateBrokerSession], getBrokerGovIdsController);
 router.route('/broker-details').patch([validateBrokerSession], editBrokerDetailsController);
 router.route('/broker-image').patch([validateBrokerSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editBrokerImageController)

@@ -1,5 +1,6 @@
 import { db } from "../db/db"
 import { TblBrokerRegistration, TblBrokerWorkExp } from "../db/db-types"
+import { ITblBrokerUser } from "../types/auth.types"
 import { IAddBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types"
 import { QueryResult } from "../types/global.types"
 import { IImage, IImageBase64 } from "../types/image.types"
@@ -273,6 +274,175 @@ export const getBrokerByCode = async (code: string): QueryResult<ITblBroker> => 
         return {
             success: false,
             data: {} as ITblBroker,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getBrokerWithRegistration = async (brokerId: number): QueryResult<ITblBroker & ITblBrokerRegistration & ITblBrokerUser> => {
+    try {
+        const brokerResult = await db.selectFrom('Tbl_Broker')
+            .innerJoin('Tbl_BrokerUser'  , 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
+            .innerJoin('Tbl_BrokerRegistration', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
+            .selectAll()
+            .where('Tbl_Broker.BrokerID', '=', brokerId)
+            .executeTakeFirstOrThrow();
+
+        if (!brokerResult) {
+            return {
+                success: false,
+                data: {} as (ITblBroker & ITblBrokerRegistration & ITblBrokerUser),
+                error: {
+                    code: 404,
+                    message: 'Broker not found'
+                }
+            }
+        }
+        
+        return {
+            success: true,
+            data: brokerResult as (ITblBroker & ITblBrokerRegistration & ITblBrokerUser)
+        }
+            
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as (ITblBroker & ITblBrokerRegistration & ITblBrokerUser),
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getBrokerWithUser = async (agentId: number): QueryResult<{ broker: ITblBroker, user: ITblBrokerUser }> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .innerJoin('Tbl_BrokerUser', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
+            .innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_Broker.BrokerID')
+            .selectAll('Tbl_Broker')
+            .select([
+                'Tbl_Broker.Religion',
+                'Tbl_BrokerUser.BrokerUserID',
+                'Tbl_BrokerUser.BrokerID',
+                'Tbl_BrokerUser.BrokerRegistrationID',
+                'Tbl_BrokerUser.ImageID',
+                'Tbl_BrokerUser.Email',
+                'Tbl_BrokerUser.IsVerified'
+            ])
+            .where('Tbl_Broker.BrokerID', '=', agentId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {
+                broker: result, // contains both tables due to selectAll
+                user: result   // typescript will need proper typing here
+            }
+        }
+    }
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: { broker: {} as ITblBroker, user: {} as ITblBrokerUser },
+            error: {
+                code: error.message.includes('no result') ? 404 : 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getBrokerRegistration = async (filters?: {brokerId?: number, brokerRegistrationId?: number}): QueryResult<ITblBrokerRegistration> => {
+    try {
+        let registrationQuery = await db.selectFrom('Tbl_BrokerRegistration')
+            .innerJoin('Tbl_BrokerUser', 'Tbl_BrokerRegistration.BrokerRegistrationID', 'Tbl_BrokerUser.BrokerRegistrationID')
+            .selectAll('Tbl_BrokerRegistration')
+
+        if(filters?.brokerId){
+            registrationQuery = registrationQuery.where('Tbl_BrokerUser.BrokerID', '=', filters.brokerId)
+        }
+
+        if(filters?.brokerRegistrationId){
+            registrationQuery = registrationQuery.where('Tbl_BrokerRegistration.BrokerRegistrationID', '=', filters.brokerRegistrationId)
+        }
+
+        const registration = await registrationQuery.executeTakeFirst()
+
+        if(!registration){
+            return {
+                success: false,
+                data: {} as ITblBrokerRegistration,
+                error: {
+                    message: 'No agent registration found.',
+                    code: 404
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: registration
+        }
+        
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBrokerRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+
+export const getBrokers = async (filters?: { name?: string, showInactive?: boolean, brokerId: number }): QueryResult<ITblBroker[]> => {
+    try {
+        let result = await db.selectFrom('Tbl_Broker')
+            .selectAll()
+
+        if(filters && filters.brokerId){
+            result = result.where('BrokerID' , '=', filters.brokerId)
+        }
+
+        if(filters && filters.name){
+            result = result.where('RepresentativeName', '=', `${filters.name}`)
+        }
+
+        if(!filters || !filters.showInactive){
+            result = result.where('IsActive', '=', 1)
+        }
+
+        const queryResult = await result.execute();
+
+        if(!queryResult){
+            throw new Error('No agents found.');
+        }
+
+        return {
+            success: true,
+            data: queryResult
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as ITblBroker[],
             error: {
                 code: 500,
                 message: error.message
