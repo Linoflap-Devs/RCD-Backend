@@ -66,6 +66,64 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
     }
 }
 
+export const getAgentBrokers = async (filters?: { name?: string, showInactive?: boolean, division?: number }): QueryResult<any> => {
+    try {
+        let result = await db.selectFrom('Vw_Agents')
+            .selectAll()
+
+        if(filters && filters.division){
+            result = result.where('DivisionID' , '=', filters.division.toString())
+        }
+
+        if(filters && filters.name){
+            result = result.where('AgentName', '=', `${filters.name}`)
+        }
+
+        if(!filters || !filters.showInactive){
+            result = result.where('IsActive', '=', 1)
+        }
+
+        // if(filters && filters.positionId){
+        //     result = result.where('PositionID', 'in', filters.positionId)
+        // }
+        // else {
+        // }
+
+        result = result.where('Position', 'in', ['BROKERS', '-BROKER-', 'BROKER'])
+        
+        const queryResult = await result.execute();
+
+        if(!queryResult){
+            throw new Error('No agents found.');
+        }
+
+        // const obj: VwAgents[] = queryResult.map((item: VwAgents) => {
+        //     return {
+        //         ...item,
+        //         FullName: ( `${item.LastName?.trim()}, ${item.FirstName?.trim()} ${item.MiddleName?.trim()}` ).trim(),
+        //         Position: item.Position?.trim()
+        //     }
+        // })
+
+        return {
+            success: true,
+            data: queryResult
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as IAgent[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 // ORIGINAL
 
 // export const getAgentRegistrations = async (): QueryResult<IAgentRegistration[]> => {

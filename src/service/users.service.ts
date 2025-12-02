@@ -6,7 +6,7 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducati
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentByCode, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -240,7 +240,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     }
 }
 
-// export const lookupBrokerDetailsService = async (agentId: number): QueryResult<any> => {
+// export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<any> => {
 
 //     const [
 //         agentWithUserResult,
@@ -260,7 +260,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
 
 //     if(!agentWithUserResult.success){
 
-//         const agent = await getBrokers(agentId)
+//         const agent = await getBrokers({brokerId: brokerId})
 
 //         if(!agent.success){
 //             return {
@@ -1047,7 +1047,7 @@ export const getBrokersService = async (
     // Fetch brokers and agents in parallel
     const [extBrokers, intBrokers] = await Promise.all([
         getBrokers(),
-        getAgents({ positionId: [brokerPosId.data[0].PositionID] })
+        getAgentBrokers()
     ]);
 
     // Early return on errors
@@ -1100,7 +1100,7 @@ export const getBrokersService = async (
         BrokerID: null,
         AgentID: agent.AgentID,
         BrokerCode: agent.AgentCode,
-        Broker: agent.FullName || `${agent.LastName}, ${agent.FirstName} ${agent.MiddleName}`.trim(),
+        Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
         ...showSales && {PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0}
     }));
 
