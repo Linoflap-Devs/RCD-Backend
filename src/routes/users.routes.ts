@@ -1,6 +1,6 @@
 import express from 'express';
 import { editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokersController, getBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
-import { validateAgentEmployeeSession, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
+import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
@@ -18,7 +18,7 @@ router.route('/user-image').patch([validateSession, multerUpload.fields([{name: 
 router.route('/user-education').patch([validateSession], editAgentEducationController);
 router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 
-router.route('/brokers').get([validateMobileSession], getBrokersController);
+router.route('/brokers').get([validateAllSessions], getBrokersController);
 router.route('/broker-ids').get([validateBrokerSession], getBrokerGovIdsController);
 router.route('/broker-details').patch([validateBrokerSession], editBrokerDetailsController);
 router.route('/broker-image').patch([validateBrokerSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editBrokerImageController)
