@@ -1,3 +1,5 @@
+import { ITypedImageBase64 } from "./image.types";
+
 export interface IBroker {
     Address: string | null;
       AddressEmergency: string | null;
@@ -125,6 +127,45 @@ export interface ITblBrokerRegistration {
     UpdateBy: number | null;
 }
 
+export interface IBrokerRegistration {
+    BrokerRegistrationID: number,
+    IsVerified: number,
+    FirstName: string,
+    MiddleName?: string | null,
+    LastName: string,
+    Gender: 'Male' | 'Female',
+    CivilStatus: 'Single' | 'Married',
+    Religion: string,
+    Birthdate: Date,
+    Birthplace: string,
+    Address: string,
+    TelephoneNumber: string,
+    ContactNumber: string,
+    SssNumber?: string | null,
+    PhilhealthNumber?: string | null,
+    PagibigNumber?: string | null,
+    TinNumber?: string | null,
+    PrcNumber?: string | null,
+    DshudNumber?: string | null,
+    EmployeeIdNumber?: string | null,
+    Email: string,
+
+    Images?: ITypedImageBase64[] | null
+
+    Education: {
+        School: string,
+        Degree: string,
+        StartDate: Date,
+        EndDate?: Date | null
+    }[],
+    Experience: {
+        JobTitle: string,
+        Company: string,
+        StartDate: Date,
+        EndDate?: Date | null
+    }[]
+}
+
 export interface IEditBroker {
     name: string, 
     gender: 'Male' | 'Female',
@@ -145,8 +186,8 @@ export interface IEditBroker {
 }
 
 export interface ITblBrokerWorkExp {
-    BrokerID: number | null;
-    BrokerRegistrationID: number | null;
+    BrokerID?: number | null;
+    BrokerRegistrationID?: number | null;
     BrokerWorkExpID: number;
     Company: string;
     EndDate: Date | null;
@@ -156,12 +197,21 @@ export interface ITblBrokerWorkExp {
 
 export interface ITblBrokerEducation {
   BrokerEducationID: number;
-  BrokerID: number | null;
-  BrokerRegistrationID: number | null;
+  BrokerID?: number | null;
+  BrokerRegistrationID?: number | null;
   Degree: string;
   EndDate: Date | null;
   School: string;
   StartDate: Date;
+}
+
+export interface IBrokerRegistrationListItem {
+    AgentRegistrationID?: number | null,
+    BrokerRegistrationID?: number | null,
+    RepresentativeName: string,
+    Email: string,
+    Gender: string,
+    ContactNumber: string,
 }
 
 export interface IAddBroker {

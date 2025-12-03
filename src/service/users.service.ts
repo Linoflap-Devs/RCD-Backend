@@ -6,11 +6,11 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducati
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
-import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
-import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
+import { IAgentRegistration, ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
+import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
+import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -1109,6 +1109,61 @@ export const getBrokersService = async (
         data: [...extFormatted, ...intFormatted] 
     };
 };
+
+export const getBrokerRegistrationsService = async (brokerId?: number): QueryResult<IBrokerRegistrationListItem[]> => {
+
+    console.log("brokerId", brokerId)
+
+    const brokerPosition = await getPositions({positionName: 'BROKER'})
+    if(!brokerPosition.success || brokerPosition.data.length === 0){
+        return {
+            success: false,
+            data: [],
+            error: brokerPosition.error
+        }
+    }
+
+    const [
+        handsOffRegistrations,
+        handsOnRegistrations
+    ] = await Promise.all([
+        getBrokerRegistrations(),
+        getAgentRegistrations({ positionID: brokerPosition.data[0].PositionID})
+    ])
+
+    if(!handsOffRegistrations.success || !handsOnRegistrations.success){
+        return {
+            success: false,
+            data: [],
+            error: handsOffRegistrations.error || handsOnRegistrations.error
+        }
+    }
+
+    const handsOff: IBrokerRegistrationListItem[] = handsOffRegistrations.data.map((item: IBrokerRegistration) => ({
+        AgentRegistrationID: null,
+        BrokerRegistrationID: item.BrokerRegistrationID,
+        RepresentativeName: `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName?.trim()}`.trim(),
+        Email: item.Email,
+        Gender: item.Gender,
+        ContactNumber: item.ContactNumber
+    }))
+
+    const handsOn: IBrokerRegistrationListItem[] = handsOnRegistrations.data.map((item: IAgentRegistration) => {
+        return {
+            AgentRegistrationID: item.AgentRegistrationID,
+            BrokerRegistrationID: null,
+            RepresentativeName: `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName?.trim()}`.trim(),
+            Email: item.Email,
+            Gender: item.Gender,
+            ContactNumber: item.ContactNumber
+        }
+    })
+
+    return {
+        success: true,
+        data: [ ...handsOff, ...handsOn ]
+    }
+}
 
 export const top10UMsService = async (date?: Date): QueryResult<any> => {
     // top 10 unit managers

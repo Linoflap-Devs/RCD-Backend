@@ -252,7 +252,7 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
 //     }
 // }
 
-export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number}): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number, positionID?: number}): QueryResult<IAgentRegistration[]> => {
     try {
         // 1. Get base agent registration data with user info and all three images
         let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
@@ -310,6 +310,10 @@ export const getAgentRegistrations = async (filters?: {agentRegistrationId?: num
         console.log(filters)
         if(filters && filters.agentRegistrationId){
              baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+        }
+
+        if(filters && filters.positionID){
+            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
         }
 
         const baseAgentData = await baseAgentDataQuery
