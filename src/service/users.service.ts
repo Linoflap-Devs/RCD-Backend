@@ -13,6 +13,8 @@ import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, 
 import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
+import { getDivisionBrokers } from "../repository/division.repository";
+import { IBrokerDivision } from "../types/division.types";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1031,19 +1033,17 @@ export const editBrokerWorkExpService = async (
 };
 
 export const getBrokersService = async (
-  showSales: boolean = false, 
-  filters?: { month?: number; year?: number }
+    showSales: boolean = false, 
+    filters?: { month?: number; year?: number }
 ): QueryResult<{
-  BrokerID?: number | null;
-  AgentID?: number | null;
-  BrokerCode?: string | null;
-  AgentCode?: string | null;
-  Broker: string;
+    BrokerID?: number | null;
+    AgentID?: number | null;
+    BrokerCode?: string | null;
+    AgentCode?: string | null;
+    Broker: string;
+    Divisions: { DivisionID: number; DivisionName: string }[];
+    PersonalSales?: number;
 }[]> => {
-    // Get broker position ID
-    const brokerPosId = await getPositions({ positionName: 'BROKER' });
-    if (!brokerPosId.success) return { success: false, data: [], error: brokerPosId.error };
-
     // Fetch brokers and agents in parallel
     const [extBrokers, intBrokers] = await Promise.all([
         getBrokers(),
@@ -1053,6 +1053,32 @@ export const getBrokersService = async (
     // Early return on errors
     if (!extBrokers.success) return { success: false, data: [], error: extBrokers.error };
     if (!intBrokers.success) return { success: false, data: [], error: intBrokers.error };
+
+    // Fetch divisions
+    const divisions = await getDivisionBrokers({ 
+        agentIds: intBrokers.data.map((a: any) => a.AgentID), 
+        brokerIds: extBrokers.data.map((b: any) => b.BrokerID) 
+    });
+
+    if (!divisions.success) return { success: false, data: [], error: divisions.error };
+
+    // Create division lookup maps for O(1) access
+    const extBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
+    const intBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
+
+    divisions.data.forEach((d: IBrokerDivision) => {
+        const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName };
+        
+        if (d.BrokerID) {
+        const existing = extBrokerDivisionsMap.get(d.BrokerID) || [];
+        extBrokerDivisionsMap.set(d.BrokerID, [...existing, divisionInfo]);
+        }
+        
+        if (d.AgentID) {
+        const existing = intBrokerDivisionsMap.get(d.AgentID) || [];
+        intBrokerDivisionsMap.set(d.AgentID, [...existing, divisionInfo]);
+        }
+    });
 
     // Conditionally fetch sales data only if showSales is true
     let extBrokerSalesMap = new Map<string, number>();
@@ -1070,15 +1096,12 @@ export const getBrokersService = async (
             )
         ]);
 
-        console.log(extBrokerSales, intBrokerSales);
-
         // Create lookup maps for O(1) access
         if (extBrokerSales.success) {
             extBrokerSalesMap = new Map(
                 extBrokerSales.data.map((s: any) => [s.AgentName, s.TotalSales || 0])
             );
         }
-
         if (intBrokerSales.success) {
             intBrokerSalesMap = new Map(
                 intBrokerSales.data.map((s: any) => [s.AgentID, s.TotalSales || 0])
@@ -1091,17 +1114,21 @@ export const getBrokersService = async (
         BrokerID: broker.BrokerID,
         AgentID: null,
         BrokerCode: broker.BrokerCode,
+        AgentCode: null,
         Broker: broker.RepresentativeName,
-        ...showSales && {PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0}
+        Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
+        ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
     }));
 
     // Format internal brokers
     const intFormatted = intBrokers.data.map((agent: IAgent) => ({
         BrokerID: null,
         AgentID: agent.AgentID,
-        BrokerCode: agent.AgentCode,
+        BrokerCode: null,
+        AgentCode: agent.AgentCode,
         Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
-        ...showSales && {PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0}
+        Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
+        ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
     }));
 
     return { 
@@ -1109,7 +1136,6 @@ export const getBrokersService = async (
         data: [...extFormatted, ...intFormatted] 
     };
 };
-
 export const getBrokerRegistrationsService = async (brokerId?: number): QueryResult<IBrokerRegistrationListItem[]> => {
 
     console.log("brokerId", brokerId)
