@@ -321,8 +321,9 @@ export interface TblBroker {
 }
 
 export interface TblBrokerDivision {
+  AgentID: number | null;
   BrokerDivisionID: Generated<number>;
-  BrokerID: number;
+  BrokerID: number | null;
   DivisionID: number;
   LastUpdated: Generated<Date>;
   UpdatedBy: number;
