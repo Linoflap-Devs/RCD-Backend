@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
+import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -749,4 +749,29 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Broker edited.', data: result.data})
+}
+
+export const deleteWebBrokerController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { brokerId } = req.params
+
+    const result = await deleteWebBrokerService(session.userID, Number(brokerId))
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to delete broker.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Broker deleted.', data: result.data})
 }

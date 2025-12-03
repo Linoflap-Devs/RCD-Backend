@@ -10,7 +10,7 @@ import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgents, g
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -1320,4 +1320,35 @@ export const editWebBrokerService = async (userId: number, brokerId: number, dat
         data: result.data
     }
     
+}
+
+export const deleteWebBrokerService = async (userId: number, brokerId: number): QueryResult<ITblBroker> => {
+
+    const brokerData = await getBrokers({brokerId: brokerId})
+
+    if(!brokerData.success || brokerData.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 400,
+                message: 'Broker not found.'
+            }
+        }
+    }
+
+    const result = await deleteBroker(userId, brokerId) 
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }
