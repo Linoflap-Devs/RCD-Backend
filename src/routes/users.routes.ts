@@ -1,5 +1,5 @@
 import express from 'express';
-import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
+import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
 import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -22,6 +22,7 @@ router.route('/user-work').patch([validateSession], editAgentWorkExpController);
 router.route('/brokers').get([validateAllSessions], getBrokersController);
 router.route('/brokers').post([validateEmployeeSession, validateRole(['AD', 'SA']), validate(addBrokerSchema)], addBrokerController);
 router.route('/brokers/registrations').get([validateEmployeeSession, validateRole(['AD', 'SA', 'BH'])], getBrokerRegistrationsController);
+router.route('/brokers/registrations/:brokerRegistrationId').get([validateEmployeeSession, validateRole(['AD', 'SA', 'BH'])], getBrokerRegistrationDetailsController);
 router.route('/brokers/:brokerId').get([validateAllSessions], getOtherBrokerUserDetailsController);
 router.route('/brokers/:brokerId').patch([validateEmployeeSession, validateRole(['AD', 'SA', 'BH'])], editWebBrokerController);
 router.route('/brokers/:brokerId').delete([validateEmployeeSession, validateRole(['AD', 'SA'])], deleteWebBrokerController);

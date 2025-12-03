@@ -1165,6 +1165,26 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
     }
 }
 
+export const lookupBrokerRegistrationService = async (brokerRegistrationId: number): QueryResult<IBrokerRegistration> => {
+
+    const brokerRegistration = await getBrokerRegistrations({brokerRegistrationId: brokerRegistrationId})
+
+    if(!brokerRegistration.success){
+        return {
+            success: false,
+            data: {} as IBrokerRegistration,
+            error: brokerRegistration.error
+        }
+    }
+
+    console.log(brokerRegistration)
+
+    return {
+        success: true,
+        data: brokerRegistration.data[0]
+    }
+}
+
 export const top10UMsService = async (date?: Date): QueryResult<any> => {
     // top 10 unit managers
     const top10Ums = await getUnitManagerSalesTotalsFn(

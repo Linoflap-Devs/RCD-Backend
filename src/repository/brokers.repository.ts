@@ -718,6 +718,8 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             };
         });
 
+        console.log(result)
+
         return {
             success: true,
             data: result

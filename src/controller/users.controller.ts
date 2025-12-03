@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
+import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -561,6 +561,39 @@ export const getBrokerRegistrationsController = async (req: Request, res: Respon
     return res.status(200).json({
         success: true,
         message: "Broker registrations.",
+        data: result.data
+    })
+}
+
+export const getBrokerRegistrationDetailsController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    const { brokerRegistrationId } = req.params
+
+    const result = await lookupBrokerRegistrationService(Number(brokerRegistrationId))
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to get broker registration details.",
+            data: {}
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Broker registration details.",
         data: result.data
     })
 }
