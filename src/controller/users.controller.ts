@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { addBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
+import { addBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokersGovIdsService, getBrokersService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, top10SPsService, top10UMsService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
-import { IEditBroker } from "../types/brokers.types";
+import { IEditBroker, ITblBroker } from "../types/brokers.types";
 import { ITblUsersWeb } from "../types/auth.types";
 
 export const getUsersController = async (req: Request, res: Response) => {
@@ -674,4 +674,79 @@ export const addBrokerController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Broker added.', data: result.data})
+}
+
+export const editWebBrokerController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        brokerId
+    } = req.params
+
+     const {
+        brokerCode,
+        representativeName,
+        contactNumber,
+        civilStatus,
+        sex,
+        address,
+        birthdate,
+        referredByID,
+        prcNumber,
+        dshudNumber,
+        personEmergency,
+        contactEmergency,
+        addressEmergency,
+        religion,
+        birthplace,
+        telephoneNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        employeeIdNumber
+    } = req.body
+
+    const obj: Partial<ITblBroker> = {
+        BrokerCode: brokerCode,
+        RepresentativeName: representativeName,
+        ContactNumber: contactNumber,
+        CivilStatus: civilStatus,
+        Sex: sex,
+        Address: address,
+        Birthdate: birthdate,
+        ReferredByID: referredByID,
+        PRCNumber: prcNumber,
+        DSHUDNumber: dshudNumber,
+        PersonEmergency: personEmergency,
+        ContactEmergency: contactEmergency,
+        AddressEmergency: addressEmergency,
+        Religion: religion,
+        Birthplace: birthplace,
+        TelephoneNumber: telephoneNumber,
+        SSSNumber: sssNumber,
+        PhilhealthNumber: philhealthNumber,
+        PagIbigNumber: pagibigNumber,
+        TINNumber: tinNumber,
+        EmployeeIDNumber: employeeIdNumber
+    }
+
+    const result = await editWebBrokerService(session.userID, Number(brokerId), obj)
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit broker.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Broker edited.', data: result.data})
 }

@@ -256,6 +256,40 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
     }
 }
 
+export const editBroker = async (userId: number, brokerId: number, data: Partial<ITblBroker>): QueryResult<ITblBroker> => {
+    try {   
+        const updateData = {
+            ...data,
+            LastUpdate: new Date(),
+            Broker: data.RepresentativeName || undefined,
+            UpdateBy: userId
+        }
+
+        const result = await db.updateTable('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getBrokerByCode = async (code: string): QueryResult<ITblBroker> => {
     try {
         const result = await db.selectFrom('Tbl_Broker')

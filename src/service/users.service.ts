@@ -10,7 +10,7 @@ import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgents, g
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addBroker, addBrokerImage, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 
@@ -1273,4 +1273,51 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
         success: true,
         data: result
     }
+}
+
+export const editWebBrokerService = async (userId: number, brokerId: number, data: Partial<ITblBroker & {LastName?: string, FirstName?: string, MiddleName?: string}>): QueryResult<ITblBroker> => {
+
+    const brokerData = await getBrokers({brokerId: brokerId})
+
+    if(!brokerData.success || brokerData.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 400,
+                message: 'Broker not found.'
+            }
+        }
+    }
+
+    if(data.BrokerCode){
+        const existingBroker = await getBrokerByCode(data.BrokerCode)
+        
+        if(existingBroker.success){
+            return {
+                success: false,
+                data: {} as ITblBroker,
+                error: {
+                    code: 400,
+                    message: 'Broker code already exists.'
+                }
+            }
+        }
+    }
+    
+    const result = await editBroker(userId, brokerId, data)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+    
 }
