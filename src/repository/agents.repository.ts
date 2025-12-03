@@ -592,6 +592,13 @@ export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: IV
             .selectAll('Vw_Agents')
             .select([
                 'Tbl_Agents.Religion',
+                'Tbl_Agents.SSSNumber',
+                'Tbl_Agents.TINNumber',
+                'Tbl_Agents.PagIbigNumber',
+                'Tbl_Agents.PhilhealthNumber',
+                'Tbl_Agents.Birthplace',
+                'Tbl_Agents.AffiliationDate',
+                'Tbl_Agents.TelephoneNumber',
                 'Tbl_AgentUser.AgentUserID',
                 'Tbl_AgentUser.AgentID',
                 'Tbl_AgentUser.AgentRegistrationID',
@@ -629,7 +636,16 @@ export const getAgent = async (agentId: number): QueryResult<IVwAgents> => {
         const result = await db.selectFrom('Vw_Agents')
             .innerJoin('Tbl_Agents', 'Vw_Agents.AgentID', 'Tbl_Agents.AgentID')
             .selectAll('Vw_Agents')
-            .select(['Tbl_Agents.Religion'])
+            .select([
+                'Tbl_Agents.Religion',
+                'Tbl_Agents.SSSNumber',
+                'Tbl_Agents.TINNumber',
+                'Tbl_Agents.PagIbigNumber',
+                'Tbl_Agents.PhilhealthNumber',
+                'Tbl_Agents.Birthplace',
+                'Tbl_Agents.AffiliationDate',
+                'Tbl_Agents.TelephoneNumber',
+            ])
             .where('Vw_Agents.AgentID', '=', agentId)
             .executeTakeFirstOrThrow()
 
