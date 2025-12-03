@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { TblDivision, VwAgents } from "../db/db-types"
-import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision, IBrokerDivision } from "../types/division.types"
 
 // Divisions
 export const getDivisions = async (): QueryResult<ITblDivision[]> => {
@@ -160,6 +160,61 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
         return {
             success: false,
             data: [] as VwAgents[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const getDivisionBrokers = async (filters?: {agentIds?: number[], brokerIds?: number[]}): QueryResult<IBrokerDivision[]> => {
+
+    try {
+        let baseQuery = await db.selectFrom('Tbl_BrokerDivision')
+            .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'Tbl_BrokerDivision.DivisionID')
+            .select('Tbl_Division.Division')
+            .selectAll()
+        
+        const hasAgentFilter = filters?.agentIds && filters.agentIds.length > 0;
+        const hasBrokerFilter = filters?.brokerIds && filters.brokerIds.length > 0;
+
+        if (hasAgentFilter && hasBrokerFilter) {
+        // Use OR condition to match either AgentID or BrokerID
+        baseQuery = baseQuery.where((eb) =>
+            eb.or([
+            eb('AgentID', 'in', filters.agentIds!),
+            eb('BrokerID', 'in', filters.brokerIds!)
+            ])
+        );
+        } else if (hasAgentFilter) {
+            baseQuery = baseQuery.where('AgentID', 'in', filters.agentIds!);
+        } else if (hasBrokerFilter) {
+            baseQuery = baseQuery.where('BrokerID', 'in', filters.brokerIds!);
+        }
+
+        const result = await baseQuery.execute()
+
+        const obj: IBrokerDivision[] = result.map((item: any) => {
+            return {
+                DivisionName: item.Division,
+                AgentID: item.AgentID,
+                BrokerID: item.BrokerID,
+                DivisionID: item.DivisionID
+            }
+        })
+
+        return {
+            success: true,
+            data: obj
+        };
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as IBrokerDivision[],
             error: {
                 code: 400,
                 message: error.message

@@ -252,7 +252,7 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
 //     }
 // }
 
-export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number}): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number, positionID?: number}): QueryResult<IAgentRegistration[]> => {
     try {
         // 1. Get base agent registration data with user info and all three images
         let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
@@ -310,6 +310,10 @@ export const getAgentRegistrations = async (filters?: {agentRegistrationId?: num
         console.log(filters)
         if(filters && filters.agentRegistrationId){
              baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+        }
+
+        if(filters && filters.positionID){
+            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
         }
 
         const baseAgentData = await baseAgentDataQuery
@@ -592,6 +596,13 @@ export const getAgentWithUser = async (agentId: number): QueryResult<{ agent: IV
             .selectAll('Vw_Agents')
             .select([
                 'Tbl_Agents.Religion',
+                'Tbl_Agents.SSSNumber',
+                'Tbl_Agents.TINNumber',
+                'Tbl_Agents.PagIbigNumber',
+                'Tbl_Agents.PhilhealthNumber',
+                'Tbl_Agents.Birthplace',
+                'Tbl_Agents.AffiliationDate',
+                'Tbl_Agents.TelephoneNumber',
                 'Tbl_AgentUser.AgentUserID',
                 'Tbl_AgentUser.AgentID',
                 'Tbl_AgentUser.AgentRegistrationID',
@@ -629,7 +640,16 @@ export const getAgent = async (agentId: number): QueryResult<IVwAgents> => {
         const result = await db.selectFrom('Vw_Agents')
             .innerJoin('Tbl_Agents', 'Vw_Agents.AgentID', 'Tbl_Agents.AgentID')
             .selectAll('Vw_Agents')
-            .select(['Tbl_Agents.Religion'])
+            .select([
+                'Tbl_Agents.Religion',
+                'Tbl_Agents.SSSNumber',
+                'Tbl_Agents.TINNumber',
+                'Tbl_Agents.PagIbigNumber',
+                'Tbl_Agents.PhilhealthNumber',
+                'Tbl_Agents.Birthplace',
+                'Tbl_Agents.AffiliationDate',
+                'Tbl_Agents.TelephoneNumber',
+            ])
             .where('Vw_Agents.AgentID', '=', agentId)
             .executeTakeFirstOrThrow()
 

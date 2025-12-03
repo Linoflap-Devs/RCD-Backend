@@ -19,3 +19,10 @@ export interface IAddDivision {
     Division: string,
     DirectorId?: number
 }
+
+export interface IBrokerDivision {
+  AgentID?: number,
+  BrokerID?: number,
+  DivisionID: number,
+  DivisionName: string
+}

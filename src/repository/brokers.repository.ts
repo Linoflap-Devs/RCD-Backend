@@ -1,9 +1,9 @@
 import { db } from "../db/db"
 import { TblBrokerRegistration, TblBrokerWorkExp } from "../db/db-types"
 import { ITblBrokerUser } from "../types/auth.types"
-import { IAddBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types"
+import { IAddBroker, IBrokerRegistration, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types"
 import { QueryResult } from "../types/global.types"
-import { IImage, IImageBase64 } from "../types/image.types"
+import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types"
 import { bufferToBase64 } from "../utils/utils"
 
 export const getBrokerRegistrationByUserId = async (brokerUserId: number): QueryResult<ITblBrokerRegistration> => {
@@ -256,6 +256,71 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
     }
 }
 
+export const editBroker = async (userId: number, brokerId: number, data: Partial<ITblBroker>): QueryResult<ITblBroker> => {
+    try {   
+        const updateData = {
+            ...data,
+            LastUpdate: new Date(),
+            Broker: data.RepresentativeName || undefined,
+            UpdateBy: userId
+        }
+
+        const result = await db.updateTable('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteBroker = async (userId: number, brokerId: number): QueryResult<ITblBroker> => {
+    try {
+        const result = await db.updateTable('Tbl_Broker')
+            .where('BrokerID', '=', brokerId)
+            .set({
+                UpdateBy: userId,
+                LastUpdate: new Date(),
+                IsActive: 0
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBroker,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getBrokerByCode = async (code: string): QueryResult<ITblBroker> => {
     try {
         const result = await db.selectFrom('Tbl_Broker')
@@ -448,5 +513,226 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
                 message: error.message
             }
         }
+    }
+}
+
+export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: number}): QueryResult<IBrokerRegistration[]> => {
+    try {
+        // 1. Get base broker registration data with user info and all three images
+        let baseBrokerDataQuery = await db.selectFrom('Tbl_BrokerRegistration')
+            .innerJoin('Tbl_BrokerUser', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
+            // Join for profile image
+            .leftJoin('Tbl_Image as ProfileImage', 'Tbl_BrokerUser.ImageID', 'ProfileImage.ImageID')
+            // Join for government ID image
+            .leftJoin('Tbl_Image as GovImage', 'Tbl_BrokerRegistration.GovImageID', 'GovImage.ImageID')
+            // Join for selfie image
+            .leftJoin('Tbl_Image as SelfieImage', 'Tbl_BrokerRegistration.SelfieImageID', 'SelfieImage.ImageID')
+            .select([
+                'Tbl_BrokerRegistration.BrokerRegistrationID',
+                'Tbl_BrokerRegistration.IsVerified',
+                'Tbl_BrokerRegistration.FirstName',
+                'Tbl_BrokerRegistration.MiddleName', 
+                'Tbl_BrokerRegistration.LastName',
+                'Tbl_BrokerRegistration.Address',
+                'Tbl_BrokerRegistration.Birthdate',
+                'Tbl_BrokerRegistration.Birthplace',
+                'Tbl_BrokerRegistration.CivilStatus',
+                'Tbl_BrokerRegistration.ContactNumber',
+                'Tbl_BrokerRegistration.Sex',
+                'Tbl_BrokerRegistration.Religion',
+                'Tbl_BrokerRegistration.TelephoneNumber',
+                'Tbl_BrokerRegistration.SSSNumber',
+                'Tbl_BrokerRegistration.PhilhealthNumber',
+                'Tbl_BrokerRegistration.PagIbigNumber',
+                'Tbl_BrokerRegistration.TINNumber',
+                'Tbl_BrokerRegistration.PRCNumber',
+                'Tbl_BrokerRegistration.DSHUDNumber',
+                'Tbl_BrokerRegistration.EmployeeIDNumber',
+                'Tbl_BrokerUser.Email',
+                'Tbl_BrokerUser.Password',
+                'Tbl_BrokerUser.BrokerID',
+                // Profile image fields
+                'ProfileImage.Filename as ProfileFilename',
+                'ProfileImage.ContentType as ProfileContentType',
+                'ProfileImage.FileExtension as ProfileFileExtension',
+                'ProfileImage.FileSize as ProfileFileSize',
+                'ProfileImage.FileContent as ProfileFileContent',
+                // Government ID image fields
+                'GovImage.Filename as GovFilename',
+                'GovImage.ContentType as GovContentType',
+                'GovImage.FileExtension as GovFileExtension',
+                'GovImage.FileSize as GovFileSize',
+                'GovImage.FileContent as GovFileContent',
+                // Selfie image fields
+                'SelfieImage.Filename as SelfieFilename',
+                'SelfieImage.ContentType as SelfieContentType',
+                'SelfieImage.FileExtension as SelfieFileExtension',
+                'SelfieImage.FileSize as SelfieFileSize',
+                'SelfieImage.FileContent as SelfieFileContent'
+            ])
+
+        console.log(filters)
+        if(filters && filters.brokerRegistrationId){
+            baseBrokerDataQuery = baseBrokerDataQuery.where('Tbl_BrokerRegistration.BrokerRegistrationID', '=', filters.brokerRegistrationId);
+        }
+
+        const baseBrokerData = await baseBrokerDataQuery
+            .where('Tbl_BrokerRegistration.IsVerified', '=', 0)
+            .orderBy('Tbl_BrokerRegistration.BrokerRegistrationID', 'asc')
+            .execute();
+
+        if (baseBrokerData.length === 0) {
+            return {
+                success: true,
+                data: []
+            };
+        }
+
+        console.log("base broker data", baseBrokerData.length)
+
+        const brokerRegistrationIds = baseBrokerData.map(broker => broker.BrokerRegistrationID);
+
+        // 2. Get education data for all brokers in one query
+        const educationData = await db.selectFrom('Tbl_BrokerEducation')
+            .select([
+                'BrokerEducationID',
+                'BrokerID',
+                'BrokerRegistrationID',
+                'Degree',
+                'EndDate',
+                'School',
+                'StartDate'
+            ])
+            .where('BrokerRegistrationID', 'in', brokerRegistrationIds)
+            .execute();
+
+        // 3. Get work experience data for all brokers in one query
+        const workExpData = await db.selectFrom('Tbl_BrokerWorkExp')
+            .select([
+                'BrokerWorkExpID',
+                'BrokerID', 
+                'BrokerRegistrationID',
+                'Company',
+                'EndDate',
+                'JobTitle',
+                'StartDate'
+            ])
+            .where('BrokerRegistrationID', 'in', brokerRegistrationIds)
+            .execute();
+
+        // 4. Create lookup maps for efficient data retrieval
+        const educationByBrokerId = educationData.reduce((acc, edu) => {
+            if (!acc[edu.BrokerRegistrationID!]) {
+                acc[edu.BrokerRegistrationID!] = [];
+            }
+            acc[edu.BrokerRegistrationID!].push({
+                BrokerEducationID: edu.BrokerEducationID,
+                Degree: edu.Degree,
+                EndDate: edu.EndDate,
+                School: edu.School,
+                StartDate: edu.StartDate
+            });
+            return acc;
+        }, {} as Record<number, ITblBrokerEducation[]>);
+
+        const workExpByBrokerId = workExpData.reduce((acc, work) => {
+            if (!acc[work.BrokerRegistrationID!]) {
+                acc[work.BrokerRegistrationID!] = [];
+            }
+            acc[work.BrokerRegistrationID!].push({
+                BrokerWorkExpID: work.BrokerWorkExpID,
+                Company: work.Company,
+                EndDate: work.EndDate || null,
+                JobTitle: work.JobTitle,
+                StartDate: work.StartDate
+            });
+            return acc;
+        }, {} as Record<number, ITblBrokerWorkExp[]>);
+
+        // 5. Build the final result array
+        const result: IBrokerRegistration[] = baseBrokerData.map(broker => {
+            // Build images array
+            const images: ITypedImageBase64[] = [];
+
+            // Add profile image
+            if (broker.ProfileFileContent) {
+                images.push({
+                    FileName: broker.ProfileFilename || '',
+                    ContentType: broker.ProfileContentType || '',
+                    FileExt: broker.ProfileFileExtension || '',
+                    FileSize: broker.ProfileFileSize || 0,
+                    FileContent: broker.ProfileFileContent.toString('base64'),
+                    ImageType: 'profile'
+                });
+            }
+
+            // Add government ID image
+            if (broker.GovFileContent) {
+                images.push({
+                    FileName: broker.GovFilename || '',
+                    ContentType: broker.GovContentType || '',
+                    FileExt: broker.GovFileExtension || '',
+                    FileSize: broker.GovFileSize || 0,
+                    FileContent: broker.GovFileContent.toString('base64'),
+                    ImageType: 'govid'
+                });
+            }
+
+            // Add selfie image
+            if (broker.SelfieFileContent) {
+                images.push({
+                    FileName: broker.SelfieFilename || '',
+                    ContentType: broker.SelfieContentType || '',
+                    FileExt: broker.SelfieFileExtension || '',
+                    FileSize: broker.SelfieFileSize || 0,
+                    FileContent: broker.SelfieFileContent.toString('base64'),
+                    ImageType: 'selfie'
+                });
+            }
+
+            return {
+                BrokerRegistrationID: broker.BrokerRegistrationID,
+                IsVerified: broker.IsVerified,
+                FirstName: broker.FirstName,
+                MiddleName: broker.MiddleName,
+                LastName: broker.LastName,
+                Email: broker.Email,
+                Gender: broker.Sex as ('Male' | 'Female'),
+                CivilStatus: broker.CivilStatus as ('Single' | 'Married'),
+                Religion: broker.Religion || '',
+                Birthdate: broker.Birthdate,
+                Birthplace: broker.Birthplace || '',
+                Address: broker.Address,
+                TelephoneNumber: broker.TelephoneNumber || '',
+                ContactNumber: broker.ContactNumber,
+                SssNumber: broker.SSSNumber || '',
+                PhilhealthNumber: broker.PhilhealthNumber,
+                PagibigNumber: broker.PagIbigNumber,
+                TinNumber: broker.TINNumber,
+                PrcNumber: broker.PRCNumber,
+                DshudNumber: broker.DSHUDNumber,
+                EmployeeIdNumber: broker.EmployeeIDNumber,
+                Images: images,
+                Experience: workExpByBrokerId[broker.BrokerRegistrationID] || [],
+                Education: educationByBrokerId[broker.BrokerRegistrationID] || []
+            };
+        });
+
+        console.log(result)
+
+        return {
+            success: true,
+            data: result
+        };
+    } catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as IBrokerRegistration[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        };
     }
 }
