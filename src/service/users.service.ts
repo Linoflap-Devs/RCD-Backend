@@ -294,6 +294,21 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
                 FileContent: img.FileContent.toString('base64')
             }
     })
+
+    // divisions
+
+    let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
+
+    const divisions = await getDivisionBrokers({brokerIds: [brokerId]})
+
+    if(divisions.success){
+        divisions.data.map((item: IBrokerDivision) => {
+            allowedDivisions.push({
+                DivisionID: item.DivisionID,
+                DivisionName: item.DivisionName
+            })
+        })
+    }
     
     const obj = {
         broker: brokerWithUserResult.success ? brokerWithUserResult.data.broker : backupBrokerData,
@@ -302,6 +317,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
             experience: brokerWork.data,
             education: brokerEducation.data,
         },
+        divisions: allowedDivisions,
         images: formattedImages
     }
 
