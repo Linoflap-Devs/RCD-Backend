@@ -341,7 +341,7 @@ export const editBrokerDetailsController = async (req: Request, res: Response) =
         contactNumber: contactNumber
     }
 
-    const result = await editBrokerService(session.userID, obj)
+const result = await editBrokerService(session.userID, obj)
 
     if(!result.success){
         res.status(400).json({ 
@@ -781,8 +781,11 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        divisions
     } = req.body
+
+    const divisionsMap: number[] | undefined = divisions ? (divisions as number[]).map((div: number) => { return Number(div)}) : undefined
 
     const obj: Partial<ITblBroker> = {
         BrokerCode: brokerCode,
@@ -808,7 +811,7 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
         EmployeeIDNumber: employeeIdNumber
     }
 
-    const result = await editWebBrokerService(session.userID, Number(brokerId), obj)
+    const result = await editWebBrokerService(session.userID, Number(brokerId), obj, divisionsMap)
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit broker.', data: {}})
