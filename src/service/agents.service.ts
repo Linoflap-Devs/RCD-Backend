@@ -1,6 +1,6 @@
 import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
-import { getDivisionBrokers } from "../repository/division.repository";
+import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
@@ -234,7 +234,7 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
     }
 }
 
-export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>) => {
+export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>, divisions?: number[]) => {
 
     if(data.AgentCode){
         data.AgentCode = undefined
@@ -243,11 +243,11 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
     console.log('edit data', data)
 
     // verify position ID
+    const agentData = await findAgentDetailsByAgentId(agentId)
+    const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
 
     if(data.PositionID){
         
-        const agentData = await findAgentDetailsByAgentId(agentId)
-    
         if(!agentData.success){
             return {
                 success: false,
@@ -267,7 +267,7 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
             }
         }
 
-        const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
+       
 
         if(positionName?.includes('broker')) {
             return {
@@ -355,6 +355,24 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
         }
     }
 
+    // edit divisions
+
+    console.log(positionName)
+    console.log(divisions)
+
+    if(positionName && positionName.includes('broker')){
+        if(divisions){
+            const editDivisions = await editDivisionBroker(userId, divisions, {agentId: agentId})
+
+            if(!editDivisions.success){
+                return {
+                    success: false,
+                    data: {},
+                    error: editDivisions.error
+                }
+            }
+        }
+    }
     return {
         success: true,
         data: result.data

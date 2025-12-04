@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { TblDivision, VwAgents } from "../db/db-types"
-import { IAddDivision, IDivision, ITblDivision, IBrokerDivision } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision } from "../types/division.types"
 
 // Divisions
 export const getDivisions = async (): QueryResult<ITblDivision[]> => {
@@ -221,4 +221,62 @@ export const getDivisionBrokers = async (filters?: {agentIds?: number[], brokerI
             },
         }
     }
+}
+
+export const editDivisionBroker = async (userId: number,  divisionIds: number[], broker: {agentId?: number, brokerId?: number}): QueryResult<ITblBrokerDivision[]> => {
+    const trx = await db.startTransaction().execute();
+    try {
+         // Delete existing divisions for the specific broker or agent
+        let deleteQuery = trx.deleteFrom('Tbl_BrokerDivision');
+        
+        if (broker.agentId !== undefined) {
+            deleteQuery = deleteQuery.where('AgentID', '=', broker.agentId);
+        } else if (broker.brokerId !== undefined) {
+            deleteQuery = deleteQuery.where('BrokerID', '=', broker.brokerId);
+        } else {
+            // If neither is provided, rollback and return error
+            await trx.rollback().execute();
+            return {
+                success: false,
+                data: [] as ITblBrokerDivision[],
+                error: {
+                    code: 400,
+                    message: 'Either agentId or brokerId must be provided'
+                }
+            };
+        }
+        
+        await deleteQuery.execute();
+        
+        const insertNew = await trx.insertInto('Tbl_BrokerDivision')
+            .values(divisionIds.map((divisionId) => ({
+                AgentID: broker.agentId || null,
+                BrokerID: broker.brokerId || null,
+                DivisionID: divisionId,
+                UpdatedBy: userId
+            })))
+            .outputAll('inserted')
+            .execute()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: insertNew
+        }
+
+    }
+
+    catch(err: unknown) {
+        trx.rollback().execute()
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblBrokerDivision[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }   
 }
