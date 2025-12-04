@@ -131,8 +131,9 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
 
     const brokerPositionId = brokerPosition.data[0].PositionID
 
-    if(agentWithUserResult.success){
-        if(agentWithUserResult.data.agent.PositionID === brokerPositionId){
+    if(agentWithUserResult.success || backupAgentData){
+        const posId = agentWithUserResult.data.agent.PositionID || backupAgentData?.PositionID  || 0
+        if(posId === brokerPositionId){
             isBroker = true
             
             brokerDivisions.data.map((item: IBrokerDivision) => {
