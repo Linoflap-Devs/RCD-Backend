@@ -1132,6 +1132,8 @@ export const getBrokersService = async (
         BrokerCode: broker.BrokerCode,
         AgentCode: null,
         Broker: broker.RepresentativeName,
+        AgentRegistrationID: null,
+        BrokerRegistrationID: broker.BrokerRegistrationID || null,
         Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
         ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
     }));
@@ -1143,6 +1145,8 @@ export const getBrokersService = async (
         BrokerCode: null,
         AgentCode: agent.AgentCode,
         Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
+        AgentRegistrationID: agent.AgentRegistrationID || null,
+        BrokerRegistrationID: null,
         Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
         ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
     }));

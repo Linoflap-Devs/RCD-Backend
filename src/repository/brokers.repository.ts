@@ -477,7 +477,10 @@ export const getBrokerRegistration = async (filters?: {brokerId?: number, broker
 export const getBrokers = async (filters?: { name?: string, showInactive?: boolean, brokerId: number }): QueryResult<ITblBroker[]> => {
     try {
         let result = await db.selectFrom('Tbl_Broker')
-            .selectAll()
+            .leftJoin('Tbl_BrokerUser', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
+            .leftJoin('Tbl_BrokerRegistration', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
+            .selectAll('Tbl_Broker')
+            .select('Tbl_BrokerRegistration.BrokerRegistrationID')
 
         if(filters && filters.brokerId){
             result = result.where('BrokerID' , '=', filters.brokerId)
