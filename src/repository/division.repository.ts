@@ -247,22 +247,28 @@ export const editDivisionBroker = async (userId: number,  divisionIds: number[],
         }
         
         await deleteQuery.execute();
-        
-        const insertNew = await trx.insertInto('Tbl_BrokerDivision')
-            .values(divisionIds.map((divisionId) => ({
-                AgentID: broker.agentId || null,
-                BrokerID: broker.brokerId || null,
-                DivisionID: divisionId,
-                UpdatedBy: userId
-            })))
-            .outputAll('inserted')
-            .execute()
+
+        let inserted: ITblBrokerDivision[] = [] 
+
+        if(divisionIds.length > 0){
+            const insertNew = await trx.insertInto('Tbl_BrokerDivision')
+                .values(divisionIds.map((divisionId) => ({
+                    AgentID: broker.agentId || null,
+                    BrokerID: broker.brokerId || null,
+                    DivisionID: divisionId,
+                    UpdatedBy: userId
+                })))
+                .outputAll('inserted')
+                .execute()
+
+            inserted = insertNew
+        }
 
         await trx.commit().execute()
 
         return {
             success: true,
-            data: insertNew
+            data: inserted
         }
 
     }

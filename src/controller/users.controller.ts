@@ -785,7 +785,14 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
         divisions
     } = req.body
 
-    const divisionsMap: number[] | undefined = divisions ? (divisions as number[]).map((div: number) => { return Number(div)}) : undefined
+    console.log("divisions param ", divisions)
+
+    const divisionsMap: number[] | undefined = 
+    divisions !== undefined && Array.isArray(divisions)
+        ? divisions
+            .filter((div: any) => div !== '' && div !== null && div !== undefined)
+            .map((div: any) => Number(div))
+        : undefined
 
     const obj: Partial<ITblBroker> = {
         BrokerCode: brokerCode,

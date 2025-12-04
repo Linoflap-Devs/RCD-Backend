@@ -223,7 +223,15 @@ export const editAgentController = async (req: Request, res: Response) =>{
         divisions
     } = req.body
 
-    const divisionsMap: number[] | undefined = divisions ? (divisions as number[]).map((div: number) => { return Number(div)}) : undefined
+    console.log("divisions", divisions)
+
+    const divisionsMap: number[] | undefined = 
+    divisions !== undefined && Array.isArray(divisions)
+        ? divisions
+            .filter((div: any) => div !== '' && div !== null && div !== undefined)
+            .map((div: any) => Number(div))
+        : undefined
+
 
     const result = await editAgentService(
         session.userID,
