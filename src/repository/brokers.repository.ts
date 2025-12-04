@@ -483,15 +483,15 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
             .select('Tbl_BrokerRegistration.BrokerRegistrationID')
 
         if(filters && filters.brokerId){
-            result = result.where('BrokerID' , '=', filters.brokerId)
+            result = result.where('Tbl_Broker.BrokerID' , '=', filters.brokerId)
         }
 
         if(filters && filters.name){
-            result = result.where('RepresentativeName', '=', `${filters.name}`)
+            result = result.where('Tbl_Broker.RepresentativeName', '=', `${filters.name}`)
         }
 
         if(!filters || !filters.showInactive){
-            result = result.where('IsActive', '=', 1)
+            result = result.where('Tbl_Broker.IsActive', '=', 1)
         }
 
         const queryResult = await result.execute();
