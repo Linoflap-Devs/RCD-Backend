@@ -6,6 +6,7 @@ export interface IAgent {
     AffiliationDate: Date;
     AgentCode: string;
     AgentID: number;
+    AgentRegistrationID?: number | null;
     AgentTaxRate: number;
     Birthdate: Date;
     Birthplace: string | null;

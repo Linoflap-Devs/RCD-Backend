@@ -20,6 +20,15 @@ export interface IAddDivision {
     DirectorId?: number
 }
 
+export interface ITblBrokerDivision {
+  AgentID: number | null;
+  BrokerDivisionID: number;
+  BrokerID: number | null;
+  DivisionID: number;
+  LastUpdated: Date;
+  UpdatedBy: number;
+}
+
 export interface IBrokerDivision {
   AgentID?: number,
   BrokerID?: number,

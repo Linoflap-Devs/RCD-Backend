@@ -219,8 +219,19 @@ export const editAgentController = async (req: Request, res: Response) =>{
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        divisions
     } = req.body
+
+    console.log("divisions", divisions)
+
+    const divisionsMap: number[] | undefined = 
+    divisions !== undefined && Array.isArray(divisions)
+        ? divisions
+            .filter((div: any) => div !== '' && div !== null && div !== undefined)
+            .map((div: any) => Number(div))
+        : undefined
+
 
     const result = await editAgentService(
         session.userID,
@@ -254,7 +265,8 @@ export const editAgentController = async (req: Request, res: Response) =>{
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber
-        }
+        },
+        divisionsMap
     )
 
     if(!result.success) {

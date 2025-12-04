@@ -69,7 +69,10 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
 export const getAgentBrokers = async (filters?: { name?: string, showInactive?: boolean, division?: number }): QueryResult<any> => {
     try {
         let result = await db.selectFrom('Vw_Agents')
-            .selectAll()
+            .leftJoin('Tbl_AgentUser', 'Vw_Agents.AgentID', 'Tbl_AgentUser.AgentID')
+            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            .selectAll('Vw_Agents')
+            .select('Tbl_AgentRegistration.AgentRegistrationID')
 
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())

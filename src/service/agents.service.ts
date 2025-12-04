@@ -1,9 +1,11 @@
 import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
+import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
+import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
 import { IAgent } from "../types/users.types";
@@ -117,6 +119,31 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
                 FileContent: img.FileContent.toString('base64')
             }
     })
+
+    // divisions
+
+    const brokerDivisions = await getDivisionBrokers({ agentIds: [agentId]})
+
+    const brokerPosition = await getPositions({ positionName: 'BROKER' })
+
+    let isBroker = false
+    let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
+
+    const brokerPositionId = brokerPosition.data[0].PositionID
+
+    if(agentWithUserResult.success || backupAgentData){
+        const posId = agentWithUserResult.data.agent.PositionID || backupAgentData?.PositionID  || 0
+        if(posId === brokerPositionId){
+            isBroker = true
+            
+            brokerDivisions.data.map((item: IBrokerDivision) => {
+                allowedDivisions.push({
+                    DivisionName: item.DivisionName,
+                    DivisionID: item.DivisionID 
+                })
+            })        
+        }
+    }
     
     const obj = {
         agent: agentWithUserResult.success ? agentWithUserResult.data.agent : backupAgentData,
@@ -125,6 +152,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
             experience: agentWork.data,
             education: agentEducation.data,
         },
+        ...isBroker && { divisions: allowedDivisions },
         images: formattedImages
     }
 
@@ -207,7 +235,7 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
     }
 }
 
-export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>) => {
+export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>, divisions?: number[]) => {
 
     if(data.AgentCode){
         data.AgentCode = undefined
@@ -216,11 +244,11 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
     console.log('edit data', data)
 
     // verify position ID
+    const agentData = await findAgentDetailsByAgentId(agentId)
+    const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
 
     if(data.PositionID){
         
-        const agentData = await findAgentDetailsByAgentId(agentId)
-    
         if(!agentData.success){
             return {
                 success: false,
@@ -240,7 +268,7 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
             }
         }
 
-        const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
+       
 
         if(positionName?.includes('broker')) {
             return {
@@ -328,6 +356,24 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
         }
     }
 
+    // edit divisions
+
+    console.log(positionName)
+    console.log(divisions)
+
+    if(positionName && positionName.includes('broker')){
+        if(divisions){
+            const editDivisions = await editDivisionBroker(userId, divisions, {agentId: agentId})
+
+            if(!editDivisions.success){
+                return {
+                    success: false,
+                    data: {},
+                    error: editDivisions.error
+                }
+            }
+        }
+    }
     return {
         success: true,
         data: result.data

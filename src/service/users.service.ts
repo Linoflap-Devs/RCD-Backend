@@ -13,7 +13,7 @@ import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, 
 import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
-import { getDivisionBrokers } from "../repository/division.repository";
+import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { IBrokerDivision } from "../types/division.types";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
@@ -294,6 +294,21 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
                 FileContent: img.FileContent.toString('base64')
             }
     })
+
+    // divisions
+
+    let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
+
+    const divisions = await getDivisionBrokers({brokerIds: [brokerId]})
+
+    if(divisions.success){
+        divisions.data.map((item: IBrokerDivision) => {
+            allowedDivisions.push({
+                DivisionID: item.DivisionID,
+                DivisionName: item.DivisionName
+            })
+        })
+    }
     
     const obj = {
         broker: brokerWithUserResult.success ? brokerWithUserResult.data.broker : backupBrokerData,
@@ -302,6 +317,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
             experience: brokerWork.data,
             education: brokerEducation.data,
         },
+        divisions: allowedDivisions,
         images: formattedImages
     }
 
@@ -1116,6 +1132,8 @@ export const getBrokersService = async (
         BrokerCode: broker.BrokerCode,
         AgentCode: null,
         Broker: broker.RepresentativeName,
+        AgentRegistrationID: null,
+        BrokerRegistrationID: broker.BrokerRegistrationID || null,
         Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
         ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
     }));
@@ -1127,6 +1145,8 @@ export const getBrokersService = async (
         BrokerCode: null,
         AgentCode: agent.AgentCode,
         Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
+        AgentRegistrationID: agent.AgentRegistrationID || null,
+        BrokerRegistrationID: null,
         Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
         ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
     }));
@@ -1376,7 +1396,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
     }
 }
 
-export const editWebBrokerService = async (userId: number, brokerId: number, data: Partial<ITblBroker & {LastName?: string, FirstName?: string, MiddleName?: string}>): QueryResult<ITblBroker> => {
+export const editWebBrokerService = async (userId: number, brokerId: number, data: Partial<ITblBroker & {LastName?: string, FirstName?: string, MiddleName?: string}>, divisions?: number[]): QueryResult<ITblBroker> => {
 
     const brokerData = await getBrokers({brokerId: brokerId})
 
@@ -1413,6 +1433,17 @@ export const editWebBrokerService = async (userId: number, brokerId: number, dat
             success: false,
             data: {} as ITblBroker,
             error: result.error
+        }
+    }
+
+    if(divisions){
+        const divisionsResult = await editDivisionBroker(userId, divisions, { brokerId: brokerId })
+        if(!divisionsResult.success){
+            return {
+                success: false,
+                data: {} as ITblBroker,
+                error: divisionsResult.error
+            }
         }
     }
 
