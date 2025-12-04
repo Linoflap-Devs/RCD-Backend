@@ -2141,10 +2141,60 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.APPROVED
     }
 
+    // get agent ids
+    let agentId = undefined
+    let employeeId = undefined
+
+    console.log(user)
+    if(user.agentUserId){
+        const result = await findAgentDetailsByUserId(user.agentUserId)
+
+        if(!result.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        agentId = result.data.AgentID
+    }
+
+    if(user.webUserId){
+        const result = await findEmployeeUserById(user.webUserId)
+
+        if(!result.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        employeeId = result.data.UserWebID
+    }
+
+    if(!agentId && !employeeId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
     const result = await rejectPendingSale(
         {
-            agentId: user.agentUserId ? user.agentUserId : undefined,
-            brokerId: user.webUserId ? user.webUserId : undefined
+            agentId: agentId ? agentId : undefined,
+            brokerId: employeeId ? employeeId : undefined
         }, 
         pendingSalesId, 
         (approvalStatus || 1), 
