@@ -929,6 +929,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         updatedByName = response.success ? response.data.AgentName ? response.data.AgentName : '' : ''
     }
     else if (result.data.LastUpdateByWeb){
+        console.log(result.data.LastUpdateByWeb)
         const lastUpdatedByEmployee = await findEmployeeUserById(result.data.LastUpdateByWeb)
         console.log(lastUpdatedByEmployee)
         if(lastUpdatedByEmployee.success && lastUpdatedByEmployee.data.UserWebID){
