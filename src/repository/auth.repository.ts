@@ -1332,7 +1332,7 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
                     ContactEmergency: registration.ContactEmergency,
                     AddressEmergency: registration.AddressEmergency,
                     Affiliation: registration.AffiliationDate,
-                    
+                    BrokerTaxRate: registration.BrokerTaxRate || 5,
                     IsActive: 1,
                     LastUpdate: new Date(),
                     UpdateBy: 0

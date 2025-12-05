@@ -297,6 +297,7 @@ export interface TblBroker {
   Broker: string;
   BrokerCode: string;
   BrokerID: Generated<number>;
+  BrokerTaxRate: number;
   CivilStatus: string | null;
   ContactEmergency: string | null;
   ContactNumber: string | null;

@@ -230,6 +230,7 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
                 TelephoneNumber: broker.TelephoneNumber,
                 TINNumber: broker.TINNumber || '',
                 SSSNumber: broker.SSSNumber || '',
+                BrokerTaxRate: broker.BrokerTaxRate || 5,
                 UpdateBy: userId,
                 LastUpdate: new Date(),
                 IsActive: 1
