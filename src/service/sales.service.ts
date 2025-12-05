@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -2971,6 +2971,92 @@ export const addSalesTargetService = async (userId: number, salesTarget: ITblSal
     salesTarget.TargetName = division.data[0].Division
 
     const result = await addSalesTarget(userId, salesTarget);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                message: 'Failed to add sales target.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+
+export const editSalesTargetService = async (userId: number, salesTargetId: number, salesTarget: Partial<ITblSalesTarget>): QueryResult<ITblSalesTarget> => {
+
+    const salesTargetData = await getSalesTargets({ id: salesTargetId });
+
+    if(!salesTargetData.success || salesTargetData.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                message: 'Sales target not found.',
+                code: 400
+            }
+        }
+    }
+
+    // check for existing
+    if(salesTarget.TargetNameID){
+
+        // check division
+
+        const division = await getDivisions({ divisionIds: [salesTarget.TargetNameID] });
+
+        if(!division.success || division.data.length === 0){
+            return {
+                success: false,
+                data: {} as ITblSalesTarget,
+                error: {
+                    message: 'Division not found.',
+                    code: 400
+                }
+            }
+        }
+
+        salesTarget.TargetName = division.data[0].Division
+
+        const duplicate = await getSalesTargets({ year: salesTargetData.data[0].TargetYear, divisionIds: [salesTarget.TargetNameID] });
+    
+        if(duplicate.success && duplicate.data.length > 0){
+            return {
+                success: false,
+                data: {} as ITblSalesTarget,
+                error: {
+                    message: 'Sales target for this year and division already exists.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(salesTarget.TargetYear){
+        const duplicate = await getSalesTargets({ year: salesTarget.TargetYear, divisionIds: [salesTargetData.data[0].TargetNameID] });
+    
+        if(duplicate.success && duplicate.data.length > 0){
+            return {
+                success: false,
+                data: {} as ITblSalesTarget,
+                error: {
+                    message: 'Sales target for this year and division already exists.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    
+
+    const result = await editSalesTarget(userId, salesTargetId, salesTarget);
 
     if(!result.success){
         return {

@@ -31,3 +31,10 @@ export const addSalesTargetSchema = z.object({
     divisionId: z.coerce.number(),
     amount: z.coerce.number(),
 })
+
+export const editSalesTargetSchema = z.object({
+    entity: z.string().max(255).optional(),
+    year: z.coerce.number().optional(),
+    divisionId: z.coerce.number().optional(),
+    amount: z.coerce.number().optional(),
+})

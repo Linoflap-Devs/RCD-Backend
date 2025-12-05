@@ -3058,6 +3058,7 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
 
 export const getSalesTargets = async (
     filters?: {
+        id?: number,
         year?: number,
         divisionIds?: number[],
         divisionNames?: string[],
@@ -3067,6 +3068,10 @@ export const getSalesTargets = async (
     try {
         let baseQuery = await db.selectFrom('Tbl_SalesTarget')
             .selectAll()
+
+        if(filters && filters?.id){
+            baseQuery = baseQuery.where('SalesTargetID', '=', filters.id)
+        }
 
         if(filters && filters?.year){
             baseQuery = baseQuery.where('TargetYear', '=', filters.year)
@@ -3119,6 +3124,34 @@ export const addSalesTarget = async (userId: number, salesTarget: ITblSalesTarge
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
         
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editSalesTarget = async (userId: number, id: number, salesTarget: Partial<ITblSalesTarget>): QueryResult<ITblSalesTarget> => {
+    try {
+
+        const result = await db.updateTable('Tbl_SalesTarget')
+            .set(salesTarget)
+            .where('SalesTargetID', '=', id)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
         return {
             success: true,
             data: result
