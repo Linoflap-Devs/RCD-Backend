@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, rejectBrokerRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -437,6 +437,31 @@ export const rejectAgentRegistrationController = async (req: Request, res: Respo
     return res.status(200).json({
         success: true, 
         message: "Agent registration rejected successfully.", 
+        data: result.data
+    });
+}
+
+export const rejectBrokerRegistrationController = async (req: Request, res: Response) => {
+
+    const {
+        brokerRegistrationId,
+    } = req.body
+
+    const result = await rejectBrokerRegistrationService(brokerRegistrationId);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to reject broker registration.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Broker registration rejected successfully.", 
         data: result.data
     });
 }

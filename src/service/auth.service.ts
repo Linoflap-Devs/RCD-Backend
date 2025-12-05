@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -781,6 +781,55 @@ export const rejectAgentRegistrationService = async (agentRegistrationId: number
             data: {} as {token: string, email: string},
             error: {
                 message: result.error?.message || 'Failed to reject agent registration.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const rejectBrokerRegistrationService = async (brokerRegistrationId: number) => {
+
+    // validations
+    const brokerRegistration = await findBrokerRegistrationById(brokerRegistrationId)
+
+    if(!brokerRegistration.success){
+        logger((brokerRegistration.error?.message || 'Failed to find broker registration.'), {brokerRegistrationId: brokerRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: brokerRegistration.error?.message || 'Failed to find broker registration.',
+                code: 404
+            }
+        }
+    }
+
+    if(brokerRegistration.data.IsVerified !== 0){
+        logger(('Broker registration is already processed.'), {brokerRegistrationId: brokerRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: 'Broker registration is already processed.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await rejectBrokerRegistration(brokerRegistrationId)
+
+    if(!result.success){
+        logger((result.error?.message || 'Failed to reject broker registration.'), {brokerRegistrationId: brokerRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: result.error?.message || 'Failed to reject broker registration.',
                 code: 500
             }
         }

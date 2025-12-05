@@ -888,6 +888,33 @@ export const findAgentRegistrationById = async(agentRegistrationId: number): Que
     }
 }
 
+export const findBrokerRegistrationById = async(agentRegistrationId: number): QueryResult<ITblBrokerRegistration> => {
+    try {
+        const result = await db.selectFrom('Tbl_BrokerRegistration')
+            .where('BrokerRegistrationID', '=', agentRegistrationId)
+            .selectAll()
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch (err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblBrokerRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number): QueryResult<IAgentUser> => {
     try {
 
@@ -1173,6 +1200,32 @@ export const rejectAgentRegistration = async (agentRegistrationId: number): Quer
         const result = await db.updateTable('Tbl_AgentRegistration')
             .set('IsVerified', 2)
             .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const rejectBrokerRegistration = async (brokerRegistrationId: number): QueryResult<null> => {
+    try {
+        const result = await db.updateTable('Tbl_BrokerRegistration')
+            .set('IsVerified', 2)
+            .where('BrokerRegistrationID', '=', brokerRegistrationId)
             .executeTakeFirstOrThrow();
 
         return {
