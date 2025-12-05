@@ -1029,7 +1029,7 @@ export const getCombinedPersonalSalesService = async (
             }
         }
 
-
+        console.log(agent?.Position)
         
         // Get both approved and pending sales
         const [approvedSalesResult, pendingSalesResult] = await Promise.all([
@@ -1047,13 +1047,14 @@ export const getCombinedPersonalSalesService = async (
                 undefined,
                 {
                     ...filters,
-                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
             )
         ]);
 
+        //console.log(pendingSalesResult.data)
         
 
         let combinedSales: any[] = [];
