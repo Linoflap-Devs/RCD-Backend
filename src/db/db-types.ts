@@ -773,7 +773,7 @@ export interface TblSalesSector {
 }
 
 export interface TblSalesTarget {
-  SalesTargetID: number;
+  SalesTargetID: Generated<number>;
   TargetAmount: number;
   TargetEntity: string;
   TargetName: string;
