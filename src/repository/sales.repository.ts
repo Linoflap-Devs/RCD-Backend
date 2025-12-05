@@ -1076,10 +1076,22 @@ export const getPendingSales = async (
             result = result.where('SalesBranchID', '=', filters.salesBranch)
             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
         }
-
+        
         if(filters && filters.agentId){
-            result = result.where('AgentID', '=', filters.agentId)
-            totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
+            const agentId = filters.agentId; // Capture the value
+            
+            result = result.where((eb) => 
+                eb.or([
+                    eb('AgentID', '=', agentId),
+                    eb('CreatedBy', '=', agentId)
+                ])
+            )
+            totalCountResult = totalCountResult.where((eb) => 
+                eb.or([
+                    eb('AgentID', '=', agentId),
+                    eb('CreatedBy', '=', agentId)
+                ])
+            )
         }
 
         if(filters && filters.brokerName){
