@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addAgentTaxRateService, getAgentTaxRatesService } from "../service/tax.service";
+import { addAgentTaxRateService, editAgentTaxRateService, getAgentTaxRatesService } from "../service/tax.service";
 
 
 export const getAgentTaxRatesController = async (req: Request, res: Response) => {
@@ -60,4 +60,43 @@ export const addAgentTaxRatesController = async (req: Request, res: Response) =>
     }
 
     res.status(200).json({success: true, message: 'Agent tax rate added.', data: result.data })
+}
+
+export const editAgentTaxRateController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        agentTaxRateId
+    } = req.params
+
+    const { 
+        taxCode,
+        taxName,
+        vatRate,
+        wTaxRate
+    } = req.body
+
+    const result = await editAgentTaxRateService(session.userID,  Number(agentTaxRateId), {
+        AgentTaxRateCode: taxCode || undefined,
+        AgentTaxRateName: taxName || undefined,
+        VATRate: Number(vatRate) || undefined,
+        WtaxRAte: Number(wTaxRate) || undefined
+    })
+
+    if(!result.success) {
+        res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit agent tax rate'})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Agent tax rate edit.', data: result.data })
 }

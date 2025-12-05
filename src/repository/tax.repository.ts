@@ -81,3 +81,37 @@ export const addAgentTaxRate = async (
         }
     }
 }
+
+export const editAgentTaxRate = async ( userId: number, agentTaxRateId: number, data: Partial<ITblAgentTaxRates> ): QueryResult<ITblAgentTaxRates> => {
+    try {
+
+        const updateData = {
+            ...data,
+            UpdateBy: userId,
+            LastUpdate: new Date()
+        }
+
+        const result = await db.updateTable('Tbl_AgentTaxRates')
+            .where('AgentTaxRateID', '=', agentTaxRateId)
+            .set(data)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        };
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblAgentTaxRates,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
