@@ -1,4 +1,4 @@
-import { addAgentTaxRate, editAgentTaxRate, getAgentTaxRate } from "../repository/tax.repository"
+import { addAgentTaxRate, deleteAgentTaxRate, editAgentTaxRate, getAgentTaxRate } from "../repository/tax.repository"
 import { QueryResult } from "../types/global.types"
 import { ITblAgentTaxRates } from "../types/tax.types"
 
@@ -117,6 +117,23 @@ export const editAgentTaxRateService = async (userId: number, agentTaxRateId: nu
     }
 
     const result = await editAgentTaxRate(userId, agentTaxRateId, data)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {} as ITblAgentTaxRates,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const deleteAgentTaxRateService = async (userId: number, agentTaxRateId: number): QueryResult<ITblAgentTaxRates> => {
+    const result = await deleteAgentTaxRate(userId, agentTaxRateId)
 
     if(!result.success) {
         return {

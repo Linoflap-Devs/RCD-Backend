@@ -115,3 +115,41 @@ export const editAgentTaxRate = async ( userId: number, agentTaxRateId: number, 
         }
     }
 }
+
+export const deleteAgentTaxRate = async (userId: number, agentTaxRateId: number): QueryResult<ITblAgentTaxRates> => {
+    try {
+
+        const result = await db.selectFrom('Tbl_AgentTaxRates')
+            .where('AgentTaxRateID', '=', agentTaxRateId)
+            .selectAll()
+            .executeTakeFirstOrThrow();
+
+        // const result = await db.deleteFrom('Tbl_AgentTaxRates')
+        //     .where('AgentTaxRateID', '=', agentTaxRateId)
+        //     .outputAll('deleted')
+        //     .executeTakeFirstOrThrow();
+
+        // const result = await db.updateTable('Tbl_AgentTaxRates')
+        //     .where('AgentTaxRateID', '=', agentTaxRateId)
+        //     .set({ IsActive: 0, UpdateBy: userId, LastUpdate: new Date() })
+        //     .outputAll('deleted')
+        //     .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        };
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblAgentTaxRates,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

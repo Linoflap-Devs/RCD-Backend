@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addAgentTaxRateService, editAgentTaxRateService, getAgentTaxRatesService } from "../service/tax.service";
+import { addAgentTaxRateService, deleteAgentTaxRateService, editAgentTaxRateService, getAgentTaxRatesService } from "../service/tax.service";
 
 
 export const getAgentTaxRatesController = async (req: Request, res: Response) => {
@@ -99,4 +99,31 @@ export const editAgentTaxRateController = async (req: Request, res: Response) =>
     }
 
     res.status(200).json({success: true, message: 'Agent tax rate edit.', data: result.data })
+}
+
+export const deleteAgentTaxRateController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        agentTaxRateId
+    } = req.params
+
+    const result = await deleteAgentTaxRateService(session.userID,  Number(agentTaxRateId))
+
+    if(!result.success) {
+        res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to delete agent tax rate'})
+        return;
+    }
+
+    res.status(200).json({success: true, message: 'Agent tax rate deleted.', data: result.data })
 }
