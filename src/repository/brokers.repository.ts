@@ -396,6 +396,7 @@ export const getBrokerWithUser = async (agentId: number): QueryResult<{ broker: 
             .selectAll('Tbl_Broker')
             .select([
                 'Tbl_Broker.Religion',
+                'Tbl_Broker.BrokerTaxRate',
                 'Tbl_BrokerUser.BrokerUserID',
                 'Tbl_BrokerUser.BrokerID',
                 'Tbl_BrokerUser.BrokerRegistrationID',

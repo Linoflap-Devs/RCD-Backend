@@ -66,6 +66,7 @@ export interface ITblBroker {
     Broker: string;
     BrokerCode: string;
     BrokerID: number;
+    BrokerTaxRate: number,
     CivilStatus: string | null;
     ContactEmergency: string | null;
     ContactNumber: string | null;

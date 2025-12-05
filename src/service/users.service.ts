@@ -15,6 +15,8 @@ import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { IBrokerDivision } from "../types/division.types";
+import { ITblAgentTaxRates } from "../types/tax.types";
+import { getAgentTaxRate } from "../repository/tax.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -309,7 +311,25 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
             })
         })
     }
-    
+
+    // tax rate
+    let agentTaxRate: Partial<ITblAgentTaxRates> = {}
+    if(brokerWithUserResult.data || backupBrokerData){
+
+        const taxRate = await getAgentTaxRate({ agentTaxRateIds: [brokerWithUserResult.data.broker.BrokerTaxRate || backupBrokerData?.BrokerTaxRate || 0] })
+
+        if(taxRate.success && taxRate.data.length > 0){
+            const item = taxRate.data[0]
+            agentTaxRate = {
+                AgentTaxRateID: item.AgentTaxRateID,
+                AgentTaxRateCode: item.AgentTaxRateCode,
+                AgentTaxRateName: item.AgentTaxRateName,
+                VATRate: item.VATRate,
+                WtaxRAte: item.WtaxRAte
+            }
+        }
+    }
+
     const obj = {
         broker: brokerWithUserResult.success ? brokerWithUserResult.data.broker : backupBrokerData,
         registrationResult: {
@@ -317,6 +337,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
             experience: brokerWork.data,
             education: brokerEducation.data,
         },
+        taxRate: agentTaxRate,
         divisions: allowedDivisions,
         images: formattedImages
     }
