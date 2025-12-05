@@ -230,6 +230,7 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
                 TelephoneNumber: broker.TelephoneNumber,
                 TINNumber: broker.TINNumber || '',
                 SSSNumber: broker.SSSNumber || '',
+                BrokerTaxRate: broker.BrokerTaxRate || 5,
                 UpdateBy: userId,
                 LastUpdate: new Date(),
                 IsActive: 1
@@ -395,6 +396,7 @@ export const getBrokerWithUser = async (agentId: number): QueryResult<{ broker: 
             .selectAll('Tbl_Broker')
             .select([
                 'Tbl_Broker.Religion',
+                'Tbl_Broker.BrokerTaxRate',
                 'Tbl_BrokerUser.BrokerUserID',
                 'Tbl_BrokerUser.BrokerID',
                 'Tbl_BrokerUser.BrokerRegistrationID',

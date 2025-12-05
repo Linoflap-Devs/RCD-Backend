@@ -304,3 +304,12 @@ export const RoleMap = new Map<string, number>([
     ["BRANCH SALES STAFF", 4], 
     ["SALES ADMIN", 5]
 ])
+
+export interface ITblSalesTarget {
+    SalesTargetID: number;
+    TargetAmount: number;
+    TargetEntity: string;
+    TargetName: string;
+    TargetNameID: number;
+    TargetYear: number;
+}

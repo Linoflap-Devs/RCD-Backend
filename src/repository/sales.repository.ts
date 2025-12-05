@@ -1,9 +1,9 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
+import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
@@ -1076,7 +1076,7 @@ export const getPendingSales = async (
             result = result.where('SalesBranchID', '=', filters.salesBranch)
             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
         }
-        
+
         if(filters && filters.agentId){
             const agentId = filters.agentId; // Capture the value
             
@@ -3046,6 +3046,149 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
         return {
             success: false,
             data: [] as FnDivisionSalesYearly[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+// sales targets
+
+export const getSalesTargets = async (
+    filters?: {
+        id?: number,
+        year?: number,
+        divisionIds?: number[],
+        divisionNames?: string[],
+        entity?: string
+    }
+): QueryResult<ITblSalesTarget[]> => {
+    try {
+        let baseQuery = await db.selectFrom('Tbl_SalesTarget')
+            .selectAll()
+
+        if(filters && filters?.id){
+            baseQuery = baseQuery.where('SalesTargetID', '=', filters.id)
+        }
+
+        if(filters && filters?.year){
+            baseQuery = baseQuery.where('TargetYear', '=', filters.year)
+        }
+
+        if(filters && filters?.divisionIds && filters.divisionIds.length > 0){
+            baseQuery = baseQuery.where('TargetNameID', 'in', filters.divisionIds)
+        }
+
+        if(filters && filters?.divisionNames && filters.divisionNames.length > 0){
+            baseQuery = baseQuery.where('TargetName', 'in', filters.divisionNames)
+        }
+
+        if(filters && filters?.entity){
+            baseQuery = baseQuery.where('TargetEntity', '=', filters.entity)
+        }
+
+        const result = await baseQuery.execute()
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblSalesTarget[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addSalesTarget = async (userId: number, salesTarget: ITblSalesTarget): QueryResult<ITblSalesTarget> => {
+    try {
+        const result = await db.insertInto('Tbl_SalesTarget')
+            .values({
+                TargetAmount: salesTarget.TargetAmount,
+                TargetEntity: salesTarget.TargetEntity,
+                TargetName: salesTarget.TargetName,
+                TargetNameID: salesTarget.TargetNameID,
+                TargetYear: salesTarget.TargetYear,
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editSalesTarget = async (userId: number, id: number, salesTarget: Partial<ITblSalesTarget>): QueryResult<ITblSalesTarget> => {
+    try {
+
+        const result = await db.updateTable('Tbl_SalesTarget')
+            .set(salesTarget)
+            .where('SalesTargetID', '=', id)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteSalesTarget = async (userId: number, salesTargetId: number): QueryResult<ITblSalesTarget> => {
+    try {
+        const result = await db.deleteFrom('Tbl_SalesTarget')
+            .where('SalesTargetID', '=', salesTargetId)
+            .outputAll('deleted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
             error: {
                 code: 500,
                 message: error.message

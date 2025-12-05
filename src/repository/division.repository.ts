@@ -4,9 +4,15 @@ import { TblDivision, VwAgents } from "../db/db-types"
 import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision } from "../types/division.types"
 
 // Divisions
-export const getDivisions = async (): QueryResult<ITblDivision[]> => {
+export const getDivisions = async (filters?: {divisionIds?: number[]}): QueryResult<ITblDivision[]> => {
     try {
-        const result = await db.selectFrom('Tbl_Division').selectAll().execute();
+        let baseQuery = await db.selectFrom('Tbl_Division').selectAll()
+
+        if(filters && filters.divisionIds && filters.divisionIds.length > 0){
+            baseQuery = baseQuery.where('DivisionID', 'in', filters.divisionIds)
+        }
+
+        const result = await baseQuery.execute();
 
         return {
             success: true,
