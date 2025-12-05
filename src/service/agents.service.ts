@@ -2,12 +2,14 @@ import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
+import { getAgentTaxRate } from "../repository/tax.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
 import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
+import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
 
 export const getAgentsService = async (filters?: {showInactive?: boolean, division?: number, position?: 'SP' | 'UM' | 'SD' | 'BR'}): QueryResult<IAgent[]> => {
@@ -144,6 +146,26 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
             })        
         }
     }
+
+
+
+    // tax rate
+    let agentTaxRate: Partial<ITblAgentTaxRates> = {}
+    if(agentWithUserResult.data || backupAgentData){
+
+        const taxRate = await getAgentTaxRate({ agentTaxRateIds: [agentWithUserResult.data.agent.AgentTaxRate || backupAgentData?.AgentTaxRate || 0] })
+
+        if(taxRate.success && taxRate.data.length > 0){
+            const item = taxRate.data[0]
+            agentTaxRate = {
+                AgentTaxRateID: item.AgentTaxRateID,
+                AgentTaxRateCode: item.AgentTaxRateCode,
+                AgentTaxRateName: item.AgentTaxRateName,
+                VATRate: item.VATRate,
+                WtaxRAte: item.WtaxRAte
+            }
+        }
+    }
     
     const obj = {
         agent: agentWithUserResult.success ? agentWithUserResult.data.agent : backupAgentData,
@@ -152,6 +174,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
             experience: agentWork.data,
             education: agentEducation.data,
         },
+        taxRate: agentTaxRate,
         ...isBroker && { divisions: allowedDivisions },
         images: formattedImages
     }
