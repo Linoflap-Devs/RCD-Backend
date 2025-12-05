@@ -763,6 +763,7 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
      const {
         brokerCode,
         representativeName,
+        brokerTaxRate,
         contactNumber,
         civilStatus,
         sex,
@@ -796,6 +797,7 @@ export const editWebBrokerController = async (req: Request, res: Response) => {
 
     const obj: Partial<ITblBroker> = {
         BrokerCode: brokerCode,
+        BrokerTaxRate: brokerTaxRate,
         RepresentativeName: representativeName,
         ContactNumber: contactNumber,
         CivilStatus: civilStatus,
