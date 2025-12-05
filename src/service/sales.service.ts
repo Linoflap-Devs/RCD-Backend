@@ -890,6 +890,7 @@ export const getPendingSalesService = async (
             SellerName: item.SellerName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
+            DateFiled: item.DateFiled,
             ApprovalStatus: item.ApprovalStatus,
             HasRemark: item.Remarks ? true : false,
             IsRejected: item.IsRejected,
