@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
+import { ITblSalesTarget } from "../types/sales.types";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
     const session = req.session
@@ -1173,4 +1174,44 @@ export const getSalesTargetsController = async (req: Request, res: Response) => 
     }
 
     return res.status(200).json({success: true, message: 'Sales targets', data: result.data})
+}
+
+export const addSalesTargetController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        entity,
+        divisionId,
+        amount,
+        year
+    } = req.body
+
+    const obj: ITblSalesTarget = {
+        SalesTargetID: 0,
+        TargetEntity: entity,
+        TargetNameID: divisionId,
+        TargetAmount: amount,
+        TargetYear: year,
+        TargetName: ''
+    }
+
+    const result = await addSalesTargetService(session.userID, obj);
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales target', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales target added', data: result.data})
 }

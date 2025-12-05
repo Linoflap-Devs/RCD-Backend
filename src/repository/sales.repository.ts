@@ -3105,3 +3105,35 @@ export const getSalesTargets = async (
         }
     }
 }
+
+export const addSalesTarget = async (userId: number, salesTarget: ITblSalesTarget): QueryResult<ITblSalesTarget> => {
+    try {
+        const result = await db.insertInto('Tbl_SalesTarget')
+            .values({
+                TargetAmount: salesTarget.TargetAmount,
+                TargetEntity: salesTarget.TargetEntity,
+                TargetName: salesTarget.TargetName,
+                TargetNameID: salesTarget.TargetNameID,
+                TargetYear: salesTarget.TargetYear,
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
