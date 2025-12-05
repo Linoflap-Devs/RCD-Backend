@@ -1176,6 +1176,34 @@ export const getSalesTargetsController = async (req: Request, res: Response) => 
     return res.status(200).json({success: true, message: 'Sales targets', data: result.data})
 }
 
+export const getSalesTargetController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        salesTargetId
+    } = req.params
+
+    const result = await getSalesTargetsService({ id: salesTargetId ? Number(salesTargetId) : undefined });
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales targets', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales targets', data: result.data})
+}
+
 export const addSalesTargetController = async (req: Request, res: Response) => {
 
     const session = req.session

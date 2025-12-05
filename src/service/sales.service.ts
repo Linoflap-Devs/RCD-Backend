@@ -2917,7 +2917,7 @@ export const getSalesByDeveloperTotalsFnService = async (userId: number, filters
 
 // Sales Targets
 
-export const getSalesTargetsService = async (filters?: {year?: number, divisionIds?: number[], divisionNames?: string[], entity?: string}): QueryResult<ITblSalesTarget[]> => {
+export const getSalesTargetsService = async (filters?: {year?: number, divisionIds?: number[], divisionNames?: string[], entity?: string, id?: number}): QueryResult<ITblSalesTarget[]> => {
     const result = await getSalesTargets(filters);
 
     if(!result.success){
