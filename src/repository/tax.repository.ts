@@ -6,7 +6,8 @@ export const getAgentTaxRate = async (
     filters?: {
         agentTaxRateIds?: number[], 
         agentTaxRateCodes?: string[], 
-        agentTaxRateNames?: string[]
+        agentTaxRateNames?: string[],
+        showInactive?: boolean
     }
 ): QueryResult<ITblAgentTaxRates[]> => {
     try {
@@ -23,6 +24,10 @@ export const getAgentTaxRate = async (
 
         if(filters && filters.agentTaxRateNames && filters.agentTaxRateNames.length > 0) {
             baseQuery = baseQuery.where('AgentTaxRateName', 'in', filters.agentTaxRateNames)
+        }
+
+        if(!filters || !filters.showInactive) {
+            baseQuery = baseQuery.where('IsActive', '=', 1)
         }
 
         const result = await baseQuery.execute()

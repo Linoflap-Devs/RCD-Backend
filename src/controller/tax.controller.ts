@@ -16,7 +16,11 @@ export const getAgentTaxRatesController = async (req: Request, res: Response) =>
         return;
     }
 
-    const result = await getAgentTaxRatesService()
+    const {
+        showInactive
+    } = req.query
+
+    const result = await getAgentTaxRatesService({ showInactive: showInactive ? true : false })
 
     if(!result.success) {
         res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to get agent tax rates'})

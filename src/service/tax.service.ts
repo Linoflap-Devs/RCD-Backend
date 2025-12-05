@@ -6,7 +6,8 @@ export const getAgentTaxRatesService = async (
     filters?: { 
         agentTaxRateIds?: number[], 
         agentTaxRateCodes?: string[],
-        agentTaxRateNames?: string[] 
+        agentTaxRateNames?: string[],
+        showInactive?: boolean
     }
 ): QueryResult<Partial<ITblAgentTaxRates>[]> => {
     
