@@ -3170,3 +3170,29 @@ export const editSalesTarget = async (userId: number, id: number, salesTarget: P
         }
     }
 }
+
+export const deleteSalesTarget = async (userId: number, salesTargetId: number): QueryResult<ITblSalesTarget> => {
+    try {
+        const result = await db.deleteFrom('Tbl_SalesTarget')
+            .where('SalesTargetID', '=', salesTargetId)
+            .outputAll('deleted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

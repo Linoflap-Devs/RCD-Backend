@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -1256,4 +1256,32 @@ export const editSalesTargetController = async (req: Request, res: Response) => 
     }
 
     return res.status(200).json({success: true, message: 'Sales target edit', data: result.data})
+}
+
+export const deleteSalesTargetController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        salesTargetId
+    } = req.params
+
+    const result = await deleteSalesTargetService(session.userID, Number(salesTargetId));
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to delete sales target', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales target deleted', data: result.data})
 }
