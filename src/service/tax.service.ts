@@ -7,7 +7,8 @@ export const getAgentTaxRatesService = async (
         agentTaxRateIds?: number[], 
         agentTaxRateCodes?: string[],
         agentTaxRateNames?: string[],
-        showInactive?: boolean
+        showInactive?: boolean,
+        showDetails?: boolean,
     }
 ): QueryResult<Partial<ITblAgentTaxRates>[]> => {
     
@@ -26,14 +27,18 @@ export const getAgentTaxRatesService = async (
         AgentTaxRateCode: item.AgentTaxRateCode,
         AgentTaxRateName: item.AgentTaxRateName,
         VATRate: item.VATRate,
-        WtaxRAte: item.WtaxRAte
+        WtaxRAte: item.WtaxRAte,
+        ...filters?.showDetails && {
+            UpdateBy: item.UpdateBy,
+            LastUpdate: item.LastUpdate,
+            IsActive: item.IsActive
+        }
     }))
 
     return {
         success: true,
         data: obj
     }
-
 }
 
 export const addAgentTaxRateService = async (userId: number, data: Partial<ITblAgentTaxRates>): QueryResult<ITblAgentTaxRates> => {
