@@ -255,6 +255,7 @@ export interface TblAgentTaxRates {
   AgentTaxRateCode: string;
   AgentTaxRateID: Generated<number>;
   AgentTaxRateName: string;
+  IsActive: Generated<number>;
   LastUpdate: Generated<Date>;
   UpdateBy: number;
   VATRate: number;

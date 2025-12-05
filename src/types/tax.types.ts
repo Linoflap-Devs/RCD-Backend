@@ -1,9 +1,11 @@
 export interface ITblAgentTaxRates {
-  AgentTaxRateCode: string;
-  AgentTaxRateID: number;
-  AgentTaxRateName: string;
-  LastUpdate: Date;
-  UpdateBy: number;
-  VATRate: number;
-  WtaxRAte: number;
+    AgentTaxRateCode: string;
+    AgentTaxRateID: number;
+    AgentTaxRateName: string;
+    IsActive: number;
+    LastUpdate: Date;
+    UpdateBy: number;
+    VATRate: number;
+    WtaxRAte: number;
+
 }

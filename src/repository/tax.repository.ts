@@ -119,21 +119,11 @@ export const editAgentTaxRate = async ( userId: number, agentTaxRateId: number, 
 export const deleteAgentTaxRate = async (userId: number, agentTaxRateId: number): QueryResult<ITblAgentTaxRates> => {
     try {
 
-        const result = await db.selectFrom('Tbl_AgentTaxRates')
+        const result = await db.updateTable('Tbl_AgentTaxRates')
             .where('AgentTaxRateID', '=', agentTaxRateId)
-            .selectAll()
+            .set({ IsActive: 0, UpdateBy: userId, LastUpdate: new Date() })
+            .outputAll('deleted')
             .executeTakeFirstOrThrow();
-
-        // const result = await db.deleteFrom('Tbl_AgentTaxRates')
-        //     .where('AgentTaxRateID', '=', agentTaxRateId)
-        //     .outputAll('deleted')
-        //     .executeTakeFirstOrThrow();
-
-        // const result = await db.updateTable('Tbl_AgentTaxRates')
-        //     .where('AgentTaxRateID', '=', agentTaxRateId)
-        //     .set({ IsActive: 0, UpdateBy: userId, LastUpdate: new Date() })
-        //     .outputAll('deleted')
-        //     .executeTakeFirstOrThrow();
 
         return {
             success: true,
