@@ -803,8 +803,13 @@ export const addPendingSalesService = async (
         }
     }
 
+    console.log(result.success, webAgentData.Role)
+
     if(webAgentData && webAgentData.Role === 'SALES ADMIN' && result.success){
-        await approvePendingSaleTransaction(webAgentData.UserWebID, result.data.AgentPendingSalesID)
+        console.log('starting approval')
+        const approval = await approvePendingSaleTransaction(webAgentData.UserWebID, result.data.AgentPendingSalesID)
+
+        console.log(approval)
     }
 
     return {
