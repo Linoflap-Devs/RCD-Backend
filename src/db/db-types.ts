@@ -253,9 +253,9 @@ export interface TblAgentsold {
 
 export interface TblAgentTaxRates {
   AgentTaxRateCode: string;
-  AgentTaxRateID: number;
+  AgentTaxRateID: Generated<number>;
   AgentTaxRateName: string;
-  LastUpdate: Date;
+  LastUpdate: Generated<Date>;
   UpdateBy: number;
   VATRate: number;
   WtaxRAte: number;
@@ -1394,6 +1394,7 @@ export interface VwPendingSalesTransactions {
   IsRejected: number;
   LastUpdate: Date;
   LastUpdateby: number | null;
+  LastUpdateByWeb: number | null;
   Lot: string;
   LotArea: number;
   MiscFee: number;
@@ -1412,6 +1413,8 @@ export interface VwPendingSalesTransactions {
   SalesSectorID: number;
   SalesStatus: string;
   SellerName: string;
+  UpdatedByName: string | null;
+  UpdatedByWebName: string | null;
 }
 
 export interface VwProjects {

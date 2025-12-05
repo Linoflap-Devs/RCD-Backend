@@ -15,6 +15,7 @@ import projectRoutes from './routes/projects.routes'
 import branchRoutes from './routes/branches.routes'
 import developerRoutes from './routes/developers.routes'
 import sectorRoutes from './routes/sectors.routes'
+import taxRoutes from './routes/tax.routes'
 import { db } from './db/db';
 import { sql } from 'kysely';
 import { checkDatabaseHealth } from './repository/health.repository';
@@ -45,6 +46,7 @@ app.use('/api/projects', projectRoutes)
 app.use('/api/branches', branchRoutes)
 app.use('/api/developers', developerRoutes)
 app.use('/api/sectors', sectorRoutes)
+app.use('/api/tax-rates', taxRoutes)
 
 app.get('/', (async (req, res) => {
 
