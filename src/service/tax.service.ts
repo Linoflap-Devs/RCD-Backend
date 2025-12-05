@@ -1,4 +1,4 @@
-import { getAgentTaxRate } from "../repository/tax.repository"
+import { addAgentTaxRate, getAgentTaxRate } from "../repository/tax.repository"
 import { QueryResult } from "../types/global.types"
 import { ITblAgentTaxRates } from "../types/tax.types"
 
@@ -33,4 +33,52 @@ export const getAgentTaxRatesService = async (
         data: obj
     }
 
+}
+
+export const addAgentTaxRateService = async (userId: number, data: Partial<ITblAgentTaxRates>): QueryResult<ITblAgentTaxRates> => {
+    // check for duplicates
+    if(data.AgentTaxRateCode){
+        const codeCheck = await getAgentTaxRate({ agentTaxRateCodes: [data.AgentTaxRateCode] })
+
+        if(codeCheck.success && codeCheck.data.length > 0){
+            return {
+                success: false,
+                data: {} as ITblAgentTaxRates,
+                error: {
+                    code: 400,
+                    message: 'Agent tax rate code already exists'
+                }
+            }
+        }
+    }
+
+    if(data.AgentTaxRateName){
+        const nameCheck = await getAgentTaxRate({ agentTaxRateNames: [data.AgentTaxRateName] })
+
+        if(nameCheck.success && nameCheck.data.length > 0){
+            return {
+                success: false,
+                data: {} as ITblAgentTaxRates,
+                error: {
+                    code: 400,
+                    message: 'Agent tax rate name already exists'
+                }
+            }
+        }
+    }
+
+    const result = await addAgentTaxRate(userId, data as ITblAgentTaxRates)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {} as ITblAgentTaxRates,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }

@@ -45,3 +45,39 @@ export const getAgentTaxRate = async (
         }
     }
 }
+
+export const addAgentTaxRate = async (
+    userId: number,
+    data: ITblAgentTaxRates
+): QueryResult<ITblAgentTaxRates> => {
+    try {
+        const result = await db.insertInto('Tbl_AgentTaxRates')
+        .values({
+            AgentTaxRateCode: data.AgentTaxRateCode,
+            AgentTaxRateName: data.AgentTaxRateName,
+            VATRate: data.VATRate,
+            WtaxRAte: data.WtaxRAte,
+            UpdateBy: userId,
+            LastUpdate: new Date()
+        })
+        .outputAll('inserted')
+        .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        };
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblAgentTaxRates,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
