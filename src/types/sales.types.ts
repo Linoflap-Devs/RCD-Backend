@@ -4,6 +4,7 @@ export interface AgentPendingSalesDetail {
     AgentID: number;
     AgentName: string | null;
     AgentPendingSalesDtlID: number;
+    BrokerID?: number | null;
     Commission: number;
     CommissionRate: number;
     PendingSalesTranCode: string;

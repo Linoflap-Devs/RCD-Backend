@@ -4,7 +4,7 @@ import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById,
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
@@ -2451,6 +2451,8 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const result = await getPendingSaleById(pendingSalesId)
 
+   
+
     if(!result.success){
         return {
             success: false,
@@ -2475,6 +2477,49 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
+     let brokerId = null
+
+    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    // build new details array
+
+    const detailsArray = []
+
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
+    if(broker){
+        detailsArray.push({
+            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
+            PositionName: "BROKER",
+            PositionID: broker.PositionID,
+            AgentName: broker.AgentName,
+            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
+            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
+            CommissionRate: broker.CommissionRate,
+            PendingSalesTranCode: broker.PendingSalesTranCode,
+            WTaxRate: broker.WTaxRate,
+            VATRate: broker.VATRate,
+            Commission: broker.Commission
+        })
+    }
+
     let lastUpdatedByName = ''
     if(result.data.LastUpdateby){
         const lastUpdatedByAgent = await findAgentDetailsByAgentId(result.data.LastUpdateby)
@@ -2492,6 +2537,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const obj = {
         ...result.data,
+        Details: detailsArray,
         LastUpdateby: lastUpdatedByName,
         LastUpdateId: result.data.LastUpdateby
     }
