@@ -483,6 +483,7 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
             .leftJoin('Tbl_BrokerRegistration', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
             .selectAll('Tbl_Broker')
             .select('Tbl_BrokerRegistration.BrokerRegistrationID')
+            .select('Tbl_BrokerUser.Email')
 
         if(filters && filters.brokerId){
             result = result.where('Tbl_Broker.BrokerID' , '=', filters.brokerId)

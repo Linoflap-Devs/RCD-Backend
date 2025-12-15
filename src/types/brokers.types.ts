@@ -89,7 +89,8 @@ export interface ITblBroker {
     TelephoneNumber: string | null;
     TINNumber: string | null;
     UpdateBy: number;
-    BrokerRegistrationID?: number | null
+    BrokerRegistrationID?: number | null,
+    Email?: string | null,
 }
 
 export interface ITblBrokerRegistration {
