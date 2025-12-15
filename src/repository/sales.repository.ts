@@ -1241,6 +1241,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.SalesSectorID',
                 'Tbl_AgentPendingSales.SalesStatus',
                 'Tbl_AgentPendingSales.SellerName',
+                'Tbl_AgentPendingSales.IsRejected',
                 // Add the names from joined tables
                 'Tbl_Division.Division as DivisionName',
                 'Tbl_Projects.ProjectName',

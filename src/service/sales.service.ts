@@ -2493,7 +2493,6 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const detailsArray = []
 
-
     const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
         if(detail.PositionName?.toLowerCase() !== 'broker'){
             detailsArray.push({

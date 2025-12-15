@@ -131,6 +131,7 @@ export interface AgentPendingSalesWithDetails {
     DPTerms: string;
     FinancingScheme: string;
     FloorArea: number;
+    IsRejected: number;
     LastUpdate: Date;
     LastUpdateby?: number | null;
     LastUpdateByWeb?: number | null;
