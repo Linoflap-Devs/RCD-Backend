@@ -1,6 +1,6 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -15,6 +15,7 @@ import { IBrokerEmailPicture } from "../types/brokers.types";
 import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
+import { getBrokers } from "../repository/brokers.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -292,11 +293,33 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
     }
 
     let images: IImageBase64[] = []
-    if(result.data[0].SalesTransDtlID){
+    if(result.data && result.data[0].SalesTransDtlID){
         const data = await getSaleImagesByTransactionDetail(result.data[0].SalesTransDtlID);
 
         if(data.success){
             images = data.data
+        }
+    }
+    else {
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    let brokerId = null
+
+    const brokerResult = result.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
         }
     }
 
@@ -304,7 +327,8 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         return {
             SalesTranDtlId: sale.SalesTransDtlID,
             Position: sale.PositionName?.trim() || '',
-            AgentID: sale.AgentID,
+            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
+            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
             AgentName: sale.AgentName?.trim() || '',
             CommissionRate: sale.CommissionRate
         }
@@ -1044,7 +1068,6 @@ export const getCombinedPersonalSalesService = async (
                 {
                     agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
-
                 }, 
                 filters
             ),

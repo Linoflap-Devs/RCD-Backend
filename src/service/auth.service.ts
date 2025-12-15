@@ -632,8 +632,6 @@ export const loginBrokerService = async (email: string, password: string): Query
 
     storedPassword = user.data.password
 
-    // compare passwords
-    //const storedPw = user.data.password
     const compare = await verifyPassword(password, storedPassword)
     const userId = brokerUser.data.brokerUserId
 
