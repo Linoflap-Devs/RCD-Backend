@@ -11,7 +11,7 @@ import { it } from "zod/v4/locales/index.cjs";
 
 export const getAgents = async (filters?: { name?: string, showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
     try {
-        let result = await db.selectFrom('Vw_UniqueActiveAgents')
+        let result = await db.selectFrom('Vw_UniqueAgents')
             .selectAll()
 
         if(filters && filters.division){
