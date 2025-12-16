@@ -954,6 +954,48 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
+    let brokerId = null
+
+    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    // build new details array
+
+    const detailsArray = []
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
+    if(broker){
+        detailsArray.push({
+            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
+            PositionName: "BROKER",
+            PositionID: broker.PositionID,
+            AgentName: broker.AgentName,
+            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
+            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
+            CommissionRate: broker.CommissionRate,
+            PendingSalesTranCode: broker.PendingSalesTranCode,
+            WTaxRate: broker.WTaxRate,
+            VATRate: broker.VATRate,
+            Commission: broker.Commission
+        })
+    }
+
     let updatedByName = ''
     if(result.data.LastUpdateby){
         console.log(result.data.LastUpdateby)
@@ -972,6 +1014,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
 
     const obj = {
         ...result.data,
+        Details: detailsArray,
         LastUpdateby: updatedByName,
         LastUpdateId: result.data.LastUpdateby
     }
@@ -2477,7 +2520,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
-     let brokerId = null
+    let brokerId = null
 
     const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
 
