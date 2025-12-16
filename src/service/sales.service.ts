@@ -993,15 +993,6 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
 
     const detailsArray = []
 
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
-
     const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
     if(broker){
         detailsArray.push({
@@ -1018,6 +1009,16 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
             Commission: broker.Commission
         })
     }
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
 
     let updatedByName = ''
     if(result.data.LastUpdateby){
@@ -2559,15 +2560,6 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const detailsArray = []
 
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
-
     const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
     if(broker){
         detailsArray.push({
@@ -2584,6 +2576,17 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
             Commission: broker.Commission
         })
     }
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    
 
     let lastUpdatedByName = ''
     if(result.data.LastUpdateby){
