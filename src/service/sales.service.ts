@@ -2480,13 +2480,15 @@ export const getWebPendingSalesService = async (
                     ...filters,
                     // approvalStatus: role == 'branch sales staff' ? [3] : [4],
                     // salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
-                    agentId: userId,
+                    createdByWeb: userId,
                     isUnique: true
                 }, 
                 pagination
             ),
         ]
     )
+
+    console.log(ownedSales.data)
 
     const resultArray: any[] = []
 

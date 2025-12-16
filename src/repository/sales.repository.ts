@@ -1034,6 +1034,7 @@ export const getPendingSales = async (
         agentId?: number,
         brokerName?: string,
         createdBy?: number,
+        createdByWeb?: number,
         developerId?: number,
         isUnique?: boolean,
         approvalStatus?: number[],
@@ -1099,6 +1100,11 @@ export const getPendingSales = async (
                     eb('CreatedBy', '=', agentId)
                 ])
             )
+        }
+
+        if(filters && filters.createdByWeb){
+            result = result.where('CreatedByWeb', '=', filters.createdByWeb)
+            totalCountResult = totalCountResult.where('CreatedByWeb', '=', filters.createdByWeb)
         }
 
         if(filters && filters.brokerName){
