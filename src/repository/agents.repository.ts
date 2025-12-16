@@ -6,7 +6,7 @@ import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../type
 import { sql } from "kysely";
 import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentUser } from "../types/auth.types";
-import { TblAgentUser, VwAgents, VwUniqueActiveAgents } from "../db/db-types";
+import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
 
 export const getAgents = async (filters?: { name?: string, showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
@@ -39,7 +39,7 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
             throw new Error('No agents found.');
         }
 
-        const obj: IAgent[] = queryResult.map((item: VwUniqueActiveAgents) => {
+        const obj: IAgent[] = queryResult.map((item: VwUniqueAgents) => {
             return {
                 ...item,
                 FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim(),
