@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -2451,8 +2451,6 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const result = await getPendingSaleById(pendingSalesId)
 
-   
-
     if(!result.success){
         return {
             success: false,
@@ -2545,6 +2543,72 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
     return {
         success: true,
         data: obj
+    }
+}
+
+export const archiveSalesTransactionService = async (userId: number, salesTranId: number): QueryResult<any> => {
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await archiveSale(userId, salesTranId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Error archiving sale',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const archivePendingSalesTransactionService = async (userId: number, pendingSalesTranId: number): QueryResult<any> => {
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await archivePendingSale(userId, pendingSalesTranId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Error archiving sale',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 
