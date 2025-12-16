@@ -114,13 +114,14 @@ export const getWebSalesTransController = async (req: Request, res: Response) =>
         return;
     }
 
-    const { page, pageSize, month, year, developerId, search } = req.query
+    const { page, pageSize, month, year, developerId, divisionId, search } = req.query
 
     const result = await getWebSalesTransService(session.userID, {
         month: month ? Number(month) : undefined,
         year: year ? Number(year) : undefined,
         developerId: developerId ? Number(developerId) : undefined,
-        search: search ? search.toString() : undefined
+        search: search ? search.toString() : undefined,
+        divisionId: divisionId ? Number(divisionId) : undefined
     }, {
         page: Number(page), 
         pageSize: Number(pageSize)
