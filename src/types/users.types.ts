@@ -35,7 +35,8 @@ export interface IAgent {
     TelephoneNumber: string | null;
     TINNumber: string | null;
     UpdateBy: number;
-    FullName?: string
+    FullName?: string,
+    Email?: string | null
 }
 
 export type IAgentPicture = IAgent & {

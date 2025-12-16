@@ -4,6 +4,7 @@ export interface AgentPendingSalesDetail {
     AgentID: number;
     AgentName: string | null;
     AgentPendingSalesDtlID: number;
+    BrokerID?: number | null;
     Commission: number;
     CommissionRate: number;
     PendingSalesTranCode: string;
@@ -130,6 +131,7 @@ export interface AgentPendingSalesWithDetails {
     DPTerms: string;
     FinancingScheme: string;
     FloorArea: number;
+    IsRejected: number;
     LastUpdate: Date;
     LastUpdateby?: number | null;
     LastUpdateByWeb?: number | null;
@@ -284,7 +286,8 @@ export enum SalesStatusText {
     PENDING_SD = 'PENDING APPROVAL - SALES DIRECTOR',
     PENDING_BH = 'PENDING APPROVAL - BRANCH HEAD',
     PENDING_SA = 'PENDING APPROVAL - SALES ADMIN',
-    APPROVED = 'APPROVED'
+    APPROVED = 'APPROVED',
+    ARCHIVED = 'ARCHIVED'
 }
 
 export enum Roles {

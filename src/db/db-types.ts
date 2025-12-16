@@ -1624,6 +1624,45 @@ export interface VwUniqueActiveAgents {
   UpdateBy: number;
 }
 
+export interface VwUniqueAgents {
+  Address: string;
+  AddressEmergency: string;
+  AffiliationDate: Date;
+  AgentCode: string;
+  AgentID: number;
+  AgentName: string | null;
+  AgentTaxRate: number;
+  AgentUserID: number | null;
+  Birthdate: Date;
+  Birthplace: string | null;
+  CivilStatus: string;
+  ContactEmergency: string;
+  ContactNumber: string;
+  Division: string;
+  DivisionID: string | null;
+  DSHUDNumber: string | null;
+  EmployeeIDNumber: string | null;
+  FirstName: string;
+  IsActive: number;
+  LastName: string;
+  LastUpdate: Date;
+  MiddleName: string;
+  PagIbigNumber: string | null;
+  PersonEmergency: string;
+  PhilhealthNumber: string | null;
+  Position: string;
+  PositionID: number | null;
+  PRCNumber: string | null;
+  ReferredByID: number | null;
+  ReferredCode: string | null;
+  Religion: string | null;
+  Sex: string;
+  SSSNumber: string | null;
+  TelephoneNumber: string | null;
+  TINNumber: string | null;
+  UpdateBy: number;
+}
+
 export interface VwUsers {
   BranchID: number;
   BranchName: string | null;
@@ -1762,6 +1801,7 @@ export interface DB {
   Vw_SalesTransactions: VwSalesTransactions;
   vw_SalesTransAgentTaxRates: VwSalesTransAgentTaxRates;
   Vw_UniqueActiveAgents: VwUniqueActiveAgents;
+  Vw_UniqueAgents: VwUniqueAgents;
   vw_Users: VwUsers;
   vw_WebKPIs: VwWebKPIs;
   xTbl_Clients: XTblClients;

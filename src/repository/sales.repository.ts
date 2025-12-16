@@ -1241,6 +1241,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.SalesSectorID',
                 'Tbl_AgentPendingSales.SalesStatus',
                 'Tbl_AgentPendingSales.SellerName',
+                'Tbl_AgentPendingSales.IsRejected',
                 // Add the names from joined tables
                 'Tbl_Division.Division as DivisionName',
                 'Tbl_Projects.ProjectName',
@@ -2607,6 +2608,68 @@ export const rejectPendingSale = async (user: { brokerId?: number, agentId?: num
         return {
             success: false,
             data: {},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const archiveSale = async (userId: number, salesTranId: number): QueryResult<ITblSalesTrans> => {
+    try {
+        const result = await db.updateTable('Tbl_SalesTrans')
+            .set({
+                SalesStatus: SalesStatusText.ARCHIVED,
+                LastUpdateby: userId,
+                LastUpdate: new TZDate
+            })
+            .where('SalesTranID', '=', salesTranId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblSalesTrans,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const archivePendingSale = async (userId: number, pendingSalesTranId: number): QueryResult<IAgentPendingSale> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentPendingSales')
+            .set({
+                SalesStatus: SalesStatusText.ARCHIVED,
+                LastUpdateByWeb: userId,
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+            })
+            .where('AgentPendingSalesID', '=', pendingSalesTranId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
             error: {
                 code: 500,
                 message: error.message

@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
-import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController } from '../controller/sales.controller';
+import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController, archivePendingSalesController, archiveSalesTransactionController } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema, addSalesTargetSchema, editSalesTargetSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
@@ -28,6 +28,9 @@ router.route('/web/pending').post(
     addWebPendingSaleController
 );
 router.route('/web/pending/:pendingSalesId').get([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], getWebPendingSalesDetailsController);
+
+router.route('/web/pending/archive/:pendingSalesId').delete([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], archivePendingSalesController);
+
 router.route('/pending').get([validateSession, validateRole(['AD','UM', 'SD'])], getPendingSalesController);
 router.route('/pending/:pendingSalesId').get([validateMobileSession], getPendingSalesDetailsController);
 router.route('/pending').post(
@@ -92,6 +95,7 @@ router.route('/web/:salesTransactionId').patch(
     ], 
     editSalesTransactionController
 );
+router.route('/web/archive/:salesTranId').delete([validateEmployeeSession, validateRole(['AD','BH', 'SA'])], archiveSalesTransactionController);
 
 
 router.route('/').get([validateEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getWebSalesTransController);

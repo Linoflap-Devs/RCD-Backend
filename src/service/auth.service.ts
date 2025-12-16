@@ -419,17 +419,179 @@ export const registerBrokerService = async (
     }
 }
 
+// export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
+
+//     const [
+//         agentUser,
+//         brokerUser
+//     ] = await Promise.all([
+//         findAgentUserByEmail(email),
+//         findBrokerUserByEmail(email)
+//     ])
+
+//     if(!agentUser.success && !brokerUser.success){
+//         return {
+//             success: false,
+//             data: {} as {token: string, email: string, position: string},
+//             error: {
+//                 message: 'Invalid credentials.',
+//                 code: 400
+//             }
+//         }
+//     }
+
+//     let storedPassword = ''
+
+//     if(agentUser.success){
+//         const user = await findAgentUserByEmail(email)
+
+//         if(!user.success) {
+//             logger((user.error?.message || 'Failed to find user.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+
+//         if(!user.data.isVerified){
+//             logger(('User is not verified.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+
+//         const positionCheck = await findAgentDetailsByUserId(user.data.agentUserId)
+
+//         if(!positionCheck.success) {
+//             logger((positionCheck.error?.message || 'Failed to find agent details.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+        
+//         if(positionCheck.data.Position?.toLowerCase().includes('broker') == false){
+//             logger(('User is not a broker.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+
+//         storedPassword = user.data.password
+//     } else {
+//         const user = await findBrokerUserByEmail(email)
+
+//         if(!user.success) {
+//             logger((user.error?.message || 'Failed to find user.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+
+//         if(!user.data.isVerified){
+//             logger(('User is not verified.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Invalid credentials.',
+//                     code: 400
+//                 }
+//             }
+//         }
+
+//         storedPassword = user.data.password
+//     }
+
+    
+
+//     // compare passwords
+//     //const storedPw = user.data.password
+//     const compare = await verifyPassword(password, storedPassword)
+//     const userId = agentUser.success ? agentUser.data.agentUserId : brokerUser.data.brokerUserId
+
+//     if(!compare){
+//         logger(('Password does not match.'), {email: email})
+//         return {
+//             success: false,
+//             data: {} as {token: string, email: string, position: string},
+//             error: {
+//                 message: 'Invalid credentials.',
+//                 code: 400
+//             }
+//         }
+//     }
+
+//     const token = generateSessionToken()
+//     if(agentUser.success){
+//         const session = await createSession(token, userId)
+
+//         if(!session.success) {
+//             logger(( session.error?.message || 'Failed to create session.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Failed to create session.',
+//                     code: 500
+//                 }
+//             }
+//         }
+//     }
+//     else {
+//         const session = await createBrokerSession(token, userId)
+
+//         if(!session.success) {
+//             logger(( session.error?.message || 'Failed to create session.'), {email: email})
+//             return {
+//                 success: false,
+//                 data: {} as {token: string, email: string, position: string},
+//                 error: {
+//                     message: 'Failed to create session.',
+//                     code: 500
+//                 }
+//             }
+//         }
+//     }
+
+//     return {
+//         success: true,
+//         data: {
+//             token: token,
+//             email: email,
+//             position: agentUser.success ? 'HANDS-ON BROKER' : 'HANDS-OFF BROKER'
+//         }
+//     }
+// }
+
 export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
 
-    const [
-        agentUser,
-        brokerUser
-    ] = await Promise.all([
-        findAgentUserByEmail(email),
-        findBrokerUserByEmail(email)
-    ])
+    const brokerUser = await findBrokerUserByEmail(email)
 
-    if(!agentUser.success && !brokerUser.success){
+    if(!brokerUser.success){
         return {
             success: false,
             data: {} as {token: string, email: string, position: string},
@@ -442,96 +604,36 @@ export const loginBrokerService = async (email: string, password: string): Query
 
     let storedPassword = ''
 
-    if(agentUser.success){
-        const user = await findAgentUserByEmail(email)
+    const user = await findBrokerUserByEmail(email)
 
-        if(!user.success) {
-            logger((user.error?.message || 'Failed to find user.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
+    if(!user.success) {
+        logger((user.error?.message || 'Failed to find user.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
             }
         }
-
-        if(!user.data.isVerified){
-            logger(('User is not verified.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
-            }
-        }
-
-        const positionCheck = await findAgentDetailsByUserId(user.data.agentUserId)
-
-        if(!positionCheck.success) {
-            logger((positionCheck.error?.message || 'Failed to find agent details.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
-            }
-        }
-        
-        if(positionCheck.data.Position?.toLowerCase().includes('broker') == false){
-            logger(('User is not a broker.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
-            }
-        }
-
-        storedPassword = user.data.password
-    } else {
-        const user = await findBrokerUserByEmail(email)
-
-        if(!user.success) {
-            logger((user.error?.message || 'Failed to find user.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
-            }
-        }
-
-        if(!user.data.isVerified){
-            logger(('User is not verified.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Invalid credentials.',
-                    code: 400
-                }
-            }
-        }
-
-        storedPassword = user.data.password
     }
 
-    
+    if(!user.data.isVerified){
+        logger(('User is not verified.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Invalid credentials.',
+                code: 400
+            }
+        }
+    }
 
-    // compare passwords
-    //const storedPw = user.data.password
+    storedPassword = user.data.password
+
     const compare = await verifyPassword(password, storedPassword)
-    const userId = agentUser.success ? agentUser.data.agentUserId : brokerUser.data.brokerUserId
+    const userId = brokerUser.data.brokerUserId
 
     if(!compare){
         logger(('Password does not match.'), {email: email})
@@ -546,33 +648,16 @@ export const loginBrokerService = async (email: string, password: string): Query
     }
 
     const token = generateSessionToken()
-    if(agentUser.success){
-        const session = await createSession(token, userId)
+    const session = await createBrokerSession(token, userId)
 
-        if(!session.success) {
-            logger(( session.error?.message || 'Failed to create session.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Failed to create session.',
-                    code: 500
-                }
-            }
-        }
-    }
-    else {
-        const session = await createBrokerSession(token, userId)
-
-        if(!session.success) {
-            logger(( session.error?.message || 'Failed to create session.'), {email: email})
-            return {
-                success: false,
-                data: {} as {token: string, email: string, position: string},
-                error: {
-                    message: 'Failed to create session.',
-                    code: 500
-                }
+    if(!session.success) {
+        logger(( session.error?.message || 'Failed to create session.'), {email: email})
+        return {
+            success: false,
+            data: {} as {token: string, email: string, position: string},
+            error: {
+                message: 'Failed to create session.',
+                code: 500
             }
         }
     }
@@ -582,7 +667,7 @@ export const loginBrokerService = async (email: string, password: string): Query
         data: {
             token: token,
             email: email,
-            position: agentUser.success ? 'HANDS-ON BROKER' : 'HANDS-OFF BROKER'
+            position: 'HANDS-OFF BROKER'
         }
     }
 }

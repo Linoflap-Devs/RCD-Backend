@@ -1,10 +1,10 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AddPendingSaleDetail, AgentPendingSale, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import path from "path";
@@ -15,6 +15,7 @@ import { IBrokerEmailPicture } from "../types/brokers.types";
 import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
+import { getBrokers } from "../repository/brokers.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -188,7 +189,8 @@ export const getWebSalesTransService = async (
         developerId?: number,
         isUnique?: boolean,
         salesBranch?: number,
-        search?: string
+        search?: string,
+        showSales?: boolean
     },
     pagination?: {
         page?: number, 
@@ -238,7 +240,8 @@ export const getWebSalesTransService = async (
             ProjectName: sale.ProjectName?.trim() || '',
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
-            ReservationDate: sale.ReservationDate
+            ReservationDate: sale.ReservationDate,
+            NetTotalTCP: sale.NetTotalTCP
         }
     })
 
@@ -292,11 +295,33 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
     }
 
     let images: IImageBase64[] = []
-    if(result.data[0].SalesTransDtlID){
+    if(result.data && result.data[0].SalesTransDtlID){
         const data = await getSaleImagesByTransactionDetail(result.data[0].SalesTransDtlID);
 
         if(data.success){
             images = data.data
+        }
+    }
+    else {
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    let brokerId = null
+
+    const brokerResult = result.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
         }
     }
 
@@ -304,7 +329,8 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         return {
             SalesTranDtlId: sale.SalesTransDtlID,
             Position: sale.PositionName?.trim() || '',
-            AgentID: sale.AgentID,
+            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
+            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
             AgentName: sale.AgentName?.trim() || '',
             CommissionRate: sale.CommissionRate
         }
@@ -402,7 +428,30 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     })
 
-     let updatedByName = ''
+    let brokerId = null
+
+    const brokerResult = details.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    const detailsNew = details.data.map((sale: VwSalesTransactions) => {
+        return {
+            SalesTranDtlId: sale.SalesTransDtlID,
+            Position: sale.PositionName?.trim() || '',
+            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
+            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
+            AgentName: sale.AgentName?.trim() || '',
+            CommissionRate: sale.CommissionRate
+        }
+    })
+
+    let updatedByName = ''
     if(details.data[0].LastUpdateby){
         const response = await findEmployeeUserById(details.data[0].LastUpdateby)
         updatedByName = response.success ? response.data.EmpName : ''
@@ -447,7 +496,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         },
         lastUpdatedBy: updatedByName,
         lastUpdatedAt: result.data.LastUpdate,
-        details: detailArray,
+        details: detailsNew,
         images: images.data
     }
 
@@ -928,6 +977,48 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
+    let brokerId = null
+
+    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    // build new details array
+
+    const detailsArray = []
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
+    if(broker){
+        detailsArray.push({
+            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
+            PositionName: "BROKER",
+            PositionID: broker.PositionID,
+            AgentName: broker.AgentName,
+            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
+            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
+            CommissionRate: broker.CommissionRate,
+            PendingSalesTranCode: broker.PendingSalesTranCode,
+            WTaxRate: broker.WTaxRate,
+            VATRate: broker.VATRate,
+            Commission: broker.Commission
+        })
+    }
+
     let updatedByName = ''
     if(result.data.LastUpdateby){
         console.log(result.data.LastUpdateby)
@@ -946,6 +1037,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
 
     const obj = {
         ...result.data,
+        Details: detailsArray,
         LastUpdateby: updatedByName,
         LastUpdateId: result.data.LastUpdateby
     }
@@ -1044,7 +1136,6 @@ export const getCombinedPersonalSalesService = async (
                 {
                     agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
-
                 }, 
                 filters
             ),
@@ -2452,6 +2543,48 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
+    let brokerId = null
+
+    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    // build new details array
+
+    const detailsArray = []
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
+    if(broker){
+        detailsArray.push({
+            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
+            PositionName: "BROKER",
+            PositionID: broker.PositionID,
+            AgentName: broker.AgentName,
+            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
+            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
+            CommissionRate: broker.CommissionRate,
+            PendingSalesTranCode: broker.PendingSalesTranCode,
+            WTaxRate: broker.WTaxRate,
+            VATRate: broker.VATRate,
+            Commission: broker.Commission
+        })
+    }
+
     let lastUpdatedByName = ''
     if(result.data.LastUpdateby){
         const lastUpdatedByAgent = await findAgentDetailsByAgentId(result.data.LastUpdateby)
@@ -2469,6 +2602,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const obj = {
         ...result.data,
+        Details: detailsArray,
         LastUpdateby: lastUpdatedByName,
         LastUpdateId: result.data.LastUpdateby
     }
@@ -2477,6 +2611,72 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
     return {
         success: true,
         data: obj
+    }
+}
+
+export const archiveSalesTransactionService = async (userId: number, salesTranId: number): QueryResult<any> => {
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await archiveSale(userId, salesTranId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Error archiving sale',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const archivePendingSalesTransactionService = async (userId: number, pendingSalesTranId: number): QueryResult<any> => {
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    const result = await archivePendingSale(userId, pendingSalesTranId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Error archiving sale',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

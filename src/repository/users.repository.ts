@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
-import { IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
+import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -528,6 +528,32 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
                 code: 400,
                 message: error.message
             },
+        }
+    }
+}
+
+export const findBrokerDetailsByBrokerId = async (brokerId: number): QueryResult<IBroker> => {
+    try {
+        const result = await db.selectFrom('Tbl_Broker')
+            .selectAll()
+            .where('BrokerID', '=', brokerId)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as IBroker,
+            error: {
+                code: 400,
+                message: error.message
+            }
         }
     }
 }

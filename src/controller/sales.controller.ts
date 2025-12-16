@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSalesTransactionService, archiveSalesTransactionService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -114,13 +114,14 @@ export const getWebSalesTransController = async (req: Request, res: Response) =>
         return;
     }
 
-    const { page, pageSize, month, year, developerId, search } = req.query
+    const { page, pageSize, month, year, developerId, divisionId, search } = req.query
 
     const result = await getWebSalesTransService(session.userID, {
         month: month ? Number(month) : undefined,
         year: year ? Number(year) : undefined,
         developerId: developerId ? Number(developerId) : undefined,
-        search: search ? search.toString() : undefined
+        search: search ? search.toString() : undefined,
+        divisionId: divisionId ? Number(divisionId) : undefined
     }, {
         page: Number(page), 
         pageSize: Number(pageSize)
@@ -1028,6 +1029,56 @@ export const approvePendingSalesController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Sales approved', data: result.data})
+}
+
+export const archiveSalesTransactionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { salesTranId } = req.params
+
+    const result = await archiveSalesTransactionService(session.userID, Number(salesTranId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to archive sales transaction', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales transaction archived', data: result.data})
+}
+
+export const archivePendingSalesController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+
+    const result = await archivePendingSalesTransactionService(session.userID, Number(pendingSalesId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to archive pending sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Pending sales archived', data: result.data})
 }
 
 export const editSaleImagesController = async (req: Request, res: Response) => {
