@@ -2462,16 +2462,33 @@ export const getWebPendingSalesService = async (
         }
     }
 
-    const result = await getPendingSales(
-        undefined, 
-        { 
-            ...filters,
-            approvalStatus: role == 'branch sales staff' ? [3] : [4],
-            salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
-            isUnique: true
-        }, 
-        pagination
+    const [result, ownedSales] = await Promise.all (
+        [
+            getPendingSales(
+                undefined, 
+                { 
+                    ...filters,
+                    approvalStatus: role == 'branch sales staff' ? [3] : [4],
+                    salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
+                    isUnique: true
+                }, 
+                pagination
+            ),
+            getPendingSales(
+                undefined, 
+                { 
+                    ...filters,
+                    // approvalStatus: role == 'branch sales staff' ? [3] : [4],
+                    // salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
+                    agentId: userId,
+                    isUnique: true
+                }, 
+                pagination
+            ),
+        ]
     )
+
+    const resultArray: any[] = []
 
     if(!result.success){
         logger(result.error?.message || '', {data: filters})
@@ -2485,8 +2502,22 @@ export const getWebPendingSalesService = async (
         }
     }
 
-    const obj = result.data.results.map((item: AgentPendingSale) => {
+    if(!ownedSales.success){
+        logger(ownedSales.error?.message || '', {data: filters})
         return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Getting pending sales failed.',
+                code: 400
+            }
+        }
+    }
+
+
+
+    const obj = result.data.results.map((item: AgentPendingSale) => {
+        resultArray.push({
             AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
@@ -2494,12 +2525,24 @@ export const getWebPendingSalesService = async (
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
             CreatedBy: item.CreatedBy
-        }
+        })
+    })
+
+    const ownedObj = ownedSales.data.results.map((item: AgentPendingSale) => {
+        resultArray.push({
+             AgentPendingSalesID: item.AgentPendingSalesID,
+            PendingSalesTransCode: item.PendingSalesTranCode,
+            SellerName: item.SellerName || 'N/A',
+            FinancingScheme: item.FinancingScheme,
+            ReservationDate: item.ReservationDate,
+            ApprovalStatus: item.ApprovalStatus,
+            CreatedBy: item.CreatedBy
+        })
     })
 
     return {
         success: true,
-        data: obj
+        data: resultArray
     }
 }
 
