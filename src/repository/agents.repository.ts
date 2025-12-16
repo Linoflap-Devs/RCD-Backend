@@ -43,7 +43,7 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
             return {
                 ...item,
                 FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim(),
-                Position: item.Position.trim()
+                Position: item.Position?.trim()
             }
         })
 
