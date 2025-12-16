@@ -189,7 +189,8 @@ export const getWebSalesTransService = async (
         developerId?: number,
         isUnique?: boolean,
         salesBranch?: number,
-        search?: string
+        search?: string,
+        showSales?: boolean
     },
     pagination?: {
         page?: number, 
@@ -239,7 +240,8 @@ export const getWebSalesTransService = async (
             ProjectName: sale.ProjectName?.trim() || '',
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
-            ReservationDate: sale.ReservationDate
+            ReservationDate: sale.ReservationDate,
+            NetTotalTCP: sale.NetTotalTCP
         }
     })
 
