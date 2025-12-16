@@ -428,7 +428,30 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     })
 
-     let updatedByName = ''
+    let brokerId = null
+
+    const brokerResult = details.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
+
+    if(brokerResult && brokerResult.AgentName){
+        const brokerData = await getBrokers({ name: brokerResult.AgentName })
+
+        if(brokerData){
+            brokerId = brokerData.data[0]?.BrokerID || null
+        }
+    }
+
+    const detailsNew = details.data.map((sale: VwSalesTransactions) => {
+        return {
+            SalesTranDtlId: sale.SalesTransDtlID,
+            Position: sale.PositionName?.trim() || '',
+            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
+            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
+            AgentName: sale.AgentName?.trim() || '',
+            CommissionRate: sale.CommissionRate
+        }
+    })
+
+    let updatedByName = ''
     if(details.data[0].LastUpdateby){
         const response = await findEmployeeUserById(details.data[0].LastUpdateby)
         updatedByName = response.success ? response.data.EmpName : ''
@@ -473,7 +496,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         },
         lastUpdatedBy: updatedByName,
         lastUpdatedAt: result.data.LastUpdate,
-        details: detailArray,
+        details: detailsNew,
         images: images.data
     }
 
