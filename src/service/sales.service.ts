@@ -3302,3 +3302,54 @@ export const deleteSalesTargetService = async (userId: number, salesTargetId: nu
         data: result.data
     }
 }
+
+export const getWebPersonalSalesService = async (
+    userId: number, 
+    filters?: { 
+        month?: number, 
+        year?: number, 
+        agentId?: number, 
+        brokerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+) => {
+
+    console.log('getWebPersonalSalesService filters', filters)
+
+    let brokerName = ''
+    if(filters && filters.brokerId){
+        const brokerData = await getBrokers({ brokerId: filters.brokerId })
+
+        if(brokerData.success && brokerData.data.length > 0){
+            brokerName = brokerData.data[0].RepresentativeName || ''
+        }
+    }
+
+    const result = await getPersonalSales( 
+        { 
+            agentId: filters && filters.agentId ? filters?.agentId : undefined, 
+            brokerName: filters && filters?.brokerId ? brokerName : undefined
+        }, 
+        filters,
+        pagination
+    );
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
