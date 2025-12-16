@@ -2231,7 +2231,7 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.PENDING_BH
     }
 
-    if(createdUserId.Position == 'BRANCH HEAD'){
+    if(createdUserId.Position == 'BRANCH HEAD' || createdUserId.Position == 'BRANCH SALES STAFF'){
         approvalStatus = SaleStatus.BRANCH_HEAD_APPROVED,
         salesStatus = SalesStatusText.PENDING_SA
     }
