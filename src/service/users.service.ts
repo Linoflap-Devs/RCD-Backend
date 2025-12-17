@@ -613,7 +613,7 @@ export const editBrokerService = async (brokerUserId: number, data: Partial<IEdi
         Birthplace: data.birthplace,
     }
 
-    const result = await editBrokerDetails(brokerUserDetails.data.BrokerID, mappedData)
+    const result = await editBrokerDetails(brokerUserDetails.data.BrokerID, mappedData, brokerUserDetails.data)
 
     if(!result.success){
         return {
