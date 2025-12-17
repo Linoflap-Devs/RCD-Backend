@@ -1145,7 +1145,8 @@ export const getCombinedPersonalSalesService = async (
                 undefined,
                 {
                     ...filters,
-                    agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
+                    //agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
+                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
