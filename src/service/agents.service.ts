@@ -369,7 +369,7 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
 
     
 
-    const result = await editAgent(userId, agentId, data)
+    const result = await editAgent(userId, agentId, data, agentData.data)
 
     if(!result.success){
         return {
