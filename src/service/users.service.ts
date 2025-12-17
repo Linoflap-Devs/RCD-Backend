@@ -567,7 +567,7 @@ export const editAgentService = async (agentUserId: number, data: IAgentEdit): Q
         }
     }
 
-    const result = await editAgentDetails(agentUserDetails.data.AgentID, data)
+    const result = await editAgentDetails(agentUserDetails.data.AgentID, data, agentUserDetails.data)
 
     if(!result.success){
         return {

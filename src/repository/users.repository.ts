@@ -619,7 +619,8 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
 }
 
 
-export const editAgentDetails = async (agentId: number, data: IAgentEdit): QueryResult<any> => {
+export const editAgentDetails = async (agentId: number, data: IAgentEdit, currentData: VwAgentPicture): QueryResult<any> => {
+    const trx = await db.startTransaction().execute();
     try {
         
         // editing logic
@@ -634,11 +635,24 @@ export const editAgentDetails = async (agentId: number, data: IAgentEdit): Query
 
         const partialData = mapToEditAgent(data);
         
-        const result = await db.updateTable('Tbl_Agents')
+        const result = await trx.updateTable('Tbl_Agents')
             .where('AgentID', '=', agentId)
             .set(partialData)
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
+
+        if(data.firstName || data.lastName || data.middleName){
+            const fullName = `${data.lastName || currentData.LastName}, ${data.firstName || currentData.FirstName} ${data.middleName || currentData.MiddleName}`;
+            console.log("full name update: ",fullName)
+            const updateRows = await trx.updateTable('Tbl_SalesTransDtl')
+                .where('AgentID', '=', agentId)
+                .set({
+                    AgentName: fullName
+                })
+                .execute();
+        }
+
+        await trx.commit().execute();
 
         return {
             success: true,
@@ -647,6 +661,7 @@ export const editAgentDetails = async (agentId: number, data: IAgentEdit): Query
     }
 
     catch (err: unknown){
+        await trx.rollback().execute();
         const error = err as Error
         return {
             success: false,
