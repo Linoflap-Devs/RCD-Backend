@@ -300,6 +300,10 @@ export const getPersonalSales = async (
 ): QueryResult<{totalPages: number, results: VwSalesTransactions[]}> => {
     try {
 
+        console.log('user', user)
+        console.log('filters', filters)
+        console.log('pagination', pagination)
+
         const page = pagination?.page ?? 1;
         const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
         const offset = pageSize ? (page - 1) * pageSize : 0;
@@ -359,9 +363,11 @@ export const getPersonalSales = async (
             totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
         }
 
+        result = result.orderBy('DateFiled', 'desc')
+
         if(pagination && pagination.page && pagination.pageSize){
             result = result.offset(offset).fetch(pagination.pageSize)
-            totalCountResult = totalCountResult.offset(offset).fetch(pagination.pageSize)
+            //totalCountResult = totalCountResult.offset(offset).fetch(pagination.pageSize)
         }
             
         const queryResult = await result.execute()
@@ -369,6 +375,7 @@ export const getPersonalSales = async (
 
         
         if(!queryResult){
+            console.log(queryResult)
             throw new Error('No sales found.')
         }
 
@@ -1027,6 +1034,7 @@ export const getPendingSales = async (
         agentId?: number,
         brokerName?: string,
         createdBy?: number,
+        createdByWeb?: number,
         developerId?: number,
         isUnique?: boolean,
         approvalStatus?: number[],
@@ -1092,6 +1100,11 @@ export const getPendingSales = async (
                     eb('CreatedBy', '=', agentId)
                 ])
             )
+        }
+
+        if(filters && filters.createdByWeb){
+            result = result.where('CreatedByWeb', '=', filters.createdByWeb)
+            totalCountResult = totalCountResult.where('CreatedByWeb', '=', filters.createdByWeb)
         }
 
         if(filters && filters.brokerName){

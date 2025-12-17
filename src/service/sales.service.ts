@@ -993,15 +993,6 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
 
     const detailsArray = []
 
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
-
     const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
     if(broker){
         detailsArray.push({
@@ -1018,6 +1009,16 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
             Commission: broker.Commission
         })
     }
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
 
     let updatedByName = ''
     if(result.data.LastUpdateby){
@@ -1144,7 +1145,8 @@ export const getCombinedPersonalSalesService = async (
                 undefined,
                 {
                     ...filters,
-                    agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
+                    //agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
+                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
@@ -2231,7 +2233,7 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
         salesStatus = SalesStatusText.PENDING_BH
     }
 
-    if(createdUserId.Position == 'BRANCH HEAD'){
+    if(createdUserId.Position == 'BRANCH HEAD' || createdUserId.Position == 'BRANCH SALES STAFF'){
         approvalStatus = SaleStatus.BRANCH_HEAD_APPROVED,
         salesStatus = SalesStatusText.PENDING_SA
     }
@@ -2461,16 +2463,35 @@ export const getWebPendingSalesService = async (
         }
     }
 
-    const result = await getPendingSales(
-        undefined, 
-        { 
-            ...filters,
-            approvalStatus: role == 'branch sales staff' ? [3] : [4],
-            salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
-            isUnique: true
-        }, 
-        pagination
+    const [result, ownedSales] = await Promise.all (
+        [
+            getPendingSales(
+                undefined, 
+                { 
+                    ...filters,
+                    approvalStatus: role == 'branch sales staff' ? [3] : [4],
+                    salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
+                    isUnique: true
+                }, 
+                pagination
+            ),
+            getPendingSales(
+                undefined, 
+                { 
+                    ...filters,
+                    // approvalStatus: role == 'branch sales staff' ? [3] : [4],
+                    // salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
+                    createdByWeb: userId,
+                    isUnique: true
+                }, 
+                pagination
+            ),
+        ]
     )
+
+    console.log(ownedSales.data)
+
+    const resultArray: any[] = []
 
     if(!result.success){
         logger(result.error?.message || '', {data: filters})
@@ -2484,8 +2505,22 @@ export const getWebPendingSalesService = async (
         }
     }
 
-    const obj = result.data.results.map((item: AgentPendingSale) => {
+    if(!ownedSales.success){
+        logger(ownedSales.error?.message || '', {data: filters})
         return {
+            success: false,
+            data: [],
+            error: {
+                message: 'Getting pending sales failed.',
+                code: 400
+            }
+        }
+    }
+
+
+
+    const obj = result.data.results.map((item: AgentPendingSale) => {
+        resultArray.push({
             AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
@@ -2493,12 +2528,24 @@ export const getWebPendingSalesService = async (
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
             CreatedBy: item.CreatedBy
-        }
+        })
+    })
+
+    const ownedObj = ownedSales.data.results.map((item: AgentPendingSale) => {
+        resultArray.push({
+             AgentPendingSalesID: item.AgentPendingSalesID,
+            PendingSalesTransCode: item.PendingSalesTranCode,
+            SellerName: item.SellerName || 'N/A',
+            FinancingScheme: item.FinancingScheme,
+            ReservationDate: item.ReservationDate,
+            ApprovalStatus: item.ApprovalStatus,
+            CreatedBy: item.CreatedBy
+        })
     })
 
     return {
         success: true,
-        data: obj
+        data: resultArray
     }
 }
 
@@ -2559,15 +2606,6 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
 
     const detailsArray = []
 
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
-
     const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
     if(broker){
         detailsArray.push({
@@ -2584,6 +2622,17 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
             Commission: broker.Commission
         })
     }
+
+    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
+        if(detail.PositionName?.toLowerCase() !== 'broker'){
+            detailsArray.push({
+                ...detail,
+                BrokerID: null
+            })
+        }
+    })
+
+    
 
     let lastUpdatedByName = ''
     if(result.data.LastUpdateby){
@@ -3290,6 +3339,57 @@ export const deleteSalesTargetService = async (userId: number, salesTargetId: nu
             error: {
                 message: 'Failed to delete sales target.',
                 code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const getWebPersonalSalesService = async (
+    userId: number, 
+    filters?: { 
+        month?: number, 
+        year?: number, 
+        agentId?: number, 
+        brokerId?: number
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+) => {
+
+    console.log('getWebPersonalSalesService filters', filters)
+
+    let brokerName = ''
+    if(filters && filters.brokerId){
+        const brokerData = await getBrokers({ brokerId: filters.brokerId })
+
+        if(brokerData.success && brokerData.data.length > 0){
+            brokerName = brokerData.data[0].RepresentativeName || ''
+        }
+    }
+
+    const result = await getPersonalSales( 
+        { 
+            agentId: filters && filters.agentId ? filters?.agentId : undefined, 
+            brokerName: filters && filters?.brokerId ? brokerName : undefined
+        }, 
+        filters,
+        pagination
+    );
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: 'No sales found.'
             }
         }
     }
