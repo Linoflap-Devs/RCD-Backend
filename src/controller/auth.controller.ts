@@ -34,6 +34,7 @@ export const registerAgentController = async (req: Request, res: Response) => {
         experience,
     } = req.body
 
+    console.log(education, experience)
 
     const obj: IAgentRegister = {
         firstName,
