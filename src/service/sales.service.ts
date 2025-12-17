@@ -241,7 +241,8 @@ export const getWebSalesTransService = async (
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
             ReservationDate: sale.ReservationDate,
-            NetTotalTCP: sale.NetTotalTCP
+            NetTotalTCP: sale.NetTotalTCP,
+            SellerName: sale.SellerName?.trim() || '',
         }
     })
 
@@ -380,7 +381,8 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         Division: data.Division,
         SalesSectorID: data.SalesSectorID,
         SectorName: data.SectorName,
-        ProjectTypeName: data.ProjectTypeName
+        ProjectTypeName: data.ProjectTypeName,
+        SellerName: data.SellerName?.trim() || '',
     }
 
     return {
