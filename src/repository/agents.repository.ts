@@ -1,6 +1,6 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
-import { IAgent, IAgentEducation, IAgentWorkExp } from "../types/users.types";
+import { IAgent, IAgentEducation, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
 import { IAgentRegister, IAgentRegistration, ITblAgentUser, IVwAgents } from "../types/auth.types";
 import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { sql } from "kysely";
@@ -911,8 +911,9 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
     }
 }
 
-export const editAgent = async (userId: number, agentId: number, data: Partial<IAddAgent>): QueryResult<ITblAgent> => {
-    
+export const editAgent = async (userId: number, agentId: number, data: Partial<IAddAgent>, currentData: VwAgentPicture): QueryResult<ITblAgent> => {
+    const trx = await db.startTransaction().execute()
+
     console.log(userId, agentId, data)
     try {
         const updateData = {
@@ -926,6 +927,17 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
             .set(updateData)
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
+
+        if(data.FirstName || data.LastName || data.MiddleName){
+            const fullName = `${data.LastName || currentData.LastName}, ${data.FirstName || currentData.FirstName} ${data.MiddleName || currentData.MiddleName}`;
+            console.log("full name update: ",fullName)
+            const updateRows = await trx.updateTable('Tbl_SalesTransDtl')
+                .where('AgentID', '=', agentId)
+                .set({
+                    AgentName: fullName
+                })
+                .execute();
+        }
 
         return {
             success: true,

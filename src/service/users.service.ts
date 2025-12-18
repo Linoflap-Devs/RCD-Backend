@@ -567,7 +567,7 @@ export const editAgentService = async (agentUserId: number, data: IAgentEdit): Q
         }
     }
 
-    const result = await editAgentDetails(agentUserDetails.data.AgentID, data)
+    const result = await editAgentDetails(agentUserDetails.data.AgentID, data, agentUserDetails.data)
 
     if(!result.success){
         return {
@@ -613,7 +613,7 @@ export const editBrokerService = async (brokerUserId: number, data: Partial<IEdi
         Birthplace: data.birthplace,
     }
 
-    const result = await editBrokerDetails(brokerUserDetails.data.BrokerID, mappedData)
+    const result = await editBrokerDetails(brokerUserDetails.data.BrokerID, mappedData, brokerUserDetails.data)
 
     if(!result.success){
         return {

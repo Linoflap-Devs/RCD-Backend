@@ -2,6 +2,7 @@ import { VwAgents } from "../db/db-types";
 import { addAgent, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
+import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
@@ -12,7 +13,16 @@ import { TblImageWithId } from "../types/image.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
 
-export const getAgentsService = async (filters?: {showInactive?: boolean, division?: number, position?: 'SP' | 'UM' | 'SD' | 'BR'}): QueryResult<IAgent[]> => {
+export const getAgentsService = async (
+    filters?: {
+        showInactive?: boolean, 
+        division?: number, 
+        position?: 'SP' | 'UM' | 'SD' | 'BR',
+        month?: number,
+        year?: number
+    }, 
+    showSales: boolean = false
+): QueryResult<IAgent[]> => {
 
     const positionMap = new Map<string, number[]>(
         [
@@ -36,9 +46,33 @@ export const getAgentsService = async (filters?: {showInactive?: boolean, divisi
         }
     }
 
+    // Conditionally fetch sales data only if showSales is true
+    let agentSalesMap = new Map<number, number>();
+
+    if (showSales) {
+        const agentSales = await getMultipleTotalPersonalSales(
+            { agentIds: result.data.map((b: IAgent) => b.AgentID) },
+            filters
+        )
+
+        // Create lookup maps for O(1) access
+        if (agentSales.success) {
+            agentSalesMap = new Map(
+                agentSales.data.map((s: any) => [s.AgentID, s.TotalSales || 0])
+            );
+        }
+    }
+
+    const obj = result.data.map((item: IAgent) => {
+        return {
+            ...item,
+            ...(showSales && { TotalSales: agentSalesMap.get(item.AgentID) || 0 } )
+        }
+    })
+
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }
 
@@ -369,7 +403,7 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
 
     
 
-    const result = await editAgent(userId, agentId, data)
+    const result = await editAgent(userId, agentId, data, agentData.data)
 
     if(!result.success){
         return {
