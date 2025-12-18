@@ -6,6 +6,7 @@ import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectBrokerRegistrationSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
 import { validateRole } from '../middleware/roles';
+import { unlinkAgentUserController } from '../controller/users.controller';
 
 const router = express.Router();
 
@@ -26,6 +27,7 @@ router.route('/logout-broker').delete(validateBrokerSession, logoutBrokerSession
 
 router.route('/approve-registration').post([validateEmployeeSession, validate(approveRegistrationSchema)], approveAgentRegistrationController);
 router.route('/reject-registration').post([validateEmployeeSession, validate(rejectRegistrationSchema)], rejectAgentRegistrationController);
+router.route('/unlink/agent/:agentUserId').post([validateEmployeeSession, validateRole(['AD','SA'])], unlinkAgentUserController);
 
 router.route('/current-user').get(validateSession, getCurrentAgentController);
 router.route('/web/current-user').get(validateEmployeeSession, getCurrentEmployeeController);
