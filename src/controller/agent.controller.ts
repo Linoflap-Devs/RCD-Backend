@@ -144,7 +144,7 @@ export const addNewAgentController = async (req: Request, res: Response) => {
             FirstName: firstName,
             MiddleName: middleName,
             ContactNumber: contactNumber,
-            DivisionID: divisionID,
+            DivisionID: divisionID || null,
             AgentTaxRate: agentTaxRate,
             CivilStatus: civilStatus,
             Sex: sex,

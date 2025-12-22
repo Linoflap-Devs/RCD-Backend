@@ -879,7 +879,7 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
                 DSHUDNumber: agent.DSHUDNumber || ' ',
                 AgentTaxRate: agent.AgentTaxRate ,
                 AffiliationDate: agent.AffiliationDate || new Date(),
-                DivisionID: agent.DivisionID,
+                DivisionID: agent.DivisionID || null,
                 ReferredByID: agent.ReferredByID,
                 ReferredCode: agent.ReferredCode,
                 TelephoneNumber: agent.TelephoneNumber,

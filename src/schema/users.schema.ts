@@ -93,7 +93,7 @@ export const addAgentSchema = z.object({
     lastName: z.string().max(50),
     sex: z.enum(['Male', 'Female']),
     civilStatus: z.enum(['Single', 'Married']),
-    divisionID: z.coerce.number(),
+    divisionID: z.coerce.number().optional(),
     positionID: z.coerce.number().optional(),
     agentTaxRate: z.coerce.number().gt(0),
     birthdate: z.coerce.date(),
