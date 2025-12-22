@@ -171,6 +171,12 @@ export const getWebDivisionSalesService = async (userId: number, filters?: { mon
         }
     }
 
+    // add a total object 
+
+    const totals = {
+        
+    }
+
     return {
         success: true,
         data: result.data
@@ -196,14 +202,14 @@ export const getWebSalesTransService = async (
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalResults: number, totalPages: number, results: Partial<VwSalesTrans>[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
 
     const userData = await findEmployeeUserById(userId);
 
     if(!userData.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, results: Partial<VwSalesTrans>[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]},
             error: {
                 code: 500,
                 message: 'No user found.'
@@ -224,7 +230,7 @@ export const getWebSalesTransService = async (
     if(!result.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
             error: {
                 code: 500,
                 message: 'No sales found.'
@@ -251,6 +257,7 @@ export const getWebSalesTransService = async (
         data: {
             totalResults: result.data.totalResults,
             totalPages: result.data.totalPages,
+            totalSales: result.data.totalSales,
             results: obj
         }
     }

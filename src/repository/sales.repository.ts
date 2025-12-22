@@ -37,6 +37,175 @@ async function generateUniqueTranCode(): Promise<string> {
     return tranCode;
 }
 
+// export const getSalesTrans = async (
+//     filters?: {
+//         divisionId?: number,
+//         month?: number,
+//         year?: number,
+//         agentId?: number,
+//         createdBy?: number,
+//         developerId?: number,
+//         isUnique?: boolean,
+//         salesBranch?: number,
+//         search?: string
+//     },
+//     pagination?: {
+//         page?: number, 
+//         pageSize?: number
+//     }
+// ): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]}> => {
+
+//     try {
+//         const page = pagination?.page ?? 1;
+//         const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+//         const offset = pageSize ? (page - 1) * pageSize : 0;
+
+//         let result = await db.selectFrom('vw_SalesTrans')
+//             .selectAll()
+//             .where('SalesStatus', '<>', 'ARCHIVED')
+
+//         let totalCountResult = await db
+//             .selectFrom("vw_SalesTrans")
+//             .select(({ fn }) => [fn.countAll<number>().as("count")])
+//             .where('SalesStatus', '<>', 'ARCHIVED')
+
+//         if(filters && filters.divisionId) {
+//             result = result.where('DivisionID', '=', filters.divisionId)
+//             totalCountResult = totalCountResult.where('DivisionID', '=', filters.divisionId)
+//         }
+
+//         if(filters && filters.developerId){
+//             result = result.where('DeveloperID', '=', filters.developerId)
+//             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+//         }
+        
+
+//         if(filters && filters.salesBranch){
+//             result = result.where('SalesBranchID', '=', filters.salesBranch)
+//             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+//         }
+
+//         if(filters && filters.month){
+//             const year = filters.year ? filters.year : new Date().getFullYear();
+//             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+//             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+//             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+//             const monthStart = startOfDay(firstDayManila);
+//             const monthEnd = endOfDay(lastDayManila);
+            
+//             const firstDay = new Date(monthStart.getTime());
+//             const lastDay = new Date(monthEnd.getTime());
+
+//             // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+//             // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+//             result = result.where('ReservationDateFormatted', '>', firstDay)
+//             result = result.where('ReservationDateFormatted', '<', lastDay)
+//             totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
+//             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
+//         }
+
+//         if(filters && filters.year && !filters.month){
+//             const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+//             const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+//             const yearStart = startOfDay(firstDayManila);
+//             const yearEnd = endOfDay(lastDayManila);
+                    
+//             const firstDay = new Date(yearStart.getTime());
+//             const lastDay = new Date(yearEnd.getTime());
+            
+//             result = result.where('ReservationDateFormatted', '>=', firstDay)
+//             result = result.where('ReservationDateFormatted', '<=', lastDay)
+//             totalCountResult = totalCountResult.where('ReservationDateFormatted', '>=', firstDay)
+//             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<=', lastDay)
+//         }
+
+//         if(filters && filters.search) {
+//         const searchTerm = `%${filters.search}%`;
+//         console.log(    )
+//         const searchAsNumber = Number(filters.search);
+//         const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+        
+//         result = result.where(({ or, eb }) => 
+//             or([
+//                 // String columns - always search these
+//                 eb('SalesTranCode', 'like', searchTerm),
+//                 eb('DeveloperName', 'like', searchTerm),
+//                 eb('ProjectName', 'like', searchTerm),
+//                 eb('Division', 'like', searchTerm),
+//                 eb('SalesStatus', 'like', searchTerm),
+//                 // Numeric column - only search if valid number
+//                 ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+//             ])
+//         );
+        
+//         totalCountResult = totalCountResult.where(({ or, eb }) => 
+//             or([
+//                 eb('SalesTranCode', 'like', searchTerm),
+//                 eb('DeveloperName', 'like', searchTerm),
+//                 eb('ProjectName', 'like', searchTerm),
+//                 eb('Division', 'like', searchTerm),
+//                 eb('SalesStatus', 'like', searchTerm),
+//                 ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+//             ])
+//         );
+//     }
+
+//         result = result.orderBy('ReservationDateFormatted', 'desc')
+        
+//         if(pagination && pagination.page && pagination.pageSize){
+//             result = result.offset(offset).fetch(pagination.pageSize)
+//         }
+        
+//         const queryResult = await result.execute();
+//         const countResult = await totalCountResult.execute();
+//         if(!result){
+//             throw new Error('No sales found.')
+//         }
+
+//         const totalCount = countResult ? Number(countResult[0].count) : 0;
+//         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+//         console.log('totalPages', totalPages)
+        
+//         let filteredResult = queryResult
+
+//         // Filter to get unique ProjectName records (keeps first occurrence)
+//         if(filters && filters.isUnique  && filters.isUnique === true){
+//             const uniqueProjects = new Map();
+//             filteredResult = queryResult.filter(record => {
+//                 if (!uniqueProjects.has(record.SalesTranCode)) {
+//                     uniqueProjects.set(record.SalesTranCode, true);
+//                     return true;
+//                 }
+//                 return false;
+//             })
+//         }
+        
+//         return {
+//             success: true,
+//             data: {
+//                 totalResults: totalCount,
+//                 totalPages: totalPages,
+//                 results: filteredResult
+//             }
+//         }
+//     }
+
+//     catch(err: unknown){
+//         const error = err as Error;
+//         return {
+//             success: false,
+//             data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+//             error: {
+//                 code: 500,
+//                 message: error.message
+//             }
+//         }
+//     }
+// }
+
 export const getSalesTrans = async (
     filters?: {
         divisionId?: number,
@@ -53,11 +222,11 @@ export const getSalesTrans = async (
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalResults: number, totalPages: number, results: VwSalesTrans[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]}> => {
 
     try {
         const page = pagination?.page ?? 1;
-        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const pageSize = pagination?.pageSize ?? undefined;
         const offset = pageSize ? (page - 1) * pageSize : 0;
 
         let result = await db.selectFrom('vw_SalesTrans')
@@ -69,26 +238,36 @@ export const getSalesTrans = async (
             .select(({ fn }) => [fn.countAll<number>().as("count")])
             .where('SalesStatus', '<>', 'ARCHIVED')
 
+        // Add totalSales query
+        let totalSalesResult = await db
+            .selectFrom("vw_SalesTrans")
+            .select(({ fn }) => [
+                fn.sum<number>('NetTotalTCP').as("totalSales")
+            ])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
         if(filters && filters.divisionId) {
             result = result.where('DivisionID', '=', filters.divisionId)
             totalCountResult = totalCountResult.where('DivisionID', '=', filters.divisionId)
+            totalSalesResult = totalSalesResult.where('DivisionID', '=', filters.divisionId)
         }
 
         if(filters && filters.developerId){
             result = result.where('DeveloperID', '=', filters.developerId)
             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+            totalSalesResult = totalSalesResult.where('DeveloperID', '=', filters.developerId)
         }
-        
 
         if(filters && filters.salesBranch){
             result = result.where('SalesBranchID', '=', filters.salesBranch)
             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+            totalSalesResult = totalSalesResult.where('SalesBranchID', '=', filters.salesBranch)
         }
 
         if(filters && filters.month){
             const year = filters.year ? filters.year : new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
-            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate();
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
         
             const monthStart = startOfDay(firstDayManila);
@@ -97,12 +276,12 @@ export const getSalesTrans = async (
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
 
-            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
-            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
             result = result.where('ReservationDateFormatted', '>', firstDay)
             result = result.where('ReservationDateFormatted', '<', lastDay)
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '>', firstDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '<', lastDay)
         }
 
         if(filters && filters.year && !filters.month){
@@ -119,38 +298,48 @@ export const getSalesTrans = async (
             result = result.where('ReservationDateFormatted', '<=', lastDay)
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '>=', firstDay)
             totalCountResult = totalCountResult.where('ReservationDateFormatted', '<=', lastDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '>=', firstDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '<=', lastDay)
         }
 
         if(filters && filters.search) {
-        const searchTerm = `%${filters.search}%`;
-        console.log(    )
-        const searchAsNumber = Number(filters.search);
-        const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
-        
-        result = result.where(({ or, eb }) => 
-            or([
-                // String columns - always search these
-                eb('SalesTranCode', 'like', searchTerm),
-                eb('DeveloperName', 'like', searchTerm),
-                eb('ProjectName', 'like', searchTerm),
-                eb('Division', 'like', searchTerm),
-                eb('SalesStatus', 'like', searchTerm),
-                // Numeric column - only search if valid number
-                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
-            ])
-        );
-        
-        totalCountResult = totalCountResult.where(({ or, eb }) => 
-            or([
-                eb('SalesTranCode', 'like', searchTerm),
-                eb('DeveloperName', 'like', searchTerm),
-                eb('ProjectName', 'like', searchTerm),
-                eb('Division', 'like', searchTerm),
-                eb('SalesStatus', 'like', searchTerm),
-                ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
-            ])
-        );
-    }
+            const searchTerm = `%${filters.search}%`;
+            const searchAsNumber = Number(filters.search);
+            const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+            
+            result = result.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('Division', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+            
+            totalCountResult = totalCountResult.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('Division', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+
+            totalSalesResult = totalSalesResult.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('Division', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+        }
 
         result = result.orderBy('ReservationDateFormatted', 'desc')
         
@@ -160,19 +349,24 @@ export const getSalesTrans = async (
         
         const queryResult = await result.execute();
         const countResult = await totalCountResult.execute();
+        const salesResult = await totalSalesResult.execute();
+        
         if(!result){
             throw new Error('No sales found.')
         }
 
         const totalCount = countResult ? Number(countResult[0].count) : 0;
         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+        const totalSales = salesResult && salesResult[0]?.totalSales 
+            ? Number(salesResult[0].totalSales) 
+            : 0;
 
         console.log('totalPages', totalPages)
         
         let filteredResult = queryResult
 
         // Filter to get unique ProjectName records (keeps first occurrence)
-        if(filters && filters.isUnique  && filters.isUnique === true){
+        if(filters && filters.isUnique && filters.isUnique === true){
             const uniqueProjects = new Map();
             filteredResult = queryResult.filter(record => {
                 if (!uniqueProjects.has(record.SalesTranCode)) {
@@ -188,6 +382,7 @@ export const getSalesTrans = async (
             data: {
                 totalResults: totalCount,
                 totalPages: totalPages,
+                totalSales: totalSales,
                 results: filteredResult
             }
         }
@@ -197,7 +392,7 @@ export const getSalesTrans = async (
         const error = err as Error;
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, results: VwSalesTrans[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
             error: {
                 code: 500,
                 message: error.message
