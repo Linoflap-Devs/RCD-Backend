@@ -6,6 +6,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
     const { 
         showInactive,
+        showNoDivision,
         division,
         position,
         showSales,
@@ -28,6 +29,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
     const result = await getAgentsService({
         showInactive: showInactive === 'true', 
+        showNoDivision: showNoDivision ? true : false,
         division: Number(division), 
         position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
         month: month ? Number(month) : undefined,

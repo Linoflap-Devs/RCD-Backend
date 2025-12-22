@@ -16,6 +16,7 @@ import { IAgent } from "../types/users.types";
 export const getAgentsService = async (
     filters?: {
         showInactive?: boolean, 
+        showNoDivision?: boolean,
         division?: number, 
         position?: 'SP' | 'UM' | 'SD' | 'BR',
         month?: number,
