@@ -22,7 +22,8 @@ export const getAgentsService = async (
         month?: number,
         year?: number
     }, 
-    showSales: boolean = false
+    showSales: boolean = false,
+    showBrokerDivisions: boolean = false
 ): QueryResult<IAgent[]> => {
 
     const positionMap = new Map<string, number[]>(
@@ -33,6 +34,11 @@ export const getAgentsService = async (
             ['BR', [72, 73, 76]]
         ]
     )
+
+    console.log('filters', filters)
+    console.log('showBrokerDivisions', showBrokerDivisions)
+    console.log('showSales', showSales)
+    // const brokerPositionIds = [72, 73, 76]
 
     const result = await getAgents({
         ...filters,
@@ -49,6 +55,7 @@ export const getAgentsService = async (
 
     // Conditionally fetch sales data only if showSales is true
     let agentSalesMap = new Map<number, number>();
+    let brokerDivisionMap = new Map<number, {DivisionID: number, DivisionName: string}[]>()
 
     if (showSales) {
         const agentSales = await getMultipleTotalPersonalSales(
@@ -64,10 +71,31 @@ export const getAgentsService = async (
         }
     }
 
+    if(showBrokerDivisions){
+        
+        const brokerPositions = positionMap.get('BR') || []
+        
+        const validBrokers = result.data.filter((a: IAgent) => brokerPositions.includes(a.PositionID || 0))
+
+        const brokerDivisions = await getDivisionBrokers({ agentIds: validBrokers.map((agent: IAgent) => agent.AgentID)})
+
+        if(brokerDivisions.success){
+            brokerDivisions.data.forEach((d: IBrokerDivision) => {
+                const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName }
+
+                if(d.AgentID){
+                    const existing = brokerDivisionMap.get(d.AgentID) || []
+                    brokerDivisionMap.set(d.AgentID, [...existing, divisionInfo])
+                }
+            })
+        }
+    }
+
     const obj = result.data.map((item: IAgent) => {
         return {
             ...item,
-            ...(showSales && { TotalSales: agentSalesMap.get(item.AgentID) || 0 } )
+            ...(showSales && { TotalSales: agentSalesMap.get(item.AgentID) || 0 } ),
+            ...((showBrokerDivisions && positionMap.get('BR')?.includes(item.PositionID || 0)) && { BrokerDivisions: brokerDivisionMap.get(item.AgentID) || [] })
         }
     })
 
