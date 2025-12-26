@@ -411,31 +411,31 @@ export const getUserDetailsWithValidationService = async (agentUserId: number, t
 
     // validations per role
 
-    if(agentUserDetails.data.Position == 'SALES PERSON'){
-        if(targetAgentDetails.data.Position !== 'SALES PERSON'){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    message: 'You are not authorized to view this agent',
-                    code: 400
-                }
-            }
-        }
-    }
+    // if(agentUserDetails.data.Position == 'SALES PERSON'){
+    //     if(targetAgentDetails.data.Position !== 'SALES PERSON'){
+    //         return {
+    //             success: false,
+    //             data: {},
+    //             error: {
+    //                 message: 'You are not authorized to view this agent',
+    //                 code: 400
+    //             }
+    //         }
+    //     }
+    // }
 
-    if(agentUserDetails.data.Position == 'UNIT MANAGER'){
-        if(targetAgentDetails.data.Position !== 'UNIT MANAGER' && targetAgentDetails.data.Position !== 'SALES PERSON'){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    message: 'You are not authorized to view this agent',
-                    code: 400
-                }
-            }
-        }
-    }
+    // if(agentUserDetails.data.Position == 'UNIT MANAGER'){
+    //     if(targetAgentDetails.data.Position !== 'UNIT MANAGER' && targetAgentDetails.data.Position !== 'SALES PERSON'){
+    //         return {
+    //             success: false,
+    //             data: {},
+    //             error: {
+    //                 message: 'You are not authorized to view this agent',
+    //                 code: 400
+    //             }
+    //         }
+    //     }
+    // }
 
     const userInfo = {
         firstName: targetAgentDetails.data.FirstName?.trim() || '',
