@@ -1244,3 +1244,36 @@ export const editBrokerWorkExp = async (brokerId: number, editedWorkExp: Partial
 //         }
 //     }
 // }
+
+export const unlinkAgentUser = async (userId: number, agentUserId: number): QueryResult<ITblAgentUser> => {
+
+    console.log('userId: ', userId, 'agentUserId: ', agentUserId)
+
+    try {
+        const result = await db.updateTable('Tbl_AgentUser')
+            .set({
+                AgentID: null,
+                IsVerified: 0,
+            })
+            .where('AgentUserID', '=', agentUserId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

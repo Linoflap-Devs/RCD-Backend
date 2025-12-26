@@ -6,6 +6,8 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
     const { 
         showInactive,
+        showNoDivision,
+        showBrokerDivisions,
         division,
         position,
         showSales,
@@ -26,13 +28,20 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
     console.log('params', showInactive, division, position)
 
-    const result = await getAgentsService({
-        showInactive: showInactive === 'true', 
-        division: Number(division), 
-        position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
-        month: month ? Number(month) : undefined,
-        year: year ? Number(year) : undefined
-    }, showSales ? true : false);
+    console.log(req.query)
+
+    const result = await getAgentsService(
+        {
+            showInactive: showInactive === 'true', 
+            showNoDivision: showNoDivision ? true : false,
+            division: Number(division), 
+            position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
+            month: month ? Number(month) : undefined,
+            year: year ? Number(year) : undefined
+        }, 
+        showSales ? true : false,
+        showBrokerDivisions ? true : false
+    );
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agents.', data: {}})
@@ -144,7 +153,7 @@ export const addNewAgentController = async (req: Request, res: Response) => {
             FirstName: firstName,
             MiddleName: middleName,
             ContactNumber: contactNumber,
-            DivisionID: divisionID,
+            DivisionID: divisionID || null,
             AgentTaxRate: agentTaxRate,
             CivilStatus: civilStatus,
             Sex: sex,

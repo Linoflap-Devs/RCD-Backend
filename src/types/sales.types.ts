@@ -287,7 +287,7 @@ export enum SalesStatusText {
     PENDING_BH = 'PENDING APPROVAL - BRANCH HEAD',
     PENDING_SA = 'PENDING APPROVAL - SALES ADMIN',
     APPROVED = 'APPROVED',
-    ARCHIVED = 'ARCHIVED'
+    ARCHIVED = 'Archived'
 }
 
 export enum Roles {

@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
@@ -1156,6 +1156,7 @@ export const getBrokersService = async (
         AgentRegistrationID: null,
         Email: broker.Email || null, 
         BrokerRegistrationID: broker.BrokerRegistrationID || null,
+        TaxRate: broker.BrokerTaxRate || 0,
         Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
         ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
     }));
@@ -1169,6 +1170,7 @@ export const getBrokersService = async (
         Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
         AgentRegistrationID: agent.AgentRegistrationID || null,
         BrokerRegistrationID: null,
+        TaxRate: agent.AgentTaxRate || 0,
         Email: agent.Email || null,
         Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
         ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
@@ -1498,6 +1500,36 @@ export const deleteWebBrokerService = async (userId: number, brokerId: number): 
         return {
             success: false,
             data: {} as ITblBroker,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const unlinkAgentUserService = async (userId: number, agentUserId: number) : QueryResult<ITblAgentUser> => {
+    const details = await findAgentDetailsByUserId(agentUserId)
+
+    if(!details.success || !details.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                code: 400,
+                message: 'Agent user not found.'
+            }
+        }
+    }
+
+    const result = await unlinkAgentUser(userId, agentUserId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
             error: result.error
         }
     }

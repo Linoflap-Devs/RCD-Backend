@@ -9,7 +9,9 @@ import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
 
-export const getAgents = async (filters?: { name?: string, showInactive?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
+export const getAgents = async (filters?: { name?: string, showInactive?: boolean, showNoDivision?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
+    
+    console.log(filters)
     try {
         let result = await db.selectFrom('Vw_UniqueAgents')
             .selectAll()
@@ -24,6 +26,10 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
 
         if(!filters || !filters.showInactive){
             result = result.where('IsActive', '=', 1)
+        }
+
+        if(!filters || !filters.showNoDivision){
+            result = result.where('DivisionID', 'is not', null)
         }
 
         if(filters && filters.positionId){
@@ -879,7 +885,7 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
                 DSHUDNumber: agent.DSHUDNumber || ' ',
                 AgentTaxRate: agent.AgentTaxRate ,
                 AffiliationDate: agent.AffiliationDate || new Date(),
-                DivisionID: agent.DivisionID,
+                DivisionID: agent.DivisionID || null,
                 ReferredByID: agent.ReferredByID,
                 ReferredCode: agent.ReferredCode,
                 TelephoneNumber: agent.TelephoneNumber,
