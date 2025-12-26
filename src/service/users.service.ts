@@ -120,11 +120,28 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
         endDate: item.EndDate
     }))
 
+    let brokerDivisions: {divisionId: number, divisionName: string}[] = []
+
+    // broker divisions
+    const brokerPositions = await getPositions( { positionName: 'BROKER' })
+
+    if(brokerPositions.success && brokerPositions.data[0].PositionID == agentUserDetails.data.PositionID){
+        const divisions = await getDivisionBrokers({ agentIds: [agentUserDetails.data.AgentID] })
+
+        if(divisions.success){
+            brokerDivisions = divisions.data.map(item => ({
+                divisionId: item.DivisionID,
+                divisionName: item.DivisionName
+            }))
+        }
+    }
+
     const obj = {
         userInfo: userInfo, 
         basicInfo: basicInfo,
         workExp: workExp,
-        education: education
+        education: education,
+        ...( brokerPositions.data[0].PositionID == agentUserDetails.data.PositionID && { brokerDivisions: brokerDivisions })
     }
 
     return {
