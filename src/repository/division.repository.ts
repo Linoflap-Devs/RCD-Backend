@@ -137,17 +137,17 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
             .where('IsActive', '=', 1)
             .orderBy('LastName', 'asc')
             
-        if(role == 'SALES DIRECTOR'){
-            result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
-        }
+        // if(role == 'SALES DIRECTOR'){
+        //     result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
+        // }
 
-        if(role == 'UNIT MANAGER'){
-            result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
-        }
+        // if(role == 'UNIT MANAGER'){
+        //     result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
+        // }
 
-        if(role == 'SALES PERSON'){
-            result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
-        }
+        // if(role == 'SALES PERSON'){
+        //     result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
+        // }
 
         const queryResult = await result.execute();
 
