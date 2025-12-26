@@ -248,11 +248,24 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
         endDate: item.EndDate
     }))
 
+    let brokerDivisions: {divisionId: number, divisionName: string}[] = []
+
+    // broker divisions
+    const divisions = await getDivisionBrokers({ brokerIds: [brokerUserDetails.data.BrokerID] })
+
+    if(divisions.success){
+        brokerDivisions = divisions.data.map(item => ({
+            divisionId: item.DivisionID,
+            divisionName: item.DivisionName
+        }))
+    }
+
     const obj = {
         userInfo: userInfo, 
         basicInfo: basicInfo,
         workExp: workExp,
-        education: education
+        education: education,
+        brokerDivisions: brokerDivisions
     }
 
     return {
