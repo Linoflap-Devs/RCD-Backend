@@ -1525,12 +1525,15 @@ export const editPendingSaleService = async (
      const validCommissions = []
 
     for(const commission of data.commissionRates || []){
-
+        console.log('commissions', commission)
         if(commission.agentId || commission.agentName){
             if(commission.position.toLowerCase() == 'broker') {
                 if(commission.agentName){
-                    const findAgent = await getAgents({ name: commission.agentName })
 
+                    
+                    const findAgent = await getAgents({ name: commission.agentName })
+                    console.log(commission.agentName)
+                    console.log(findAgent)
                     if(findAgent.success && findAgent.data[0]){
                         commission.agentId = findAgent.data[0].AgentID
                     }
@@ -1650,17 +1653,64 @@ export const editPendingSalesDetailsService = async (
 
     // validate objects
     const validEdits: EditPendingSaleDetail[] = [];
-        for (const detail of data) {
-            if (!detail.pendingSalesDtlId) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
-            if (!detail.commissionRate) return { success: false, data: {}, error: { message: 'Commission Rate not found', code: 400 } };
-    
+
+    const currentPendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!currentPendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 404
+            }
+        }
+    }
+
+    const pendingDetailsMap = new Map<number, typeof currentPendingSale.data.Details[0]>()
+
+    for (const detail of currentPendingSale.data.Details) {
+        pendingDetailsMap.set(detail.AgentPendingSalesDtlID, detail)
+    }
+
+    for (const detail of data) {
+        if (!detail.pendingSalesDtlId) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
+        if (!detail.commissionRate) return { success: false, data: {}, error: { message: 'Commission Rate not found', code: 400 } };
+        
+        const currentDetail = pendingDetailsMap.get(detail.pendingSalesDtlId)
+
+        if(!currentDetail) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
+
+        if(detail.agentId || detail.agentName){
+            if(currentDetail.PositionName.toLowerCase() == 'broker') {
+                if(detail.agentName){
+                
+                    const findAgent = await getAgents({ name: detail.agentName })
+                    console.log(detail.agentName)
+                    console.log(findAgent)
+                    if(findAgent.success && findAgent.data[0]){
+                        detail.agentId = findAgent.data[0].AgentID
+                    }
+                }
+
+                if(detail.agentId){
+                    const agent = await getAgent(detail.agentId)
+                    
+                    if(agent.success && agent.data){
+                        detail.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                    }
+                }
+            }
+
             validEdits.push({
                 pendingSalesDtlId: detail.pendingSalesDtlId,
                 ...(detail.agentId && { agentId: detail.agentId }),
                 ...(detail.agentName && { agentName: detail.agentName }),
+                position: detail.position,
                 commissionRate: detail.commissionRate,
             });
         }
+    }
 
     const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, validEdits);
 
