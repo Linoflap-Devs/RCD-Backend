@@ -474,7 +474,7 @@ export const getUserDetailsWithValidationService = async (agentUserId: number, t
         division: targetAgentDetails.data.Division?.trim() || '',
         position: targetAgentDetails.data.Position?.trim() || '',
         email: targetAgentDetails.data.Email?.trim() || '',
-        profileImage: targetAgentDetails.data.Image ? agentUserDetails.data.Image : null,
+        profileImage: targetAgentDetails.data.Image || null,
     }
 
     const agentDetails = await getAgentDetails(agentUserDetails.data.AgentID)
