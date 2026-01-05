@@ -174,6 +174,7 @@ export interface EditPendingSaleDetail {
     pendingSalesDtlId: number,
     agentId?: number,
     agentName?: string,
+    position: string,
     commissionRate: number,
 }
 
