@@ -1846,6 +1846,17 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
         }
     }
 
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
     if(pendingSale.data.DivisionID != agentData.data.DivisionID){
         return {
             success: false,
@@ -1874,7 +1885,7 @@ export const approveSalesDirectorService = async (agentUserId: number, pendingSa
     }
 
     const result = await approveNextStage({
-        agentId: agentUserId,
+        agentId: agentData.data.AgentID,
         pendingSalesId: pendingSalesId,
         nextApprovalStatus: SaleStatus.SALES_DIRECTOR_APPROVED,
         nextSalesStatus: SalesStatusText.PENDING_BH
