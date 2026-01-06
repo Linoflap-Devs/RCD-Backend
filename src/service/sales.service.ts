@@ -1180,11 +1180,13 @@ export const getCombinedPersonalSalesService = async (
                     projectCode: sale.SalesTranCode?.trim() || '',
                     // agentName: sale.AgentName || '',
                     agentName: sale.SellerName || sale.AgentName || '',
+                    divisionId: sale.DivisionID,
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: null,
                     hasRemarks: false,
-                    isEditable: false
+                    isEditable: false,
+                    isRejected: false,
                 }
             });
             combinedSales.push(...approvedSales);
@@ -1210,11 +1212,13 @@ export const getCombinedPersonalSalesService = async (
                     projectCode: sale.PendingSalesTranCode?.trim() || '',
                     // agentName: sale.AgentName || sale.CreatedByName || '',
                     agentName: sale.SellerName || sale.AgentName || sale.CreatedBy || '',
+                    divisionId: sale.DivisionID,
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
                     hasRemarks: sale.Remarks ? true : false,
-                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1)
+                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
+                    isRejected: sale.IsRejected,
                 }
             });
             combinedSales.push(...pendingSales);

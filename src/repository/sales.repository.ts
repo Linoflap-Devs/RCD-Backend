@@ -1233,7 +1233,8 @@ export const getPendingSales = async (
         developerId?: number,
         isUnique?: boolean,
         approvalStatus?: number[],
-        salesBranch?: number
+        salesBranch?: number,
+        showRejected?: boolean
     },
     pagination?: {
         page?: number, 
@@ -1344,6 +1345,11 @@ export const getPendingSales = async (
             result = result.where('ReservationDate', '<=', lastDay)
             totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
             totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
+        }
+
+        if(filters && filters.showRejected !== true){
+            result = result.where('IsRejected', '=', 0)
+            totalCountResult = totalCountResult.where('IsRejected', '=', 0)
         }
 
         result = result.orderBy('ReservationDate', 'desc')
