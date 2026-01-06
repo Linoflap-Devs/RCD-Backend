@@ -616,6 +616,7 @@ export const registerAgentTransaction = async(
             TINNumber: data.tinNumber ?? '',
             PRCNumber: data.prcNumber ?? '',
             DSHUDNumber: data.dshudNumber ?? '',
+            TelephoneNumber: data.telephoneNumber ?? '', 
             EmployeeIDNumber: data.employeeIdNumber ?? '',
             PersonEmergency: '',
             ContactEmergency: '',
