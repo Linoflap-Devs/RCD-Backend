@@ -282,7 +282,7 @@ export const getCommissionForecastByMonthFn = async (sorts?: ForecastByMonthSort
                 YEAR(CONVERT(DATE, ReservationDate, 101)) AS Year,
                 SUM(NetTotalTCP) AS NetTotalTCP
             FROM 
-                Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+                Fn_CommissionForecastV2( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
             GROUP BY 
                 MONTH(CONVERT(DATE, ReservationDate, 101)),
                 YEAR(CONVERT(DATE, ReservationDate, 101))
