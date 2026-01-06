@@ -1167,9 +1167,29 @@ export const getCombinedPersonalSalesService = async (
 
         let combinedSales: any[] = [];
 
+        // Map to track division totals
+        const divisionTotalsMap = new Map<number, { 
+            divisionId: number, 
+            divisionName: string, 
+            totalSalesAmount: number 
+        }>();
+
         // Process approved sales
         if (approvedSalesResult.success) {
             const approvedSales = approvedSalesResult.data.results.map((sale: VwSalesTransactions) => {
+
+                if (sale.DivisionID && sale.NetTotalTCP) {
+                    const existing = divisionTotalsMap.get(sale.DivisionID);
+                    if (existing) {
+                        existing.totalSalesAmount += sale.NetTotalTCP;
+                    } else {
+                        divisionTotalsMap.set(sale.DivisionID, {
+                            divisionId: sale.DivisionID,
+                            divisionName: sale.Division || '',
+                            totalSalesAmount: sale.NetTotalTCP
+                        });
+                    }
+                }
 
                 return {
                     salesId: sale.SalesTranID,
@@ -1180,15 +1200,20 @@ export const getCombinedPersonalSalesService = async (
                     projectCode: sale.SalesTranCode?.trim() || '',
                     // agentName: sale.AgentName || '',
                     agentName: sale.SellerName || sale.AgentName || '',
+                    divisionName: sale.Division,
+                    divisionId: sale.DivisionID,
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: null,
                     hasRemarks: false,
-                    isEditable: false
+                    isEditable: false,
+                    isRejected: false,
                 }
             });
             combinedSales.push(...approvedSales);
         }
+
+        console.log("pendingSalesResult", divisionTotalsMap)
 
         // Process pending sales
         //console.log(pendingSalesResult.data)
@@ -1210,15 +1235,22 @@ export const getCombinedPersonalSalesService = async (
                     projectCode: sale.PendingSalesTranCode?.trim() || '',
                     // agentName: sale.AgentName || sale.CreatedByName || '',
                     agentName: sale.SellerName || sale.AgentName || sale.CreatedBy || '',
+                    divisionId: sale.DivisionID,
+                    divisionName: sale.Division,
                     reservationDate: sale.ReservationDate,
                     dateFiled: sale.DateFiled,
                     approvalStatus: sale.ApprovalStatus,
                     hasRemarks: sale.Remarks ? true : false,
-                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1)
+                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
+                    isRejected: sale.IsRejected ? true : false,
                 }
             });
             combinedSales.push(...pendingSales);
         }
+
+        // Convert division totals map to array
+        const divisionTotals = Array.from(divisionTotalsMap.values())
+            .sort((a, b) => a.divisionName.localeCompare(b.divisionName));
 
         // Sort by dateFiled descending
         combinedSales.sort((a, b) => new Date(b.dateFiled ? b.dateFiled : b.reservationDate).getTime() - new Date(a.dateFiled ? a.dateFiled : a.reservationDate).getTime());
@@ -1250,6 +1282,7 @@ export const getCombinedPersonalSalesService = async (
         const result = {
             totalPages: totalPages,
             totalSalesAmount: totalSalesAmount.data,
+            divisionTotals: divisionTotals,
             sales: paginatedSales
         };
 
