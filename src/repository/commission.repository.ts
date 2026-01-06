@@ -197,7 +197,7 @@ export const getCommissionForecastFn = async (sorts?: SortOption[], take?: numbe
         
         const result = await sql`
             SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
-            FROM Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            FROM Fn_CommissionForecastV2( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
         
@@ -237,7 +237,7 @@ export const getCommissionForecastTopBuyersFn = async (sorts?: TopBuyerSortOptio
         
         const result = await sql`
             SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} BuyersName, SUM(NetTotalTCP) AS NetTotalTCP
-            FROM Fn_CommissionForecast( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            FROM Fn_CommissionForecastV2( ${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
             GROUP BY BuyersName
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
@@ -315,7 +315,7 @@ export const getCommissionForecastPercentageFn = async (): QueryResult<FnCommiss
                 SUM(DownPayment) AS TotalForecast,
                 SUM(DPPaid) AS TotalPaid,
                 (SUM(DPPaid) / SUM(DownPayment)) * 100 AS TotalPaidPercent
-            FROM Fn_CommissionForecast(getdate())
+            FROM Fn_CommissionForecastV2(getdate())
         `.execute(db)
         
         const rows: FnCommissionForecastPercentage[] = result.rows as FnCommissionForecastPercentage[]
