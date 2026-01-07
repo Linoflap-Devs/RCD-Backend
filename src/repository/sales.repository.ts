@@ -1349,8 +1349,37 @@ export const getPendingSales = async (
         }
 
         if(filters && filters.showRejected !== true){
-            result = result.where('IsRejected', '=', 0)
-            totalCountResult = totalCountResult.where('IsRejected', '=', 0)
+            // If filtering by agentId, show rejected sales for that agent
+            if(filters && filters.agentId){
+                const agentId = filters.agentId;
+                
+                // Show non-rejected sales OR rejected sales belonging to this agent
+                result = result.where((eb) => 
+                    eb.or([
+                        eb('IsRejected', '=', 0),
+                        eb.and([
+                            eb('IsRejected', '=', 1),
+                            eb('CreatedBy', '=', agentId)
+                        ])
+                    ])
+                )
+                totalCountResult = totalCountResult.where((eb) => 
+                    eb.or([
+                        eb('IsRejected', '=', 0),
+                        eb.and([
+                            eb('IsRejected', '=', 1),
+                            eb.or([
+                                eb('AgentID', '=', agentId),
+                                eb('CreatedBy', '=', agentId)
+                            ])
+                        ])
+                    ])
+                )
+            } else {
+                // Default behavior: hide all rejected sales
+                result = result.where('IsRejected', '=', 0)
+                totalCountResult = totalCountResult.where('IsRejected', '=', 0)
+            }
         }
 
         result = result.orderBy('ReservationDate', 'desc')
