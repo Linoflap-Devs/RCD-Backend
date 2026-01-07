@@ -1359,7 +1359,10 @@ export const getPendingSales = async (
                         eb('IsRejected', '=', 0),
                         eb.and([
                             eb('IsRejected', '=', 1),
-                            eb('CreatedBy', '=', agentId)
+                            eb.or([
+                                eb('CreatedBy', '=', agentId),
+                                eb('AgentID', '=', agentId),
+                            ])
                         ])
                     ])
                 )
@@ -2351,6 +2354,13 @@ export const editPendingSale = async (
             await updateCommission('ASSISTANCE FEE', 0, commissionDetails.assistanceFee);
             await updateCommission('REFERRAL FEE', 0, commissionDetails.referralFee);
             await updateCommission('OTHERS', 0, commissionDetails.others);
+        }
+
+        if(existingSale.IsRejected === 1 && existingSale.CreatedBy === user.agentUserId){
+            const result = await trx.updateTable('Tbl_AgentPendingSales')
+            .where('AgentPendingSalesID', '=', pendingSalesId)
+            .set({ IsRejected: 0 })
+            .execute()
         }
 
         await trx.commit().execute();
