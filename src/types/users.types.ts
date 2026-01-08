@@ -168,6 +168,8 @@ export interface IMobileAccount {
     ImageID: number | null,
     AgentID: number | null,
     BrokerID: number | null,
+    Position: string | null,
+    PositionID: number | null,
     AgentRegistrationID: number | null,
     BrokerRegistrationID: number | null
 }

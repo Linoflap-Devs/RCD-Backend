@@ -1572,6 +1572,8 @@ export const unlinkAgentUserService = async (userId: number, agentUserId: number
 
 export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> => {
     
+    const position = await getPositions({ positionName: 'BROKER' })
+
     const [agentUsers, brokerUsers] = await Promise.all([
         getAgentUsers(),
         getBrokerUsers()
@@ -1596,6 +1598,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             ImageID: user.ImageID,
             AgentID: user.AgentID,
             BrokerID: null,
+            Position: user && user.Position ? user.Position.trim() : null,
+            PositionID: user?.PositionID || null,
             AgentRegistrationID: user.AgentRegistrationID,
             BrokerRegistrationID: null
         })
@@ -1610,6 +1614,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             ImageID: user.ImageID,
             AgentID: null,
             BrokerID: user.BrokerID,
+            Position: "BROKER",
+            PositionID: position.data[0].PositionID || null,
             AgentRegistrationID: null,
             BrokerRegistrationID: user.BrokerRegistrationID
         })
