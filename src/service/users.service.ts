@@ -1587,6 +1587,42 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
         }
     }
 
+    // hands on brokers
+    let handsOnDivisionMap = new Map<number, {DivisionID: number, DivisionName: string}[]>()
+    const validHandsOnBrokers = agentUsers.data.filter((a: ITblAgentUser) => position.data[0].PositionID === (a.PositionID || 0))
+
+    const brokerDivisions = await getDivisionBrokers({ agentIds: validHandsOnBrokers.map((agent: ITblAgentUser) => (agent.AgentID || 0)) })
+
+    if(brokerDivisions.success){
+        brokerDivisions.data.forEach((d: IBrokerDivision) => {
+            const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName }
+
+            if(d.AgentID){
+                const existing = handsOnDivisionMap.get(d.AgentID) || []
+                handsOnDivisionMap.set(d.AgentID, [...existing, divisionInfo])
+            }
+        })
+    }
+
+    // hands off brokers
+    let handsOffDivisionMap = new Map<number, {DivisionID: number, DivisionName: string}[]>()
+
+    const handsOffDivisions = await getDivisionBrokers({ brokerIds: brokerUsers.data.map((broker: ITblBrokerUser) => (broker.BrokerID || 0)) })
+
+    if(handsOffDivisions.success){
+        handsOffDivisions.data.forEach((d: IBrokerDivision) => {
+            const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName }
+
+            if(d.BrokerID){
+                const existing = handsOffDivisionMap.get(d.BrokerID) || []
+                handsOffDivisionMap.set(d.BrokerID, [...existing, divisionInfo])
+            }
+        })
+    }
+
+    console.log('handsOnDivisionMap', handsOnDivisionMap)
+    console.log('handsOffDivisionMap', handsOffDivisionMap)
+
     const users: IMobileAccount[] = []
 
     agentUsers.data.map((user: ITblAgentUser) => {
@@ -1603,7 +1639,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             Division: user && user.Division ? user.Division.trim() : null,
             DivisionID: user?.DivisionID ? Number(user.DivisionID) : null,
             AgentRegistrationID: user.AgentRegistrationID,
-            BrokerRegistrationID: null
+            BrokerRegistrationID: null,
+            ...((position.data[0].PositionID == (user.PositionID || 0)) && { BrokerDivisions: handsOnDivisionMap.get(user.AgentID || 0) || [] })
         })
     })
 
@@ -1621,7 +1658,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             Division: null,
             DivisionID: null,
             AgentRegistrationID: null,
-            BrokerRegistrationID: user.BrokerRegistrationID
+            BrokerRegistrationID: user.BrokerRegistrationID,
+            BrokerDivisions: handsOffDivisionMap.get(user.BrokerID || 0) || []
         })
     })
 

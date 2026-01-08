@@ -173,5 +173,9 @@ export interface IMobileAccount {
     Division: string | null,
     DivisionID: number | null,
     AgentRegistrationID: number | null,
-    BrokerRegistrationID: number | null
+    BrokerRegistrationID: number | null,
+    BrokerDivisions?: {
+        DivisionID: number,
+        DivisionName: string
+    }[]
 }
