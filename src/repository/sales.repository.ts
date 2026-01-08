@@ -1596,7 +1596,7 @@ export const addPendingSale = async (
             developerID: number,
             developerCommission: number,
             netTCP: number,
-            miscFee: number,
+            miscFee: number | null,
             financingScheme: string,
         },
         payment: {
@@ -1688,7 +1688,7 @@ export const addPendingSale = async (
                 DeveloperID: data.property.developerID,
                 DevCommType: data.property.developerCommission.toString(),
                 NetTotalTCP: data.property.netTCP,
-                MiscFee: data.property.miscFee,
+                MiscFee: data.property.miscFee || 0,
                 FinancingScheme: data.property.financingScheme,
 
                 DownPayment: data.payment.downpayment || 0,
