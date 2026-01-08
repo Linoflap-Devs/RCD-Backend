@@ -2798,7 +2798,8 @@ export const approveNextStage = async (data: {
                 Remarks: null,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
                 LastUpdateby: data.agentId ? data.agentId : null,
-                LastUpdateByWeb: data.userId ? data.userId : null
+                LastUpdateByWeb: data.userId ? data.userId : null,
+                IsRejected: 0
             })
             .where('AgentPendingSalesID', '=', data.pendingSalesId)
             .outputAll('inserted')
