@@ -25,7 +25,9 @@ export interface ITblAgentUser {
     ImageID: number | null,
     IsVerified: number,
     Position?: string | null,
-    PositionID?: number | null
+    PositionID?: number | null,
+    Division?: string | null,
+    DivisionID?: string | null
 }
 
 export interface IAgentUserSession {

@@ -1600,6 +1600,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             BrokerID: null,
             Position: user && user.Position ? user.Position.trim() : null,
             PositionID: user?.PositionID || null,
+            Division: user && user.Division ? user.Division.trim() : null,
+            DivisionID: user?.DivisionID ? Number(user.DivisionID) : null,
             AgentRegistrationID: user.AgentRegistrationID,
             BrokerRegistrationID: null
         })
@@ -1616,6 +1618,8 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
             BrokerID: user.BrokerID,
             Position: "BROKER",
             PositionID: position.data[0].PositionID || null,
+            Division: null,
+            DivisionID: null,
             AgentRegistrationID: null,
             BrokerRegistrationID: user.BrokerRegistrationID
         })

@@ -36,10 +36,13 @@ export const getAgentUsers = async (): QueryResult<ITblAgentUser[]> => {
         const baseQuery = await db.selectFrom('Tbl_AgentUser')
             .leftJoin('Tbl_Agents', 'Tbl_AgentUser.AgentID', 'Tbl_Agents.AgentID')
             .leftJoin('Tbl_Position', 'Tbl_Agents.PositionID', 'Tbl_Position.PositionID')
+            .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
             .selectAll('Tbl_AgentUser')
             .select([
                 'Tbl_Agents.PositionID',
-                'Tbl_Position.Position'
+                'Tbl_Agents.DivisionID',
+                'Tbl_Position.Position',
+                'Tbl_Division.Division'
             ])
 
         const result = await baseQuery.execute();
