@@ -24,6 +24,10 @@ export interface ITblAgentUser {
     Email: string
     ImageID: number | null,
     IsVerified: number,
+    Position?: string | null,
+    PositionID?: number | null,
+    Division?: string | null,
+    DivisionID?: string | null
 }
 
 export interface IAgentUserSession {

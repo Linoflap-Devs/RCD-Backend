@@ -522,6 +522,32 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
     }
 }
 
+export const getBrokerUsers = async (): QueryResult<ITblBrokerUser[]> => {
+    try {   
+        const baseQuery = await db.selectFrom('Tbl_BrokerUser')
+            .selectAll()
+
+        const result = await baseQuery.execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblBrokerUser[],
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: number}): QueryResult<IBrokerRegistration[]> => {
     try {
         // 1. Get base broker registration data with user info and all three images

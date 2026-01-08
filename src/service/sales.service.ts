@@ -849,7 +849,7 @@ export const addPendingSalesService = async (
     )
 
     if(!result.success){
-        logger('addPendingSalesService', {data: data})
+        //logger('addPendingSalesService', {data: data})
         logger('addPendingSalesService', {error: result.error})
         return {
             success: false,

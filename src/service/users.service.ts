@@ -2,15 +2,15 @@ import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
-import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, NewEducation, NewWorkExp } from "../types/users.types";
+import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
 import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
-import { IAgentRegistration, ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
+import { IAgentRegistration, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
-import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
+import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerUsers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
 import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
@@ -1568,4 +1568,103 @@ export const unlinkAgentUserService = async (userId: number, agentUserId: number
         success: true,
         data: result.data
     }
+}
+
+export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> => {
+    
+    const position = await getPositions({ positionName: 'BROKER' })
+
+    const [agentUsers, brokerUsers] = await Promise.all([
+        getAgentUsers(),
+        getBrokerUsers()
+    ])
+
+    if(!agentUsers.success || !brokerUsers.success){
+        return {
+            success: false,
+            data: [],
+            error: agentUsers.error || brokerUsers.error
+        }
+    }
+
+    // hands on brokers
+    let handsOnDivisionMap = new Map<number, {DivisionID: number, DivisionName: string}[]>()
+    const validHandsOnBrokers = agentUsers.data.filter((a: ITblAgentUser) => position.data[0].PositionID === (a.PositionID || 0))
+
+    const brokerDivisions = await getDivisionBrokers({ agentIds: validHandsOnBrokers.map((agent: ITblAgentUser) => (agent.AgentID || 0)) })
+
+    if(brokerDivisions.success){
+        brokerDivisions.data.forEach((d: IBrokerDivision) => {
+            const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName }
+
+            if(d.AgentID){
+                const existing = handsOnDivisionMap.get(d.AgentID) || []
+                handsOnDivisionMap.set(d.AgentID, [...existing, divisionInfo])
+            }
+        })
+    }
+
+    // hands off brokers
+    let handsOffDivisionMap = new Map<number, {DivisionID: number, DivisionName: string}[]>()
+
+    const handsOffDivisions = await getDivisionBrokers({ brokerIds: brokerUsers.data.map((broker: ITblBrokerUser) => (broker.BrokerID || 0)) })
+
+    if(handsOffDivisions.success){
+        handsOffDivisions.data.forEach((d: IBrokerDivision) => {
+            const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName }
+
+            if(d.BrokerID){
+                const existing = handsOffDivisionMap.get(d.BrokerID) || []
+                handsOffDivisionMap.set(d.BrokerID, [...existing, divisionInfo])
+            }
+        })
+    }
+
+    console.log('handsOnDivisionMap', handsOnDivisionMap)
+    console.log('handsOffDivisionMap', handsOffDivisionMap)
+
+    const users: IMobileAccount[] = []
+
+    agentUsers.data.map((user: ITblAgentUser) => {
+        users.push({
+            AgentUserID: user.AgentUserID,
+            BrokerUserID: null,
+            Email: user.Email,
+            IsVerified: user.IsVerified,
+            ImageID: user.ImageID,
+            AgentID: user.AgentID,
+            BrokerID: null,
+            Position: user && user.Position ? user.Position.trim() : null,
+            PositionID: user?.PositionID || null,
+            Division: user && user.Division ? user.Division.trim() : null,
+            DivisionID: user?.DivisionID ? Number(user.DivisionID) : null,
+            AgentRegistrationID: user.AgentRegistrationID,
+            BrokerRegistrationID: null,
+            ...((position.data[0].PositionID == (user.PositionID || 0)) && { BrokerDivisions: handsOnDivisionMap.get(user.AgentID || 0) || [] })
+        })
+    })
+
+    brokerUsers.data.map((user: ITblBrokerUser) => {
+        users.push({
+            AgentUserID: null,
+            BrokerUserID: user.BrokerUserID,
+            Email: user.Email,
+            IsVerified: user.IsVerified,
+            ImageID: user.ImageID,
+            AgentID: null,
+            BrokerID: user.BrokerID,
+            Position: "BROKER",
+            PositionID: position.data[0].PositionID || null,
+            Division: null,
+            DivisionID: null,
+            AgentRegistrationID: null,
+            BrokerRegistrationID: user.BrokerRegistrationID,
+            BrokerDivisions: handsOffDivisionMap.get(user.BrokerID || 0) || []
+        })
+    })
+
+    return {
+        success: true,
+        data: users
+    }   
 }
