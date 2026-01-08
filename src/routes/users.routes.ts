@@ -1,5 +1,5 @@
 import express from 'express';
-import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
+import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getMobileAccountsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUsersController } from '../controller/users.controller';
 import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -31,6 +31,8 @@ router.route('/broker-details').patch([validateBrokerSession], editBrokerDetails
 router.route('/broker-image').patch([validateBrokerSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editBrokerImageController)
 router.route('/broker-education').patch([validateBrokerSession], editBrokerEducationController);
 router.route('/broker-work').patch([validateBrokerSession], editBrokerWorkExpController);
+
+router.route('/mobile-accounts').get([validateEmployeeSession], getMobileAccountsController)
 
 router.route('/top-10-um').get([validateEmployeeSession], getTop10UMsController);
 router.route('/top-10-sp').get([validateEmployeeSession], getTop10SPsController);

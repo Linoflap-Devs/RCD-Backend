@@ -159,3 +159,15 @@ export interface IBrokerWorkExpEditController {
     jobTitle?: string;
     startDate?: Date;
 }
+
+export interface IMobileAccount {
+    AgentUserID: number | null,
+    BrokerUserID: number | null,
+    Email: string,
+    IsVerified: number,
+    ImageID: number | null,
+    AgentID: number | null,
+    BrokerID: number | null,
+    AgentRegistrationID: number | null,
+    BrokerRegistrationID: number | null
+}
