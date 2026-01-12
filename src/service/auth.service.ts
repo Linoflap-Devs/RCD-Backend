@@ -17,6 +17,7 @@ import is from "zod/v4/locales/is.cjs";
 import { ITblBroker, ITblBrokerRegistration } from "../types/brokers.types";
 import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { getPositions } from "../repository/position.repository";
+import { getBrokerUsers } from "../repository/brokers.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -835,6 +836,34 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
 }
 
 export const approveBrokerRegistrationService = async (brokerRegistrationId: number, brokerId?: number) => {
+
+    if(brokerId){
+        const checkBroker = await getBrokerUsers({brokerIds: [brokerId]})
+
+        if(!checkBroker.success){
+            logger((checkBroker.error?.message || 'Failed to check broker ID.'), {brokerId: brokerId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: 'Failed to check broker ID. \n' + checkBroker.error?.message,
+                    code: 500
+                }
+            }
+        }
+
+        if(checkBroker.success && checkBroker.data.length > 0){
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: 'Broker already has a mobile account.',
+                    code: 400
+                }
+            }
+        }
+    }
+
     const result = await approveBrokerRegistrationTransaction(brokerRegistrationId, brokerId)
 
     if(!result.success){
