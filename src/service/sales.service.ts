@@ -1073,6 +1073,14 @@ export const getCombinedPersonalSalesService = async (
         let agent: VwAgentPicture | undefined = undefined
         let broker: IBrokerEmailPicture | undefined = undefined
 
+        let approvalStatusRoleMap: Map<string, number> = new Map([
+            ['SALES PERSON', 1],
+            ['UNIT MANAGER', 1],
+            ['SALES DIRECTOR', 2],
+            ['BRANCH SALES STAFF', 3],
+            ['SALES ADMIN', 4],
+        ])
+
         if(user.agentUserId){
             const agentData = await findAgentDetailsByUserId(user.agentUserId);
         
@@ -1149,23 +1157,57 @@ export const getCombinedPersonalSalesService = async (
                 }, 
                 filters
             ),
-            // Get pending sales
+            // Get pending sales (self-submitted)
             getPendingSales(
                 undefined,
                 {
                     ...filters,
                     //agentId: agent?.Position?.toLowerCase().includes('sales person') ? agent ? agent.AgentID ? agent.AgentID : undefined : undefined : undefined,
-                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    //agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    createdBy: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
-            )
+            )           
         ]);
+
+
+        let otherPendingSales: {totalPages: number, results: AgentPendingSale[]} = {} as {totalPages: number, results: AgentPendingSale[]}
+
+        if(!broker || (agent && agent.Position?.toLowerCase() !== 'sales person')){
+
+            const pos = agent && agent.Position ? agent.Position?.toUpperCase() : '';
+
+            const otherPendingSalesResult = await getPendingSales(
+                agent ? agent.DivisionID ? Number(agent.DivisionID) : 0 : 0,
+                {
+                    ...filters,
+                    approvalStatus: approvalStatusRoleMap.get(pos) ? [approvalStatusRoleMap.get(pos) || 0] : [0],
+                    isUnique: true
+                }
+            )
+
+            if(otherPendingSalesResult.success){
+                console.log("otherPendingSalesResult length", otherPendingSalesResult.data.results.length)
+                console.log("otherPendingSalesResult 1", otherPendingSalesResult.data.results[0])
+                console.log("otherPendingSalesResult 2", otherPendingSalesResult.data.results[0])
+                console.log("otherPendingSalesResult 3", otherPendingSalesResult.data.results[0])
+                otherPendingSales = otherPendingSalesResult.data
+            }
+        }
+
+        console.log("filters", filters)
+        console.log("agentId", agent ? agent.AgentID ? agent.AgentID : undefined : undefined)
+        console.log("brokerName", broker ? broker.RepresentativeName : undefined)
 
         //console.log(pendingSalesResult.data)
         
 
         let combinedSales: any[] = [];
+
+        let approvedTrans: any[] = []
+        let selfPendingSales: any[] = []
+        let othersPendingSales: any[] = []
 
         // Map to track division totals
         const divisionTotalsMap = new Map<number, { 
@@ -1210,6 +1252,7 @@ export const getCombinedPersonalSalesService = async (
                     isRejected: false,
                 }
             });
+            approvedTrans.push(...approvedSales);
             combinedSales.push(...approvedSales);
         }
 
@@ -1245,7 +1288,45 @@ export const getCombinedPersonalSalesService = async (
                     isRejected: sale.IsRejected ? true : false,
                 }
             });
+            selfPendingSales.push(...pendingSales);
             combinedSales.push(...pendingSales);
+        }
+
+        if (otherPendingSales.results.length > 0) {
+
+            let sampleArr = []
+
+            const pendingSales = otherPendingSales.results.map((sale: AgentPendingSale) => {
+
+                let agentRole = agent ? agent.Position : undefined
+
+                const role = RoleMap.get((agent?.Position || 'BROKER').toUpperCase()) || 0
+
+                const isSubmitter = role !== 0 && agent?.AgentID === (sale.CreatedBy)
+
+                return {
+                    salesId: null,
+                    salesTransDtlId: null,
+                    pendingSalesId: sale.AgentPendingSalesID,
+                    pendingSalesDtlId: null,
+                    projectName: sale.ProjectName?.trim() || '',
+                    projectCode: sale.PendingSalesTranCode?.trim() || '',
+                    // agentName: sale.AgentName || sale.CreatedByName || '',
+                    agentName: sale.SellerName || sale.AgentName || sale.CreatedBy || '',
+                    divisionId: sale.DivisionID,
+                    divisionName: sale.Division,
+                    reservationDate: sale.ReservationDate,
+                    dateFiled: sale.DateFiled,
+                    approvalStatus: sale.ApprovalStatus,
+                    hasRemarks: sale.Remarks ? true : false,
+                    isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
+                    isRejected: sale.IsRejected ? true : false,
+                }
+            });
+            sampleArr.push(...pendingSales)
+            othersPendingSales.push(...pendingSales)
+            combinedSales.push(...pendingSales);
+            console.log(sampleArr)
         }
 
         // Convert division totals map to array
@@ -1283,7 +1364,12 @@ export const getCombinedPersonalSalesService = async (
             totalPages: totalPages,
             totalSalesAmount: totalSalesAmount.data,
             divisionTotals: divisionTotals,
-            sales: paginatedSales
+            sales: paginatedSales,
+            debug: {
+                approved: approvedTrans,
+                pending: selfPendingSales,
+                others: othersPendingSales
+            }
         };
 
         return {
