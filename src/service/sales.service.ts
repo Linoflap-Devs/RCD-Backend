@@ -1148,7 +1148,7 @@ export const getCombinedPersonalSalesService = async (
         console.log(agent?.Position)
         
         // Get both approved and pending sales
-        const [approvedSalesResult, pendingSalesResult] = await Promise.all([
+        const [approvedSalesResult, pendingSalesResult, sdApprovedSales] = await Promise.all([
             // Get approved sales using existing function or create similar one
             getPersonalSales(
                 {
@@ -1168,7 +1168,18 @@ export const getCombinedPersonalSalesService = async (
                     brokerName: broker ? broker.RepresentativeName : undefined,
                     isUnique: true
                 }
-            )           
+            ),
+             // Get sd approved sales
+            getPendingSales(
+                undefined,
+                {
+                    ...filters,
+                    agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
+                    brokerName: broker ? broker.RepresentativeName : undefined,
+                    approvalStatus: [3,4],
+                    isUnique: true
+                }
+            )               
         ]);
 
 
@@ -1208,6 +1219,7 @@ export const getCombinedPersonalSalesService = async (
         let approvedTrans: any[] = []
         let selfPendingSales: any[] = []
         let othersPendingSales: any[] = []
+        let sdApprovedSalesArr: any[] = []
 
         // Map to track division totals
         const divisionTotalsMap = new Map<number, { 
@@ -1292,6 +1304,38 @@ export const getCombinedPersonalSalesService = async (
             combinedSales.push(...pendingSales);
         }
 
+        if (sdApprovedSales.success) {
+            const pendingSales = sdApprovedSales.data.results.map((sale: AgentPendingSale) => {
+
+                let agentRole = agent ? agent.Position : undefined
+
+                const role = RoleMap.get((agent?.Position || 'BROKER').toUpperCase()) || 0
+
+                const isSubmitter = role !== 0 && agent?.AgentID === (sale.CreatedBy)
+
+                return {
+                    salesId: null,
+                    salesTransDtlId: null,
+                    pendingSalesId: sale.AgentPendingSalesID,
+                    pendingSalesDtlId: null,
+                    projectName: sale.ProjectName?.trim() || '',
+                    projectCode: sale.PendingSalesTranCode?.trim() || '',
+                    // agentName: sale.AgentName || sale.CreatedByName || '',
+                    agentName: sale.SellerName || sale.AgentName || sale.CreatedBy || '',
+                    divisionId: sale.DivisionID,
+                    divisionName: sale.Division,
+                    reservationDate: sale.ReservationDate,
+                    dateFiled: sale.DateFiled,
+                    approvalStatus: sale.ApprovalStatus,
+                    hasRemarks: sale.Remarks ? true : false,
+                    isEditable: false,
+                    isRejected: sale.IsRejected ? true : false,
+                }
+            });
+            sdApprovedSalesArr.push(...pendingSales);
+            combinedSales.push(...pendingSales);
+        }
+
         if (otherPendingSales.results.length > 0) {
 
             let sampleArr = []
@@ -1365,11 +1409,12 @@ export const getCombinedPersonalSalesService = async (
             totalSalesAmount: totalSalesAmount.data,
             divisionTotals: divisionTotals,
             sales: paginatedSales,
-            debug: {
-                approved: approvedTrans,
-                pending: selfPendingSales,
-                others: othersPendingSales
-            }
+            // debug: {
+            //     approved: approvedTrans,
+            //     pending: selfPendingSales,
+            //     others: othersPendingSales,
+            //     sdApproved: sdApprovedSalesArr
+            // }
         };
 
         return {
