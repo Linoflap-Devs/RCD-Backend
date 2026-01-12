@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
@@ -1560,6 +1560,36 @@ export const unlinkAgentUserService = async (userId: number, agentUserId: number
         return {
             success: false,
             data: {} as ITblAgentUser,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const unlinkBrokerUserService = async (userId: number, brokerUserId: number) : QueryResult<ITblBrokerUser> => {
+    const details = await findBrokerDetailsByUserId(brokerUserId)
+
+    if(!details.success || !details.data.BrokerID){
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                code: 400,
+                message: 'Broker user not found.'
+            }
+        }
+    }
+
+    const result = await unlinkBrokerUser(userId, brokerUserId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
             error: result.error
         }
     }

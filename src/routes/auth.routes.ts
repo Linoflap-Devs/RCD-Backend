@@ -6,7 +6,7 @@ import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectBrokerRegistrationSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
 import { validateRole } from '../middleware/roles';
-import { unlinkAgentUserController } from '../controller/users.controller';
+import { unlinkAgentUserController, unlinkBrokerUserController } from '../controller/users.controller';
 
 const router = express.Router();
 
@@ -21,6 +21,7 @@ router.route('/logout-employee').delete(validateEmployeeSession, logoutEmployeeS
 router.route('/register-broker').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]), validate(registerBrokerSchema)], registerBrokerController);
 router.route('/approve-broker-registration').post([validateEmployeeSession, validateRole(['AD','SA']), validate(approveBrokerRegistrationSchema)], approveBrokerRegistrationController);
 router.route('/reject-broker-registration').post([validateEmployeeSession, validate(rejectBrokerRegistrationSchema)], rejectBrokerRegistrationController);
+router.route('/unlink/broker/:brokerUserId').post([validateEmployeeSession, validateRole(['AD','SA'])], unlinkBrokerUserController);
 router.route('/login-broker').post(validate(loginAgentSchema), loginBrokerController);
 router.route('/logout-broker').delete(validateBrokerSession, logoutBrokerSessionController)
 
