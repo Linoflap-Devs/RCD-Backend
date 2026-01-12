@@ -2,6 +2,7 @@ export interface IDivision {
     DivisionID: number,
     DivisionName: string,
     DivisionCode: string
+    IsActive: number
 }
 
 export interface ITblDivision {
