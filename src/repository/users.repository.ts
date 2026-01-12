@@ -1258,8 +1258,10 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
 
     console.log('userId: ', userId, 'agentUserId: ', agentUserId)
 
+    const trx = await db.startTransaction().execute();
+
     try {
-        const result = await db.updateTable('Tbl_AgentUser')
+        const result = await trx.updateTable('Tbl_AgentUser')
             .set({
                 AgentID: null,
                 IsVerified: 0,
@@ -1268,6 +1270,16 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
+        const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
+            .set({
+                IsVerified: 0
+            })
+            .where('AgentRegistrationID', '=', result.AgentRegistrationID)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        await trx.commit().execute();
+
         return {
             success: true,
             data: result
@@ -1275,6 +1287,7 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error
         return {
             success: false,
@@ -1291,8 +1304,10 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
 
     console.log('userId: ', userId, 'brokerUserId: ', brokerUserId)
 
+    const trx = await db.startTransaction().execute();
+
     try {
-        const result = await db.updateTable('Tbl_BrokerUser')
+        const result = await trx.updateTable('Tbl_BrokerUser')
             .set({
                 BrokerID: null,
                 IsVerified: 0,
@@ -1301,6 +1316,16 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
+        const updateRegistration = await trx.updateTable('Tbl_BrokerRegistration')
+            .set({
+                IsVerified: 0
+            })
+            .where('BrokerRegistrationID', '=', result.BrokerRegistrationID)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        await trx.commit().execute();
+
         return {
             success: true,
             data: result
@@ -1308,6 +1333,7 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error
         return {
             success: false,
