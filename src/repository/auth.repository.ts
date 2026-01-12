@@ -1030,6 +1030,19 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                                                     .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
+                const updateGovIds = await trx.updateTable('Tbl_Agents')
+                                        .set({ 
+                                            PRCNumber: registration.PRCNumber || undefined,
+                                            DSHUDNumber: registration.DSHUDNumber || undefined,
+                                            SSSNumber: registration.SSSNumber || undefined,
+                                            PhilhealthNumber: registration.PhilhealthNumber || undefined,
+                                            PagIbigNumber: registration.PagIbigNumber || undefined,
+                                            TINNumber: registration.TINNumber || undefined,
+                                            EmployeeIDNumber: registration.EmployeeIDNumber || undefined 
+                                        })
+                                        .where('AgentID', '=', agentData.AgentID)
+                                        .executeTakeFirstOrThrow();
+                
                                                     
                 // assign agent id
                 agentIdInserted = Number(agentData.AgentID);
