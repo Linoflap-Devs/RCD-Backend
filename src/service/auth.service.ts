@@ -3,8 +3,8 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -780,6 +780,36 @@ export const loginEmployeeService = async (username: string, password: string): 
 }
 
 export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number) => {
+
+    if(agentId){
+        const checkAgentUsers = await getTblAgentUsers({agentIds: [agentId]})
+
+        if(!checkAgentUsers.success){
+            logger((checkAgentUsers.error?.message || 'Failed to check agent ID.'), {agentId: agentId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: 'Failed to check agent ID. \n' + checkAgentUsers.error?.message,
+                    code: 500
+                }
+            }
+        }
+
+        if(checkAgentUsers.success && checkAgentUsers.data.length > 0){
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: 'Agent already has a mobile account.',
+                    code: 400
+                }
+            }
+        }
+
+    }
+
+
     const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId)
 
     if(!result.success){

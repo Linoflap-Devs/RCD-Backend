@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblUsersWeb, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblAgentUser, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
@@ -857,6 +857,41 @@ export const registerBrokerTransaction = async(
             error: {
                 code: code,
                 message: message
+            }
+        }
+    }
+}
+
+export const getTblAgentUsers = async (filters?: {agentUserIds?: number[], agentRegistrationIds?: number[], agentIds?: number[]}): QueryResult<ITblAgentUser[]> => {
+    try {
+        let baseQuery = await db.selectFrom('Tbl_AgentUser')
+            .selectAll()
+
+        if(filters && filters.agentRegistrationIds && filters.agentRegistrationIds.length > 0) {
+            baseQuery = baseQuery.where('AgentRegistrationID', 'in', filters.agentRegistrationIds)
+        }
+
+        if(filters && filters.agentIds && filters.agentIds.length > 0) {
+            baseQuery = baseQuery.where('AgentID', 'in', filters.agentIds)
+        }
+
+        const result = await baseQuery.execute()
+
+        return {
+            success: true,
+            data: result
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: [] as ITblAgentUser[],
+            error: {
+                code: 500,
+                message: error.message
             }
         }
     }
