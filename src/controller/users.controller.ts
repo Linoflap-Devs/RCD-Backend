@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService } from "../service/users.service";
+import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -878,6 +878,31 @@ export const unlinkAgentUserController = async (req: Request, res: Response) => 
     }
 
     return res.status(200).json({success: true, message: 'Agent user unlinked.', data: result.data})
+}
+
+export const unlinkBrokerUserController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { brokerUserId } = req.params
+
+    const result = await unlinkBrokerUserService(session.userID, Number(brokerUserId))
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to unlink broker user.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Broker user unlinked.', data: result.data})
 }
 
 export const getMobileAccountsController = async (req: Request, res: Response) => {

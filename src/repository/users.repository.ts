@@ -1,6 +1,6 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { ITblAgentUser, ITblUsersWeb } from "../types/auth.types";
+import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
@@ -1279,6 +1279,39 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
         return {
             success: false,
             data: {} as ITblAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const unlinkBrokerUser = async (userId: number, brokerUserId: number): QueryResult<ITblBrokerUser> => {
+
+    console.log('userId: ', userId, 'brokerUserId: ', brokerUserId)
+
+    try {
+        const result = await db.updateTable('Tbl_BrokerUser')
+            .set({
+                BrokerID: null,
+                IsVerified: 0,
+            })
+            .where('BrokerUserID', '=', brokerUserId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
             error: {
                 code: 500,
                 message: error.message

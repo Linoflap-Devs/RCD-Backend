@@ -522,10 +522,14 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
     }
 }
 
-export const getBrokerUsers = async (): QueryResult<ITblBrokerUser[]> => {
+export const getBrokerUsers = async (filters?: {brokerIds?: number[]}): QueryResult<ITblBrokerUser[]> => {
     try {   
-        const baseQuery = await db.selectFrom('Tbl_BrokerUser')
+        let baseQuery = await db.selectFrom('Tbl_BrokerUser')
             .selectAll()
+
+        if(filters && filters.brokerIds && filters.brokerIds.length > 0){
+            baseQuery = baseQuery.where('Tbl_BrokerUser.BrokerID', 'in', filters.brokerIds)
+        }
 
         const result = await baseQuery.execute();
 

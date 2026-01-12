@@ -20,7 +20,8 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
         DivisionID: div.DivisionID,
         DivisionName: div.Division,
         DivisionCode: div.DivisionCode,
-        DirectorID: div.DirectorID
+        DirectorID: div.DirectorID,
+        IsActive: div.IsActive
     }))
 
     return {
