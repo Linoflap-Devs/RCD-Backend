@@ -1003,6 +1003,10 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
             }
         }
 
+        console.log('Starting agent approval transaction for registration id: ', agentRegistrationId)
+        console.log('Agent data to link: ', agentData)
+        console.log('Registration data: ', registration)
+
         const trx = await db.startTransaction().execute();
 
         let agentIdInserted = 0;
@@ -1019,29 +1023,51 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                                                 .set('AgentID', Number(agentData.AgentID))
                                                 .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
+
+                console.log('Updating agent work experience for existing agent id: ', agentData.AgentID)
                 
                 const updateAgentWorkExp = await trx.updateTable('Tbl_AgentWorkExp') 
                                                 .set('AgentID', Number(agentData.AgentID))
                                                 .where('AgentRegistrationID', '=', agentRegistrationId)
                                                 .executeTakeFirstOrThrow()
 
+                console.log('Updating agent registration to verified for existing agent id: ', agentData.AgentID)
+
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
                                                     .set('IsVerified', 1)
                                                     .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
-                const updateGovIds = await trx.updateTable('Tbl_Agents')
-                                        .set({ 
-                                            PRCNumber: registration.PRCNumber || undefined,
-                                            DSHUDNumber: registration.DSHUDNumber || undefined,
-                                            SSSNumber: registration.SSSNumber || undefined,
-                                            PhilhealthNumber: registration.PhilhealthNumber || undefined,
-                                            PagIbigNumber: registration.PagIbigNumber || undefined,
-                                            TINNumber: registration.TINNumber || undefined,
-                                            EmployeeIDNumber: registration.EmployeeIDNumber || undefined 
-                                        })
-                                        .where('AgentID', '=', agentData.AgentID)
-                                        .executeTakeFirstOrThrow();
+                console.log('Updating government IDs for existing agent id: ', agentData.AgentID)
+
+                // const updateGovIds = await trx.updateTable('Tbl_Agents')
+                //                         .set({ 
+                //                             PRCNumber: registration.PRCNumber || undefined,
+                //                             DSHUDNumber: registration.DSHUDNumber || undefined,
+                //                             SSSNumber: registration.SSSNumber || undefined,
+                //                             PhilhealthNumber: registration.PhilhealthNumber || undefined,
+                //                             PagIbigNumber: registration.PagIbigNumber || undefined,
+                //                             TINNumber: registration.TINNumber || undefined,
+                //                             EmployeeIDNumber: registration.EmployeeIDNumber || undefined 
+                //                         })
+                //                         .where('AgentID', '=', agentData.AgentID)
+                //                         .executeTakeFirstOrThrow();
+
+                const govIdUpdates: Record<string, string> = {};
+                if (registration.PRCNumber) govIdUpdates.PRCNumber = registration.PRCNumber;
+                if (registration.DSHUDNumber) govIdUpdates.DSHUDNumber = registration.DSHUDNumber;
+                if (registration.SSSNumber) govIdUpdates.SSSNumber = registration.SSSNumber;
+                if (registration.PhilhealthNumber) govIdUpdates.PhilhealthNumber = registration.PhilhealthNumber;
+                if (registration.PagIbigNumber) govIdUpdates.PagIbigNumber = registration.PagIbigNumber;
+                if (registration.TINNumber) govIdUpdates.TINNumber = registration.TINNumber;
+                if (registration.EmployeeIDNumber) govIdUpdates.EmployeeIDNumber = registration.EmployeeIDNumber;
+
+                if (Object.keys(govIdUpdates).length > 0) {
+                    await trx.updateTable('Tbl_Agents')
+                        .set(govIdUpdates)
+                        .where('AgentID', '=', agentData.AgentID)
+                        .executeTakeFirstOrThrow();
+                }
                 
                                                     
                 // assign agent id
