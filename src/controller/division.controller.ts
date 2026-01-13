@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addDivisionService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
+import { activateDivisionService, addDivisionService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
 
 export const getDivisionsController = async (req: Request, res: Response) => {
 
@@ -113,6 +113,39 @@ export const deleteDivisionController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true,
         message: "Division deleted.",
+        data: result.data
+    })
+}
+
+export const activateDivisionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    // const { divisionID } = req.body
+    const { divisionId } = req.params
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await activateDivisionService(session.userID, Number(divisionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to activate division.",
+            data: {}
+        })
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division activated.",
         data: result.data
     })
 }
