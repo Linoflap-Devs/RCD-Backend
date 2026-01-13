@@ -1169,7 +1169,7 @@ export const getCombinedPersonalSalesService = async (
                     isUnique: true
                 }
             ),
-             // Get sd approved sales
+             // Get sd approved sales (excluding self-submitted)
             getPendingSales(
                 undefined,
                 {
@@ -1183,9 +1183,10 @@ export const getCombinedPersonalSalesService = async (
         ]);
 
 
-        let otherPendingSales: {totalPages: number, results: AgentPendingSale[]} = {} as {totalPages: number, results: AgentPendingSale[]}
+        let otherPendingSales: {totalPages: number, results: AgentPendingSale[]} = {totalPages: 0, results: []}
 
-        if(!broker || (agent && agent.Position?.toLowerCase() !== 'sales person')){
+        // get sales to be approved by the user
+        if(!broker && (agent && agent.Position?.toLowerCase() !== 'sales person')){
 
             const pos = agent && agent.Position ? agent.Position?.toUpperCase() : '';
 
@@ -1194,6 +1195,7 @@ export const getCombinedPersonalSalesService = async (
                 {
                     ...filters,
                     approvalStatus: approvalStatusRoleMap.get(pos) ? [approvalStatusRoleMap.get(pos) || 0] : [0],
+                    excAgentId: agent ? agent.AgentID ? Number(agent.AgentID) : 0 : 0,
                     isUnique: true
                 }
             )
@@ -1262,13 +1264,12 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: false,
                     isEditable: false,
                     isRejected: false,
+                    //source: 'approved'
                 }
             });
             approvedTrans.push(...approvedSales);
             combinedSales.push(...approvedSales);
         }
-
-        console.log("pendingSalesResult", divisionTotalsMap)
 
         // Process pending sales
         //console.log(pendingSalesResult.data)
@@ -1298,6 +1299,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
                     isRejected: sale.IsRejected ? true : false,
+                    //source: 'pending'
                 }
             });
             selfPendingSales.push(...pendingSales);
@@ -1305,7 +1307,13 @@ export const getCombinedPersonalSalesService = async (
         }
 
         if (sdApprovedSales.success) {
-            const pendingSales = sdApprovedSales.data.results.map((sale: AgentPendingSale) => {
+
+            const pendingSalesIds = pendingSalesResult.success ? pendingSalesResult.data.results.map((sale: AgentPendingSale) => sale.AgentPendingSalesID) : []
+
+            // exclude self-submitted sales
+            const filteredSdApprovedSales = sdApprovedSales.data.results.filter((sale: AgentPendingSale) => !pendingSalesIds.includes(sale.AgentPendingSalesID));
+
+            const pendingSales = filteredSdApprovedSales.map((sale: AgentPendingSale) => {
 
                 let agentRole = agent ? agent.Position : undefined
 
@@ -1330,6 +1338,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: false,
                     isRejected: sale.IsRejected ? true : false,
+                    //source: 'sdApproved'
                 }
             });
             sdApprovedSalesArr.push(...pendingSales);
@@ -1365,12 +1374,11 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
                     isRejected: sale.IsRejected ? true : false,
+                    //source: 'othersPending'
                 }
             });
-            sampleArr.push(...pendingSales)
             othersPendingSales.push(...pendingSales)
             combinedSales.push(...pendingSales);
-            console.log(sampleArr)
         }
 
         // Convert division totals map to array
@@ -1404,16 +1412,45 @@ export const getCombinedPersonalSalesService = async (
             }
         );
 
+        function getDuplicateReport(array: any[]) {
+            const map = new Map();
+            
+            array.forEach((item, index) => {
+                const key = `${item.salesId}-${item.pendingSalesId}-${item.projectCode}`;
+                
+                if (!map.has(key)) {
+                map.set(key, []);
+                }
+                map.get(key).push(index);
+            });
+            
+            const duplicates: any[] = [];
+            map.forEach((indices, key) => {
+                if (indices.length > 1) {
+                duplicates.push({
+                    key,
+                    count: indices.length,
+                    indices,
+                    items: indices.map((i: any) => array[i])
+                });
+                }
+            });
+            
+            return duplicates;
+        }
+
         const result = {
             totalPages: totalPages,
             totalSalesAmount: totalSalesAmount.data,
             divisionTotals: divisionTotals,
             sales: paginatedSales,
             // debug: {
+            //     totalResults: combinedSales.length,
             //     approved: approvedTrans,
             //     pending: selfPendingSales,
             //     others: othersPendingSales,
-            //     sdApproved: sdApprovedSalesArr
+            //     sdApproved: sdApprovedSalesArr, 
+            //     duplicates: getDuplicateReport(combinedSales)
             // }
         };
 
