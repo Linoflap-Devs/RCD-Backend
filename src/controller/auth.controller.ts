@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, rejectBrokerRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, rejectAgentRegistrationService, rejectBrokerRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -207,6 +207,32 @@ export const inviteNewUserController = async (req: Request, res: Response) => {
         message: "User invited successfully.",
         data: result.data
     })
+}
+
+export const getInviteTokenDetailsController = async (req: Request, res: Response) => {
+    const {
+        referralCode
+    } = req.params
+
+    const result = await getInviteTokenDetailsService(referralCode)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to get invite token details.",
+            data: {}
+        })
+
+        return
+    }
+
+    res.status(200).json({
+        success: true, 
+        message: "Invite token details retrieved successfully.",
+        data: result.data
+    })
+
+    return
 }
 
 export const addAgentController = async (req: Request, res: Response) => {

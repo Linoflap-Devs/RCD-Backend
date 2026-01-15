@@ -5,7 +5,7 @@ import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
 import { validateRole } from '../middleware/roles';
-import { inviteNewUserController } from '../controller/auth.controller';
+import { getInviteTokenDetailsController, inviteNewUserController } from '../controller/auth.controller';
 
 const router = express.Router();
 
@@ -39,6 +39,7 @@ router.route('/top-10-um').get([validateEmployeeSession], getTop10UMsController)
 router.route('/top-10-sp').get([validateEmployeeSession], getTop10SPsController);
 
 router.route('/invite-user').post([validateSession, validateRole(['UM'])], inviteNewUserController)
+router.route('/referral/:referralCode').get(getInviteTokenDetailsController);
 
 router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
 

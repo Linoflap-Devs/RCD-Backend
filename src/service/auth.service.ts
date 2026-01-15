@@ -1,4 +1,4 @@
-import { IAgentRegister, IBrokerRegister, IEmployeeRegister } from "../types/auth.types";
+import { IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
@@ -179,6 +179,37 @@ export const inviteNewUserService = async (userId: number, email: string) => {
     }    
 
     return { success: true, data: { inviteToken: token } } 
+}
+
+export const getInviteTokenDetailsService = async (token: string): QueryResult<Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string}> => {
+
+    console.log('getInviteTokenDetailsService', token)
+    const tokenDetails = await findInviteToken({inviteToken: token})
+
+    console.log('tokenDetails', tokenDetails)
+    if(!tokenDetails.success){
+        return { 
+            success: false, 
+            data: {} as Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string},
+            error: { 
+                code: 500, 
+                message: 'Token not found or may have already expired.' 
+            } 
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            ExpiryDate: tokenDetails.data.ExpiryDate,
+            DivisionID: tokenDetails.data.DivisionID,
+            AgentID: tokenDetails.data.LinkedUserID,
+            Division: tokenDetails.data.Division,
+            FirstName: tokenDetails.data.FirstName,
+            MiddleName: tokenDetails.data.MiddleName,
+            LastName: tokenDetails.data.LastName,
+        }
+    }
 }
 
 export const registerAgentService = async (
