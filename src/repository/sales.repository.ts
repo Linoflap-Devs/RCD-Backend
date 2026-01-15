@@ -1225,9 +1225,11 @@ export const getSalesSector = async (sectorId: number): QueryResult<TblSalesSect
 export const getPendingSales = async (
     divisionId?: number,
     filters?: {
+        excPendingSaleIds?: number[],
         month?: number,
         year?: number,
         agentId?: number,
+        excAgentId?: number,
         brokerName?: string,
         createdBy?: number,
         createdByWeb?: number,
@@ -1267,6 +1269,11 @@ export const getPendingSales = async (
             totalCountResult = totalCountResult.where('DivisionID', '=', divisionId)
         }
 
+        if(filters && filters.excPendingSaleIds && filters.excPendingSaleIds.length > 0){
+            result = result.where('AgentPendingSalesID', 'not in', filters.excPendingSaleIds)
+            totalCountResult = totalCountResult.where('AgentPendingSalesID', 'not in', filters.excPendingSaleIds)
+        }
+
         if(filters && filters.developerId){
             result = result.where('DeveloperID', '=', filters.developerId)
             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
@@ -1300,6 +1307,13 @@ export const getPendingSales = async (
             //         eb('CreatedBy', '=', agentId)
             //     ])
             // )
+        }
+
+        if(filters && filters.excAgentId){
+            const excAgentId = filters.excAgentId; // Capture the value
+
+            result = result.where('AgentID', '<>', excAgentId)
+            totalCountResult = totalCountResult.where('AgentID', '<>', excAgentId)
         }
 
         if(filters && filters.createdBy){

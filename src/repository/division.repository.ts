@@ -128,6 +128,33 @@ export const deleteDivision = async (divisionId: number): QueryResult<ITblDivisi
     }
 }
 
+export const activateDivision = async (divisionId: number): QueryResult<ITblDivision> => {
+    try {
+        const result = await db.updateTable('Tbl_Division')
+            .set({ IsActive: 1})
+            .where('DivisionID', '=', divisionId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getDivisionAgents = async (agentId: number, divisionId: number, role: string): QueryResult<VwAgents[]> => {
     try {
         let result = await db.selectFrom('Vw_Agents')

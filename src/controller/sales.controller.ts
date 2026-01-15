@@ -485,6 +485,7 @@ export const addWebPendingSaleController = async (req: Request, res: Response) =
                 const unescaped = commissionRates.replace(/\\\"/g, '"');
                 parsedCommissionRates = JSON.parse(unescaped);
             } catch (innerError) {
+                console.error('Error parsing commissionRates:', innerError);
                 res.status(400).json({
                     success: false, 
                     message: 'Invalid commissionRates format', 
@@ -818,12 +819,16 @@ export const editSalesTransactionController = async (req: Request, res: Response
     let parsedCommissionRates = [];
     if (commissionRates) {
         try {
+            console.log('commissionRates', commissionRates);
             parsedCommissionRates = JSON.parse(commissionRates);
+            console.log('parsedCommissionRates', parsedCommissionRates);
         } catch (error) {
             // Try parsing double-escaped JSON
             try {
                 const unescaped = commissionRates.replace(/\\\"/g, '"');
+                console.log('unescaped', unescaped);
                 parsedCommissionRates = JSON.parse(unescaped);
+                console.log('parsedCommissionRates after unescape', parsedCommissionRates);
             } catch (innerError) {
                 res.status(400).json({
                     success: false, 

@@ -1,6 +1,6 @@
 import { QueryResult } from "../types/global.types"
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository"
-import { addDivision, deleteDivision, editDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
+import { activateDivision, addDivision, deleteDivision, editDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
 import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
@@ -182,6 +182,66 @@ export const deleteDivisionService = async ( userId: number, divisionId: number 
         success: true,
         data: result.data
     }
+}
+
+export const activateDivisionService = async ( userId: number, divisionId: number ): QueryResult<ITblDivision> => {
+    const userData = await findEmployeeUserById(userId)
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: userData.error
+        }
+    }
+
+    const divisionCheck = await getDivisions({ divisionIds: [divisionId] })
+
+    if(!divisionCheck.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: divisionCheck.error
+        }
+    }
+
+    if(divisionCheck.data.length == 0){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: 'Division not found.'
+            }
+        }
+    }
+
+    if(divisionCheck.data[0].IsActive == 1){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: {
+                code: 400,
+                message: 'Division is already active.'
+            }
+        }
+    }
+
+    const result = await activateDivision(divisionId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivision,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
 }
 
 export const getDivisionHierarchyService = async (agentUserId: number): QueryResult<any> => {
