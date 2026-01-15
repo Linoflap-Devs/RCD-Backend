@@ -5,6 +5,7 @@ import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
 import { validateRole } from '../middleware/roles';
+import { inviteNewUserController } from '../controller/auth.controller';
 
 const router = express.Router();
 
@@ -36,6 +37,8 @@ router.route('/mobile-accounts').get([validateEmployeeSession], getMobileAccount
 
 router.route('/top-10-um').get([validateEmployeeSession], getTop10UMsController);
 router.route('/top-10-sp').get([validateEmployeeSession], getTop10SPsController);
+
+router.route('/invite-user').post([validateSession, validateRole(['UM'])], inviteNewUserController)
 
 router.route('/:agentId').get([validateSession], findAgentByAgentIdController);
 

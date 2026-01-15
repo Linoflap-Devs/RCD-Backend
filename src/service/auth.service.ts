@@ -3,13 +3,13 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
 import { sendMail } from "../utils/email";
-import { emailChangePasswordTemplate, emailOTPTemplate } from "../assets/email/email.template";
+import { emailChangePasswordTemplate, emailInviteTemplate, emailOTPTemplate } from "../assets/email/email.template";
 import 'dotenv/config'
 import { verifyDESPassword } from "../utils/utils";
 import { getSalesBranch } from "../repository/sales.repository";
@@ -18,6 +18,8 @@ import { ITblBroker, ITblBrokerRegistration } from "../types/brokers.types";
 import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { getPositions } from "../repository/position.repository";
 import { getBrokerUsers } from "../repository/brokers.repository";
+import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
+import { send } from "process";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -129,6 +131,54 @@ export const validateBrokerSessionToken = async (token: string) => {
 
     logger('Session not found', {token: token})
     return { session: null, user: null }
+}
+
+// Invite Token
+const generateInviteToken = (): string => {
+    const bytes = new Uint8Array(20);
+    crypto.getRandomValues(bytes);
+    const token = Buffer.from(bytes).toString('hex');
+    return token;
+}
+
+export const inviteNewUserService = async (userId: number, email: string) => {
+    const agentData = await findAgentDetailsByUserId(userId)
+
+    if(!agentData.success){
+        return { success: false, data: {}, error: { code: 500, message: 'Failed to find agent user.' } }
+    }
+
+    if(!agentData.data.AgentID){
+        return { success: false, data: {}, error: { code: 404, message: 'Agent not found.' } }
+    }
+
+    if(!agentData.data.DivisionID){
+        return { success: false, data: {}, error: { code: 400, message: 'Agent division not found.' } }
+    }
+
+    const existingInvite = await findInviteToken({email: email})
+
+    if(existingInvite.data){
+        const deleteAllTokens = await deleteAllInviteTokensByEmail(email)
+    }
+
+    const token = generateInviteToken();
+
+    const expiry = addMinutes(new Date(), 60 * 24 * 1); // 1 days expiration
+    
+    const insertToken = await insertInviteToken(token, email, Number(agentData.data.DivisionID), agentData.data.AgentID, expiry);
+
+    const template = emailInviteTemplate(`${agentData.data.FirstName} ${agentData.data.LastName}` , process.env.FRONTEND_DOMAIN || 'localhost:3000', token)
+
+    const sendMail = await sendTemplateEmail(`Recipient <${email}>`, "You're invited to join RCD Realty Marketing Corp.", '', template)
+
+    console.log(sendMail)
+
+    if(sendMail.data.succeeded == 0){
+        return { success: false, data: {}, error: { code: 500, message: 'Failed to send invite email.' } }
+    }    
+
+    return { success: true, data: { inviteToken: token } } 
 }
 
 export const registerAgentService = async (

@@ -646,6 +646,33 @@ export const deleteInviteToken = async (inviteTokenId: number): QueryResult<null
 
 } 
 
+export const deleteAllInviteTokensByEmail = async (email: string): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('InviteTokens')
+            .where('Email', '=', email)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
 export const registerAgentTransaction = async(
     data: IAgentRegister, 
     profileImageMetadata?: IImage, 
