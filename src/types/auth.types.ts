@@ -275,3 +275,14 @@ export interface ITblUsersWeb {
     UserName: string;
     UserWebID: number;
 }
+
+export interface IInviteTokens {
+    CreatedAt: Date;
+    DivisionID: number;
+    Email: string;
+    ExpiryDate: Date;
+    InviteToken: string;
+    InviteTokenID: number;
+    LinkedUserID: number;
+    UpdatedAt: Date | null;
+}

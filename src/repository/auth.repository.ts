@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, ITblAgentUser, ITblUsersWeb, Token } from "../types/auth.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, IInviteTokens, ITblAgentUser, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
@@ -539,6 +539,112 @@ export const extendBrokerSessionExpiry = async (sessionId: number, expiry: Date)
         }
     }
 }
+
+// Invite Tokens
+export const insertInviteToken = async (inviteToken: string, email: string, divisionId: number, userId: number, expiryDate: Date): QueryResult<IInviteTokens> => {
+    try {
+        const result = await db.insertInto('InviteTokens')
+            .values({
+                InviteToken: inviteToken,
+                Email: email,
+                DivisionID: divisionId,
+                LinkedUserID: userId,
+                ExpiryDate: expiryDate
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IInviteTokens,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<IInviteTokens> => {
+    try {
+        let baseQuery = db.selectFrom('InviteTokens').selectAll();
+
+        if (filters?.inviteToken) {
+            baseQuery = baseQuery.where('InviteToken', '=', filters.inviteToken);
+        }
+
+        if (filters?.email) {
+            baseQuery = baseQuery.where('Email', '=', filters.email);
+        }
+
+        if (filters?.divisionId) {
+            baseQuery = baseQuery.where('DivisionID', '=', filters.divisionId);
+        }
+
+        if (filters?.userId) {
+            baseQuery = baseQuery.where('LinkedUserID', '=', filters.userId);
+        }
+
+        if (filters?.expiryDate) {
+            baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
+        }
+
+        const result = await baseQuery.executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IInviteTokens,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const deleteInviteToken = async (inviteTokenId: number): QueryResult<null> => { 
+    try {
+
+        const result = await db.deleteFrom('InviteTokens')
+            .where('InviteTokenID', '=', inviteTokenId)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+
+} 
 
 export const registerAgentTransaction = async(
     data: IAgentRegister, 
