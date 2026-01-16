@@ -304,6 +304,33 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
         }
     }
 
+    if(data.ReferredByID){
+        const referringAgent = await findAgentDetailsByAgentId(data.ReferredByID)
+
+        if(!referringAgent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Cannot find referring agent. \n' + referringAgent.error?.message
+                }
+            }
+        }
+
+        if(referringAgent.data.Position !== 'UNIT MANAGER'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Referring agent is not a Unit Manager.'
+                }
+            }
+        }
+
+        data.ReferredCode = referringAgent.data.AgentCode
+    }
 
     const result = await addAgent(userId, data)
 
