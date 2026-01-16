@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/app.ts",
     "generate": "kysely-codegen --dialect 'mssql' --out-file src/db/db-types.ts",
-    "build": "tsc && cp -r src/assets dist/assets",
+    "build": "tsc",
     "start": "node dist/app.js"
   },
   "keywords": [],

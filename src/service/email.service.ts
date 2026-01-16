@@ -60,7 +60,11 @@ export async function sendSimpleEmail(
 
 export const sendTemplateEmail = async ( to: string, subject: string, textBody: string, htmlBody: string): Promise<SMTP2GOResponse> => {
 
-    const logoPath = path.join(__dirname, '../assets/image/logo.png');
+    // const logoPath = path.join(__dirname, '../assets/image/logo.png');
+    // const logoBuffer = fs.readFileSync(logoPath);
+    // const logoBase64 = logoBuffer.toString('base64');
+
+    const logoPath = path.join(process.cwd(), 'src/assets/image/logo.png');
     const logoBuffer = fs.readFileSync(logoPath);
     const logoBase64 = logoBuffer.toString('base64');
 
