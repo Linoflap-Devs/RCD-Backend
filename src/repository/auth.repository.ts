@@ -573,10 +573,19 @@ export const insertInviteToken = async (inviteToken: string, email: string, divi
     }
 }
 
-export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<IInviteTokens> => {
+export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string}> => {
     try {
-        let baseQuery = db.selectFrom('InviteTokens').selectAll();
-
+        let baseQuery = db.selectFrom('InviteTokens')
+            .selectAll()
+            .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
+            .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
+            .select([
+                'Tbl_Division.Division',
+                'Tbl_Agents.FirstName',
+                'Tbl_Agents.MiddleName',
+                'Tbl_Agents.LastName'
+            ])
+            
         if (filters?.inviteToken) {
             baseQuery = baseQuery.where('InviteToken', '=', filters.inviteToken);
         }
@@ -597,6 +606,9 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
             baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
         }
 
+        // only non-expired tokens
+        //baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
+
         const result = await baseQuery.executeTakeFirstOrThrow();
 
         return {
@@ -609,7 +621,7 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
         const error = err as Error;
         return {
             success: false,
-            data: {} as IInviteTokens,
+            data: {} as IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string},
             error: {
                 message: error.message,
                 code: 500
@@ -645,6 +657,33 @@ export const deleteInviteToken = async (inviteTokenId: number): QueryResult<null
     }
 
 } 
+
+export const deleteAllInviteTokensByEmail = async (email: string): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('InviteTokens')
+            .where('Email', '=', email)
+            .executeTakeFirstOrThrow();
+
+        return {
+            success: true,
+            data: null,
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
 
 export const registerAgentTransaction = async(
     data: IAgentRegister, 

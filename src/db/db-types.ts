@@ -18,6 +18,17 @@ export interface DatabaseFirewallRules {
   start_ip_address: string;
 }
 
+export interface InviteTokens {
+  CreatedAt: Generated<Date>;
+  DivisionID: number;
+  Email: string;
+  ExpiryDate: Date;
+  InviteToken: string;
+  InviteTokenID: Generated<number>;
+  LinkedUserID: number;
+  UpdatedAt: Date | null;
+}
+
 export interface SalesTransTemp {
   AF: string | null;
   afID: number;
@@ -1638,7 +1649,7 @@ export interface VwUniqueAgents {
   CivilStatus: string;
   ContactEmergency: string;
   ContactNumber: string;
-  Division: string;
+  Division: string | null;
   DivisionID: string | null;
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
@@ -1650,7 +1661,7 @@ export interface VwUniqueAgents {
   PagIbigNumber: string | null;
   PersonEmergency: string;
   PhilhealthNumber: string | null;
-  Position: string;
+  Position: string | null;
   PositionID: number | null;
   PRCNumber: string | null;
   ReferredByID: number | null;
@@ -1707,6 +1718,7 @@ export interface XTblClients {
 
 export interface DB {
   database_firewall_rules: DatabaseFirewallRules;
+  InviteTokens: InviteTokens;
   SalesTransTemp: SalesTransTemp;
   Tbl_AgentEducation: TblAgentEducation;
   Tbl_AgentPendingSales: TblAgentPendingSales;

@@ -1,32 +1,11 @@
 import 'dotenv/config'
+import { EmailData, SMTP2GOResponse } from '../types/email.types';
+import path from 'path';
+import fs from 'fs'
 
 const apiUrl = process.env.SEND2GO_API
 const apiKey = process.env.SEND2GO_KEY
-
-export interface EmailData {
-    sender: string;
-    to: string[];
-    subject: string;
-    text_body: string;
-    html_body?: string;
-    api_key?: string;
-    cc?: string[];
-    bcc?: string[];
-    custom_headers?: Record<string, string>;
-}
-
-export interface SMTP2GOResponse {
-    data: {
-        succeeded: number;
-        failed: number;
-        failures?: Array<{
-            email: string;
-            error: string;
-        }>;
-        error?: string;
-    };
-    request_id?: string;
-}
+const senderEmail = process.env.SENDER_EMAIL
 
 export async function sendEmail(emailData: EmailData): Promise<SMTP2GOResponse> {
 
@@ -52,6 +31,8 @@ export async function sendEmail(emailData: EmailData): Promise<SMTP2GOResponse> 
         throw new Error(`Email send failed: ${result.data?.error || response.statusText}`);
     }
 
+    console.log('sendEmail', result);
+
     return result;
 }
 
@@ -73,6 +54,43 @@ export async function sendSimpleEmail(
     if (htmlBody) {
         emailData.html_body = htmlBody;
     }
+
+    return sendEmail(emailData);
+}
+
+export const sendTemplateEmail = async ( to: string, subject: string, textBody: string, htmlBody: string): Promise<SMTP2GOResponse> => {
+
+    // const logoPath = path.join(__dirname, '../assets/image/logo.png');
+    // const logoBuffer = fs.readFileSync(logoPath);
+    // const logoBase64 = logoBuffer.toString('base64');
+
+    const logoPath = path.join(process.cwd(), 'src/assets/image/logo.png');
+    const logoBuffer = fs.readFileSync(logoPath);
+    const logoBase64 = logoBuffer.toString('base64');
+
+    if(!apiKey) {
+        throw new Error('SMTP2GO_API_KEY environment variable is not set');
+    }
+
+    if(!process.env.SENDER_EMAIL) {
+        throw new Error('SENDER_EMAIL environment variable is not set');
+    }
+
+    const emailData: EmailData = {
+        sender: process.env.SENDER_EMAIL,
+        to: [to],
+        subject,
+        text_body: textBody,
+        html_body: htmlBody,
+        api_key: apiKey,
+        inlines: [
+            {
+                filename: 'logo',
+                fileblob: logoBase64,
+                mimetype: 'image/png'
+            }
+        ]
+    };
 
     return sendEmail(emailData);
 }
