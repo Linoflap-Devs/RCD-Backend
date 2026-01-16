@@ -8,7 +8,7 @@ import path from "path";
 import { logger } from "../utils/logger";
 import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
-import { IAgentRegistration, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
+import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
 import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerUsers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
@@ -17,6 +17,7 @@ import { editDivisionBroker, getDivisionBrokers } from "../repository/division.r
 import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
+import { findInviteToken } from "../repository/auth.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1697,4 +1698,45 @@ export const getMobileAccountsService = async (): QueryResult<IMobileAccount[]> 
         success: true,
         data: users
     }   
+}
+
+export const getInvitedEmailsService = async (userId: number): QueryResult<Partial<IInviteTokens>[]> => {
+    const agent = await findAgentDetailsByUserId(userId)
+
+    if(!agent.success){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agent.data.AgentID){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await findInviteToken({ userId: agent.data.AgentID })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }

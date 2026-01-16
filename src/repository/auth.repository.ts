@@ -573,7 +573,7 @@ export const insertInviteToken = async (inviteToken: string, email: string, divi
     }
 }
 
-export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string}> => {
+export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
             .selectAll()
@@ -609,7 +609,7 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
         // only non-expired tokens
         //baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
 
-        const result = await baseQuery.executeTakeFirstOrThrow();
+        const result = await baseQuery.execute();
 
         return {
             success: true,
@@ -621,7 +621,7 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
         const error = err as Error;
         return {
             success: false,
-            data: {} as IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string},
+            data: {} as (IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[],
             error: {
                 message: error.message,
                 code: 500

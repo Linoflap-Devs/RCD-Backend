@@ -201,14 +201,14 @@ export const getInviteTokenDetailsService = async (token: string): QueryResult<P
     return {
         success: true,
         data: {
-            Email: tokenDetails.data.Email,
-            ExpiryDate: tokenDetails.data.ExpiryDate,
-            DivisionID: tokenDetails.data.DivisionID,
-            AgentID: tokenDetails.data.LinkedUserID,
-            Division: tokenDetails.data.Division,
-            FirstName: tokenDetails.data.FirstName,
-            MiddleName: tokenDetails.data.MiddleName,
-            LastName: tokenDetails.data.LastName,
+            Email: tokenDetails.data[0].Email,
+            ExpiryDate: tokenDetails.data[0].ExpiryDate,
+            DivisionID: tokenDetails.data[0].DivisionID,
+            AgentID: tokenDetails.data[0].LinkedUserID,
+            Division: tokenDetails.data[0].Division,
+            FirstName: tokenDetails.data[0].FirstName,
+            MiddleName: tokenDetails.data[0].MiddleName,
+            LastName: tokenDetails.data[0].LastName,
         }
     }
 }
