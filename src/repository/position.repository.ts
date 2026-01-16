@@ -7,7 +7,8 @@ export const getPositions = async (
         positionId?: number,
         showInactive?: boolean,
         positionCode?: string,
-        positionName?: string
+        positionName?: string,
+        positionNames?: string[]
     }
 ): QueryResult<TblPosition[]> => {
     try {
@@ -24,6 +25,10 @@ export const getPositions = async (
 
         if (filters && filters.positionName) {
             baseQuery = baseQuery.where('Position', '=', filters.positionName)
+        }
+
+        if (filters && filters.positionNames && filters.positionNames.length > 0) {
+            baseQuery = baseQuery.where('Position', 'in', filters.positionNames)
         }
 
         if (!filters || !filters.showInactive) {
