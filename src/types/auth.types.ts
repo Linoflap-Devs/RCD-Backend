@@ -125,13 +125,13 @@ export interface IAgentRegister {
     middleName?: string | null,
     lastName: string,
     gender: 'Male' | 'Female',
-    civilStatus: 'Single' | 'Married',
-    religion: string,
+    civilStatus?: 'Single' | 'Married' | null,
+    religion?: string | null,
     birthdate: Date,
-    birthplace: string,
+    birthplace?: string | null,
     address: string,
-    telephoneNumber: string,
-    contactNumber: string,
+    telephoneNumber?: string | null,
+    contactNumber?: string | null,
     sssNumber?: string | null,
     philhealthNumber?: string | null,
     referredCode?: string | null,
@@ -160,6 +160,20 @@ export interface IAgentRegister {
         startDate: Date,
         endDate?: Date | null
     }[]
+}
+
+export interface IAgentInvite {
+    firstName: string,
+    middleName?: string | null,
+    lastName: string,
+    gender: 'Male' | 'Female',
+    birthdate: Date,
+    address: string,
+    email: string,
+    password: string,
+    referredCode?: string | null,
+    referredById?: number | null,
+    divisionId?: number | null,
 }
 
 export interface IBrokerRegister {
@@ -208,7 +222,7 @@ export interface IAgentRegistrationListItem {
     LastName: string,
     Email: string,
     Gender: string,
-    ContactNumber: string,
+    ContactNumber?: string | null,
 }
 
 export interface IAgentRegistration {
@@ -218,13 +232,13 @@ export interface IAgentRegistration {
     MiddleName?: string | null,
     LastName: string,
     Gender: 'Male' | 'Female',
-    CivilStatus: 'Single' | 'Married',
-    Religion: string,
+    CivilStatus?: 'Single' | 'Married' | null,
+    Religion?: string,
     Birthdate: Date,
-    Birthplace: string,
+    Birthplace?: string | null,
     Address: string,
-    TelephoneNumber: string,
-    ContactNumber: string,
+    TelephoneNumber?: string | null,
+    ContactNumber?: string | null,
     SssNumber?: string | null,
     PhilhealthNumber?: string | null,
     PagibigNumber?: string | null,

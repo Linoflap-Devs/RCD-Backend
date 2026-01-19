@@ -1257,7 +1257,7 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
             RepresentativeName: `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName?.trim()}`.trim(),
             Email: item.Email,
             Gender: item.Gender,
-            ContactNumber: item.ContactNumber
+            ContactNumber: item.ContactNumber || null
         }
     })
 
