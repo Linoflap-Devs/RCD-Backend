@@ -573,7 +573,7 @@ export const insertInviteToken = async (inviteToken: string, email: string, divi
     }
 }
 
-export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
+export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date, showUsed?: boolean}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
             .selectAll()
@@ -606,9 +606,12 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
             baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
         }
 
+        if (filters?.showUsed !== undefined) {
+            baseQuery = baseQuery.where('IsUsed', '=', filters.showUsed ? 1 : 0);
+        }
+
         // only non-expired tokens
         baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
-        baseQuery = baseQuery.where('IsUsed', '=', 0);
         
         const result = await baseQuery.execute();
 
