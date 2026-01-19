@@ -322,13 +322,13 @@ export const registerInviteService = async (
 
     const tokenDetails = await getInviteTokenDetailsService(inviteToken)
 
-    if(!tokenDetails.success){
+    if(!tokenDetails.success || tokenDetails.data.IsUsed == 1){
         return {
             success: false,
             data: {},
             error: {
                 code: 500,
-                message: 'Token not found or may have already expired.'
+                message: 'Token is invalid, expired, or already used.'
             }
         }
     }
