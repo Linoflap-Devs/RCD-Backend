@@ -25,6 +25,7 @@ export interface InviteTokens {
   ExpiryDate: Date;
   InviteToken: string;
   InviteTokenID: Generated<number>;
+  IsUsed: Generated<number>;
   LinkedUserID: number;
   UpdatedAt: Date | null;
 }

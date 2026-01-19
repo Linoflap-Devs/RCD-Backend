@@ -630,6 +630,33 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
     }
 }
 
+export const updateInviteToken = async (inviteToken: string, data: Partial<IInviteTokens>): QueryResult<IInviteTokens> => {
+    try {
+        const result = await db.updateTable('InviteTokens')
+            .set(data)
+            .where('InviteToken', '=', inviteToken)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IInviteTokens,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
 export const deleteInviteToken = async (inviteTokenId: number): QueryResult<null> => { 
     try {
 

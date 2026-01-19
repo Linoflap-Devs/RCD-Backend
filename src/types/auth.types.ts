@@ -300,6 +300,7 @@ export interface IInviteTokens {
     ExpiryDate: Date;
     InviteToken: string;
     InviteTokenID: number;
+    IsUsed: number;
     LinkedUserID: number;
     UpdatedAt: Date | null;
 }
