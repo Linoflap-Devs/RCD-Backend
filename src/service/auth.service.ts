@@ -20,6 +20,7 @@ import { getPositions } from "../repository/position.repository";
 import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
+import { getAgent } from "../repository/agents.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -160,6 +161,19 @@ export const inviteNewUserService = async (userId: number, email: string) => {
 
     if(existingInvite.data){
         const deleteAllTokens = await deleteAllInviteTokensByEmail(email)
+    }
+
+    const existingRegistration = await getAgentUsers({emails: [email]})
+
+    if(existingRegistration.success && existingRegistration.data.length > 0){
+        return { 
+            success: false, 
+            data: {}, 
+            error: { 
+                code: 400, 
+                message: 'Email is already registered.' 
+            } 
+        }
     }
 
     const token = generateInviteToken();
