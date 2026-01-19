@@ -608,7 +608,8 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
 
         // only non-expired tokens
         baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
-
+        baseQuery = baseQuery.where('IsUsed', '=', 0);
+        
         const result = await baseQuery.execute();
 
         return {
