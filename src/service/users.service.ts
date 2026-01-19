@@ -1735,8 +1735,22 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
+    const obj: IInviteTokens[] = result.data.map((invite: IInviteTokens) => {
+        return {
+            InviteTokenID: invite.InviteTokenID,
+            InviteToken: invite.InviteToken,
+            Email: invite.Email,
+            LinkedUserID: invite.LinkedUserID,
+            DivisionID: invite.DivisionID,
+            IsUsed: invite.IsUsed,
+            ExpiryDate: invite.ExpiryDate,
+            CreatedAt: invite.CreatedAt,
+            UpdatedAt: invite.UpdatedAt
+        }
+    })
+
     return {
         success: true,
-        data: result.data
+        data: obj
     }
 }

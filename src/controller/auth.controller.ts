@@ -245,6 +245,8 @@ export const inviteNewUserController = async (req: Request, res: Response) => {
             message: result.error?.message || "Failed to invite new user.",
             data: {}
         })
+
+        return
     }
 
     return res.status(200).json({
