@@ -1,4 +1,4 @@
-import { IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
+import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
@@ -187,12 +187,12 @@ export const getInviteTokenDetailsService = async (token: string): QueryResult<P
     const tokenDetails = await findInviteToken({inviteToken: token})
 
     console.log('tokenDetails', tokenDetails)
-    if(!tokenDetails.success){
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
         return { 
             success: false, 
             data: {} as Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string},
             error: { 
-                code: 500, 
+                code: tokenDetails.data.length === 0 ? 404 : 500, 
                 message: 'Token not found or may have already expired.' 
             } 
         }
@@ -292,11 +292,7 @@ export const registerAgentService = async (
 
 export const registerInviteService = async (
     inviteToken: string,
-    data: IAgentRegister, 
-    image?: Express.Multer.File,
-    govIdImage?: Express.Multer.File,
-    selfieImage?: Express.Multer.File,
-    agentId?: number
+    data: IAgentInvite
 ): QueryResult<any> => {
 
     const tokenDetails = await getInviteTokenDetailsService(inviteToken)
@@ -342,68 +338,19 @@ export const registerInviteService = async (
     data.referredCode = referringAgent.data.AgentCode
     data.divisionId = tokenDetails.data.DivisionID
 
-    if(agentId){
-        const agent = await findAgentDetailsByAgentId(agentId)
+    const obj: IAgentRegister = {
+        ...data,
+        education: [],
+        experience: []
+    }   
 
-        if(!agent.success){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 500,
-                    message: 'Failed to find agent details.'
-                }
-            }
-        }
-    }
-
-    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-
-    let metadata: IImage | undefined = undefined
-
-    if(image)(
-        metadata = {
-            FileName: filename,
-            ContentType: image.mimetype,
-            FileExt: path.extname(image.originalname),
-            FileSize: image.size,
-            FileContent: image.buffer
-        }
-    )
-
-    let govIdMetadata: IImage | undefined = undefined
-    if(govIdImage)(
-        govIdMetadata = {
-            FileName: govIdFilename,
-            ContentType: govIdImage.mimetype,
-            FileExt: path.extname(govIdImage.originalname),
-            FileSize: govIdImage.size,
-            FileContent: govIdImage.buffer
-        }
-    )
-    
-    let selfieMetadata: IImage | undefined = undefined
-    if(selfieImage)(
-        selfieMetadata = {
-            FileName: selfieFilename,
-            ContentType: selfieImage.mimetype,
-            FileExt: path.extname(selfieImage.originalname),
-            FileSize: selfieImage.size,
-            FileContent: selfieImage.buffer
-        }
-    )
-
-
-
-    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata, agentId)
+    const result = await registerAgentTransaction(obj)
 
     if(!result.success) {
         return {
             success: false,
             data: {},
-            error: {
+                error: {
                 message: result.error?.message || 'Failed to register agent.',
                 code: result.error?.code || 500 
             }

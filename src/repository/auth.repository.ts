@@ -607,7 +607,7 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
         }
 
         // only non-expired tokens
-        //baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
+        baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
 
         const result = await baseQuery.execute();
 
@@ -1251,9 +1251,9 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     LastName: registration.LastName,
                     FirstName: registration.FirstName,
                     MiddleName: registration.MiddleName ?? '',
-                    ContactNumber: registration.ContactNumber,
+                    ContactNumber: registration.ContactNumber || '',
                     AgentTaxRate: 5,
-                    CivilStatus: registration.CivilStatus,
+                    CivilStatus: registration.CivilStatus || '',
                     Sex: registration.Sex,
                     Address: registration.Address,
                     Birthdate: registration.Birthdate,
