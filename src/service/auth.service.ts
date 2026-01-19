@@ -201,13 +201,14 @@ export const getInviteTokenDetailsService = async (token: string): QueryResult<P
     return {
         success: true,
         data: {
-            ExpiryDate: tokenDetails.data.ExpiryDate,
-            DivisionID: tokenDetails.data.DivisionID,
-            AgentID: tokenDetails.data.LinkedUserID,
-            Division: tokenDetails.data.Division,
-            FirstName: tokenDetails.data.FirstName,
-            MiddleName: tokenDetails.data.MiddleName,
-            LastName: tokenDetails.data.LastName,
+            Email: tokenDetails.data[0].Email,
+            ExpiryDate: tokenDetails.data[0].ExpiryDate,
+            DivisionID: tokenDetails.data[0].DivisionID,
+            AgentID: tokenDetails.data[0].LinkedUserID,
+            Division: tokenDetails.data[0].Division,
+            FirstName: tokenDetails.data[0].FirstName,
+            MiddleName: tokenDetails.data[0].MiddleName,
+            LastName: tokenDetails.data[0].LastName,
         }
     }
 }
@@ -272,6 +273,129 @@ export const registerAgentService = async (
             FileContent: selfieImage.buffer
         }
     )
+
+    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata, agentId)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register agent.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
+
+    return result
+}
+
+export const registerInviteService = async (
+    inviteToken: string,
+    data: IAgentRegister, 
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File,
+    agentId?: number
+): QueryResult<any> => {
+
+    const tokenDetails = await getInviteTokenDetailsService(inviteToken)
+
+    if(!tokenDetails.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: 'Token not found or may have already expired.'
+            }
+        }
+    }
+
+    if(tokenDetails.data.Email != data.email){
+        console.log(tokenDetails.data)
+        console.log(tokenDetails.data.Email, data.email)
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: 'Email does not match with invited email.'
+            }
+        }
+    }
+
+    const referringAgent = await findAgentDetailsByAgentId(tokenDetails.data.AgentID)
+
+    if(!referringAgent.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 500,
+                message: 'Failed to find referring agent details.'
+            }
+        }
+    }
+
+    data.referredById = referringAgent.data.AgentID
+    data.referredCode = referringAgent.data.AgentCode
+    data.divisionId = tokenDetails.data.DivisionID
+
+    if(agentId){
+        const agent = await findAgentDetailsByAgentId(agentId)
+
+        if(!agent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent details.'
+                }
+            }
+        }
+    }
+
+    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+
+    let metadata: IImage | undefined = undefined
+
+    if(image)(
+        metadata = {
+            FileName: filename,
+            ContentType: image.mimetype,
+            FileExt: path.extname(image.originalname),
+            FileSize: image.size,
+            FileContent: image.buffer
+        }
+    )
+
+    let govIdMetadata: IImage | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: govIdImage.buffer
+        }
+    )
+    
+    let selfieMetadata: IImage | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: selfieImage.buffer
+        }
+    )
+
+
 
     const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata, agentId)
 
