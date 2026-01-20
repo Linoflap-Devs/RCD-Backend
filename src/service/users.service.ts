@@ -1746,7 +1746,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
             IsUsed: invite.IsUsed,
             ExpiryDate: new TZDate(invite.ExpiryDate, 'Asia/Manila'),
             CreatedAt: new TZDate(invite.CreatedAt, 'Asia/Manila'),
-            UpdatedAt: invite.UpdatedAt ? new TZDate(invite.UpdatedAt, 'Asia/Manila') : null 
+            UpdatedAt: invite.UpdatedAt ? new TZDate(invite.UpdatedAt, 'Asia/Manila') : null
         }
     })
 
