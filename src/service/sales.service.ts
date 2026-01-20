@@ -1961,7 +1961,7 @@ export const editSalesTranService = async (
         downpayment?: number,
         dpTerms?: number,
         monthlyPayment?: number
-        dpStartDate?: Date,
+        dpStartDate?: Date | null,
         sellerName?: string,
         images?: {
             receipt?: Express.Multer.File,
