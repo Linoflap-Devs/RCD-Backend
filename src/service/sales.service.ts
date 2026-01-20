@@ -1166,7 +1166,8 @@ export const getCombinedPersonalSalesService = async (
                     //agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     createdBy: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
-                    isUnique: true
+                    isUnique: true,
+                    showRejected: true,
                 }
             ),
              // Get sd approved sales (excluding self-submitted)
