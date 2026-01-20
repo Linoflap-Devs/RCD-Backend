@@ -18,6 +18,7 @@ import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken } from "../repository/auth.repository";
+import { TZDate } from "@date-fns/tz";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1743,9 +1744,9 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
             LinkedUserID: invite.LinkedUserID,
             DivisionID: invite.DivisionID,
             IsUsed: invite.IsUsed,
-            ExpiryDate: invite.ExpiryDate,
-            CreatedAt: invite.CreatedAt,
-            UpdatedAt: invite.UpdatedAt
+            ExpiryDate: new TZDate(invite.ExpiryDate, 'Asia/Manila'),
+            CreatedAt: new TZDate(invite.CreatedAt, 'Asia/Manila'),
+            UpdatedAt: invite.UpdatedAt ? new TZDate(invite.UpdatedAt, 'Asia/Manila') : null 
         }
     })
 
