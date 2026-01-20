@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -511,6 +511,34 @@ export const approveInviteRegistrationController = async (req: Request, res: Res
         message: "Invite registration approved successfully.", 
         data: result.data
     });
+}
+
+export const revokeInviteTokenController = async (req: Request, res: Response) => {
+    const session = req.session 
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        inviteToken
+    } = req.params
+
+    const result = await revokeInviteTokenService(session.userID, inviteToken);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to revoke invite token.", 
+            data: {}
+        });
+    }
 }
 
 export const rejectInviteRegistrationController = async (req: Request, res: Response) => {
