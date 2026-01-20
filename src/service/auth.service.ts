@@ -20,7 +20,7 @@ import { getPositions } from "../repository/position.repository";
 import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
-import { getAgent } from "../repository/agents.repository";
+import { editAgentRegistration, getAgent, getAgentRegistration } from "../repository/agents.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -957,6 +957,92 @@ export const loginEmployeeService = async (username: string, password: string): 
             branchId: user.data.branchId
         }
     }    
+}
+
+export const approveInviteRegistrationService = async (userId: number, inviteToken: string): QueryResult<ITblAgentRegistration> => {
+
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: tokenDetails.error?.message || 'Failed to get invite token details.',
+                code: tokenDetails.error?.code || 500
+            }
+        }
+    }
+
+    const umAgent = await findAgentDetailsByUserId(userId)
+
+    if(!umAgent.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: umAgent.error?.message || 'Failed to get agent details.',
+                code: umAgent.error?.code || 500
+            }
+        }
+    }
+
+    if(tokenDetails.data[0].LinkedUserID !== umAgent.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Invite token does not belong to the provided user ID.',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await getAgentUsers({ emails: [tokenDetails.data[0].Email] })
+
+    if(!agentUser.success || agentUser.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Agent user not found for the provided invite token.',
+                code: 404
+            }
+        }
+    }
+
+    console.log(agentUser.data[0])
+
+    const registration = await getAgentRegistration({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0 })
+
+    if(!registration.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: registration.error?.message || 'Failed to get agent registration.',
+                code: registration.error?.code || 500
+            }
+        }
+    }
+
+    const approve = await editAgentRegistration({ agentId: umAgent.data.AgentID }, registration.data.AgentRegistrationID,  { IsVerified: 1 })
+
+    if(!approve.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: approve.error?.message || 'Failed to approve agent registration.',
+                code: approve.error?.code || 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: approve.data
+    }
 }
 
 export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number) => {
