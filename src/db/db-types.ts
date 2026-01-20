@@ -25,6 +25,7 @@ export interface InviteTokens {
   ExpiryDate: Date;
   InviteToken: string;
   InviteTokenID: Generated<number>;
+  IsUsed: Generated<number>;
   LinkedUserID: number;
   UpdatedAt: Date | null;
 }
@@ -159,16 +160,16 @@ export interface TblAgentReferral {
 
 export interface TblAgentRegistration {
   Address: string;
-  AddressEmergency: string;
-  AffiliationDate: Date;
+  AddressEmergency: string | null;
+  AffiliationDate: Date | null;
   AgentCode: string;
   AgentRegistrationID: Generated<number>;
-  AgentTaxRate: number;
+  AgentTaxRate: number | null;
   Birthdate: Date;
   Birthplace: string | null;
-  CivilStatus: string;
-  ContactEmergency: string;
-  ContactNumber: string;
+  CivilStatus: string | null;
+  ContactEmergency: string | null;
+  ContactNumber: string | null;
   DivisionID: string | null;
   DSHUDNumber: string | null;
   EmployeeIDNumber: string | null;
@@ -179,7 +180,7 @@ export interface TblAgentRegistration {
   LastUpdate: Generated<Date>;
   MiddleName: string;
   PagIbigNumber: string | null;
-  PersonEmergency: string;
+  PersonEmergency: string | null;
   PhilhealthNumber: string | null;
   PositionID: number | null;
   PRCNumber: string | null;

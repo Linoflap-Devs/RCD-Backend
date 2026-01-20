@@ -1,9 +1,9 @@
-import { IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
+import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -20,6 +20,7 @@ import { getPositions } from "../repository/position.repository";
 import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
+import { editAgentRegistration, getAgent, getAgentRegistration } from "../repository/agents.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -159,7 +160,31 @@ export const inviteNewUserService = async (userId: number, email: string) => {
     const existingInvite = await findInviteToken({email: email})
 
     if(existingInvite.data){
+        if(existingInvite.data.some(invite => invite.IsUsed == 1)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 400,
+                    message: 'Email is already registered.'
+                }
+            }
+        }
+
         const deleteAllTokens = await deleteAllInviteTokensByEmail(email)
+    }
+
+    const existingRegistration = await getAgentUsers({emails: [email]})
+
+    if(existingRegistration.success && existingRegistration.data.length > 0){
+        return { 
+            success: false, 
+            data: {}, 
+            error: { 
+                code: 400, 
+                message: 'Email is already registered.' 
+            } 
+        }
     }
 
     const token = generateInviteToken();
@@ -187,12 +212,12 @@ export const getInviteTokenDetailsService = async (token: string): QueryResult<P
     const tokenDetails = await findInviteToken({inviteToken: token})
 
     console.log('tokenDetails', tokenDetails)
-    if(!tokenDetails.success){
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
         return { 
             success: false, 
             data: {} as Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string},
             error: { 
-                code: 500, 
+                code: tokenDetails.data.length === 0 ? 404 : 500, 
                 message: 'Token not found or may have already expired.' 
             } 
         }
@@ -292,22 +317,18 @@ export const registerAgentService = async (
 
 export const registerInviteService = async (
     inviteToken: string,
-    data: IAgentRegister, 
-    image?: Express.Multer.File,
-    govIdImage?: Express.Multer.File,
-    selfieImage?: Express.Multer.File,
-    agentId?: number
+    data: IAgentInvite
 ): QueryResult<any> => {
 
     const tokenDetails = await getInviteTokenDetailsService(inviteToken)
 
-    if(!tokenDetails.success){
+    if(!tokenDetails.success || tokenDetails.data.IsUsed == 1){
         return {
             success: false,
             data: {},
             error: {
                 code: 500,
-                message: 'Token not found or may have already expired.'
+                message: 'Token is invalid, expired, or already used.'
             }
         }
     }
@@ -342,73 +363,26 @@ export const registerInviteService = async (
     data.referredCode = referringAgent.data.AgentCode
     data.divisionId = tokenDetails.data.DivisionID
 
-    if(agentId){
-        const agent = await findAgentDetailsByAgentId(agentId)
+    const obj: IAgentRegister = {
+        ...data,
+        education: [],
+        experience: []
+    }   
 
-        if(!agent.success){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 500,
-                    message: 'Failed to find agent details.'
-                }
-            }
-        }
-    }
-
-    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
-
-    let metadata: IImage | undefined = undefined
-
-    if(image)(
-        metadata = {
-            FileName: filename,
-            ContentType: image.mimetype,
-            FileExt: path.extname(image.originalname),
-            FileSize: image.size,
-            FileContent: image.buffer
-        }
-    )
-
-    let govIdMetadata: IImage | undefined = undefined
-    if(govIdImage)(
-        govIdMetadata = {
-            FileName: govIdFilename,
-            ContentType: govIdImage.mimetype,
-            FileExt: path.extname(govIdImage.originalname),
-            FileSize: govIdImage.size,
-            FileContent: govIdImage.buffer
-        }
-    )
-    
-    let selfieMetadata: IImage | undefined = undefined
-    if(selfieImage)(
-        selfieMetadata = {
-            FileName: selfieFilename,
-            ContentType: selfieImage.mimetype,
-            FileExt: path.extname(selfieImage.originalname),
-            FileSize: selfieImage.size,
-            FileContent: selfieImage.buffer
-        }
-    )
-
-
-
-    const result = await registerAgentTransaction(data, metadata, govIdMetadata, selfieMetadata, agentId)
+    const result = await registerAgentTransaction(obj)
 
     if(!result.success) {
         return {
             success: false,
             data: {},
-            error: {
+                error: {
                 message: result.error?.message || 'Failed to register agent.',
                 code: result.error?.code || 500 
             }
         }
     }
+
+    const updateIsUsed = await updateInviteToken(inviteToken, { IsUsed: 1 })
 
     return result
 }
@@ -983,6 +957,177 @@ export const loginEmployeeService = async (username: string, password: string): 
             branchId: user.data.branchId
         }
     }    
+}
+
+export const approveInviteRegistrationService = async (userId: number, inviteToken: string): QueryResult<ITblAgentRegistration> => {
+
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: tokenDetails.error?.message || 'Failed to get invite token details.',
+                code: tokenDetails.error?.code || 500
+            }
+        }
+    }
+
+    const umAgent = await findAgentDetailsByUserId(userId)
+
+    if(!umAgent.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: umAgent.error?.message || 'Failed to get agent details.',
+                code: umAgent.error?.code || 500
+            }
+        }
+    }
+
+    if(tokenDetails.data[0].LinkedUserID !== umAgent.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Invite token does not belong to the provided user ID.',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await getAgentUsers({ emails: [tokenDetails.data[0].Email] })
+
+    if(!agentUser.success || agentUser.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Agent user not found for the provided invite token.',
+                code: 404
+            }
+        }
+    }
+
+    console.log(agentUser.data[0])
+
+    const registration = await getAgentRegistration({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0 })
+
+    if(!registration.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: registration.error?.message || 'Failed to get agent registration.',
+                code: registration.error?.code || 500
+            }
+        }
+    }
+
+    const approve = await editAgentRegistration({ agentId: umAgent.data.AgentID }, registration.data.AgentRegistrationID,  { IsVerified: 1 })
+
+    if(!approve.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: approve.error?.message || 'Failed to approve agent registration.',
+                code: approve.error?.code || 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: approve.data
+    }
+}
+
+export const rejectInviteRegistrationService = async (userId: number, inviteToken: string): QueryResult<null | ITblAgentRegistration> => {
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: tokenDetails.error?.message || 'Failed to get invite token details.',
+                code: tokenDetails.error?.code || 500
+            }
+        }
+    }
+
+    const umAgent = await findAgentDetailsByUserId(userId)
+
+    if(!umAgent.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: umAgent.error?.message || 'Failed to get agent details.',
+                code: umAgent.error?.code || 500
+            }
+        }
+    }
+
+    if(tokenDetails.data[0].LinkedUserID !== umAgent.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Invite token does not belong to the provided user ID.',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await getAgentUsers({ emails: [tokenDetails.data[0].Email] })
+
+    if(!agentUser.success || agentUser.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Agent user not found for the provided invite token.',
+                code: 404
+            }
+        }
+    }
+
+    console.log(agentUser.data[0])
+
+    const registration = await getAgentRegistration({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0 })
+
+    if(!registration.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: registration.error?.message || 'Failed to get agent registration.',
+                code: registration.error?.code || 500
+            }
+        }
+    }
+
+    const reject = await deleteInviteRegistrationTransaction(registration.data.AgentRegistrationID, inviteToken, agentUser.data[0].AgentUserID)
+
+    if(!reject.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: reject.error?.message || 'Failed to reject agent registration.',
+                code: reject.error?.code || 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: reject.data
+    }
 }
 
 export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number) => {

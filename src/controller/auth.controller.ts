@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, verifyOTPService } from "../service/auth.service";
+import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -84,67 +84,32 @@ export const registerAgentController = async (req: Request, res: Response) => {
 };
 
 export const registerInviteController = async (req: Request, res: Response) => {
-
-    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
-    console.log(JSON.stringify(req.files))
-    console.log(profileImage)
-
     const {
         firstName,
         middleName,
         lastName,
         gender,
-        civilStatus,
-        religion,
         birthdate,
-        birthplace,
         address,
-        telephoneNumber,
-        contactNumber,
-        sssNumber,
-        philhealthNumber,
-        pagibigNumber,
-        tinNumber,
-        prcNumber,
-        dshudNumber,
-        employeeIdNumber,
-        email,
+        email,  
         password,
-        education,
-        experience,
         inviteToken
     } = req.body
 
     console.log("req body", req.body)
 
-    console.log("education and experience", education, experience)
-
-    const obj: IAgentRegister = {
+    const obj: IAgentInvite = {
         firstName,
         middleName,
         lastName,
         gender,
-        civilStatus,
-        religion,
         birthdate,
-        birthplace,
         address,
-        telephoneNumber,
-        contactNumber,
-        sssNumber,
-        philhealthNumber,
-        pagibigNumber,
-        tinNumber,
-        prcNumber,
-        dshudNumber,
-        employeeIdNumber,
         email,
         password,
-        education,
-        experience,
     }
 
-    const result = await registerInviteService(inviteToken, obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+    const result = await registerInviteService(inviteToken, obj);
 
     console.log(result)
     if(!result.success){
@@ -280,6 +245,8 @@ export const inviteNewUserController = async (req: Request, res: Response) => {
             message: result.error?.message || "Failed to invite new user.",
             data: {}
         })
+
+        return
     }
 
     return res.status(200).json({
@@ -506,6 +473,78 @@ export const loginEmployeeController = async (req: Request, res: Response) => {
     return res.status(200).json({
         success: true, 
         message: "Employee logged in successfully.", 
+        data: result.data
+    });
+}
+
+export const approveInviteRegistrationController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+    
+    const {
+        inviteToken
+    } = req.body
+
+    const result = await approveInviteRegistrationService(session.userID, inviteToken);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to approve invite registration.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Invite registration approved successfully.", 
+        data: result.data
+    });
+}
+
+export const rejectInviteRegistrationController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    };
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+    
+    const {
+        inviteToken
+    } = req.body
+
+    const result = await rejectInviteRegistrationService(session.userID, inviteToken);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to reject invite registration.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Invite registration rejected successfully.", 
         data: result.data
     });
 }

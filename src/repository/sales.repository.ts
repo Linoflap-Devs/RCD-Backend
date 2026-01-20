@@ -2142,7 +2142,7 @@ export const editPendingSale = async (
         downpayment?: number,
         dpTerms?: number,
         monthlyPayment?: number
-        dpStartDate?: Date,
+        dpStartDate?: Date | null,
         sellerName?: string,
         images?: {
             receipt?: IImage,
@@ -2210,7 +2210,7 @@ export const editPendingSale = async (
         if(data.downpayment !== undefined) updateData.DownPayment = data.downpayment;
         if(data.dpTerms !== undefined) updateData.DPTerms = data.dpTerms.toString();
         if(data.monthlyPayment !== undefined) updateData.MonthlyDP = data.monthlyPayment;
-        if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate;
+        if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate ? data.dpStartDate : null;
         if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
 
         // Update the pending sale
@@ -2544,7 +2544,7 @@ export const editSalesTransaction = async (
         downpayment?: number,
         dpTerms?: number,
         monthlyPayment?: number
-        dpStartDate?: Date,
+        dpStartDate?: Date | null,
         sellerName?: string,
         images?: {
             receipt?: IImage,
@@ -2605,7 +2605,7 @@ export const editSalesTransaction = async (
         if(data.downpayment !== undefined) updateData.DownPayment = data.downpayment;
         if(data.dpTerms !== undefined) updateData.DPTerms = data.dpTerms.toString();
         if(data.monthlyPayment !== undefined) updateData.MonthlyDP = data.monthlyPayment;
-        if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate;
+        if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate ? data.dpStartDate : null;
         if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
 
         // Update the pending sale

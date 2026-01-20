@@ -573,7 +573,15 @@ export const insertInviteToken = async (inviteToken: string, email: string, divi
     }
 }
 
-export const findInviteToken = async (filters?: {inviteToken?: string, email?: string, divisionId?: number, userId?: number, expiryDate?: Date}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
+export const findInviteToken = async (filters?: {
+    inviteToken?: string, 
+    email?: string, 
+    divisionId?: number, 
+    userId?: number, 
+    expiryDate?: Date, 
+    showUsed?: boolean,
+    showExpired?: boolean,
+}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
             .selectAll()
@@ -606,9 +614,14 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
             baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
         }
 
-        // only non-expired tokens
-        //baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
+        if (filters?.showUsed !== undefined) {
+            baseQuery = baseQuery.where('IsUsed', '=', filters.showUsed ? 1 : 0);
+        }
 
+        if (filters?.showExpired !== true) {
+            baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
+        }
+        
         const result = await baseQuery.execute();
 
         return {
@@ -622,6 +635,33 @@ export const findInviteToken = async (filters?: {inviteToken?: string, email?: s
         return {
             success: false,
             data: {} as (IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[],
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const updateInviteToken = async (inviteToken: string, data: Partial<IInviteTokens>): QueryResult<IInviteTokens> => {
+    try {
+        const result = await db.updateTable('InviteTokens')
+            .set(data)
+            .where('InviteToken', '=', inviteToken)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow();
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IInviteTokens,
             error: {
                 message: error.message,
                 code: 500
@@ -842,6 +882,45 @@ export const registerAgentTransaction = async(
             error: {
                 code: code,
                 message: message
+            }
+        }
+    }
+}
+
+
+export const deleteInviteRegistrationTransaction = async (agentRegistrationId: number, inviteToken: string, agentUserId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
+    try {
+        const deleteRegistration = await trx.deleteFrom('Tbl_AgentRegistration')
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const deleteToken = await trx.deleteFrom('InviteTokens')
+            .where('InviteToken', '=', inviteToken)
+            .executeTakeFirstOrThrow()
+        
+        const deleteUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        await trx.rollback().execute()
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
             }
         }
     }
@@ -1251,9 +1330,9 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     LastName: registration.LastName,
                     FirstName: registration.FirstName,
                     MiddleName: registration.MiddleName ?? '',
-                    ContactNumber: registration.ContactNumber,
+                    ContactNumber: registration.ContactNumber || '',
                     AgentTaxRate: 5,
-                    CivilStatus: registration.CivilStatus,
+                    CivilStatus: registration.CivilStatus || '',
                     Sex: registration.Sex,
                     Address: registration.Address,
                     Birthdate: registration.Birthdate,

@@ -214,7 +214,7 @@ export interface IBrokerRegistrationListItem {
     RepresentativeName: string,
     Email: string,
     Gender: string,
-    ContactNumber: string,
+    ContactNumber?: string | null,
 }
 
 export interface IAddBroker {

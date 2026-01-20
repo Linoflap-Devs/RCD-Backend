@@ -1166,7 +1166,8 @@ export const getCombinedPersonalSalesService = async (
                     //agentId: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     createdBy: agent ? agent.AgentID ? agent.AgentID : undefined : undefined,
                     brokerName: broker ? broker.RepresentativeName : undefined,
-                    isUnique: true
+                    isUnique: true,
+                    showRejected: true,
                 }
             ),
              // Get sd approved sales (excluding self-submitted)
@@ -1538,7 +1539,7 @@ export const editPendingSaleService = async (
         downpayment?: number,
         dpTerms?: number,
         monthlyPayment?: number
-        dpStartDate?: Date,
+        dpStartDate?: Date | null,
         sellerName?: string,
         images?: {
             receipt?: Express.Multer.File,
@@ -1960,7 +1961,7 @@ export const editSalesTranService = async (
         downpayment?: number,
         dpTerms?: number,
         monthlyPayment?: number
-        dpStartDate?: Date,
+        dpStartDate?: Date | null,
         sellerName?: string,
         images?: {
             receipt?: Express.Multer.File,

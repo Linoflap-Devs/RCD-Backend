@@ -31,9 +31,9 @@ export const getUsers = async (): QueryResult<ITblUsersWeb[]> => {
     
 };
 
-export const getAgentUsers = async (): QueryResult<ITblAgentUser[]> => {
+export const getAgentUsers = async (filters?: { emails?: string[] }): QueryResult<ITblAgentUser[]> => {
     try {   
-        const baseQuery = await db.selectFrom('Tbl_AgentUser')
+        let baseQuery = await db.selectFrom('Tbl_AgentUser')
             .leftJoin('Tbl_Agents', 'Tbl_AgentUser.AgentID', 'Tbl_Agents.AgentID')
             .leftJoin('Tbl_Position', 'Tbl_Agents.PositionID', 'Tbl_Position.PositionID')
             .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
@@ -44,6 +44,10 @@ export const getAgentUsers = async (): QueryResult<ITblAgentUser[]> => {
                 'Tbl_Position.Position',
                 'Tbl_Division.Division'
             ])
+
+        if(filters && filters.emails) {
+            baseQuery = baseQuery.where('Tbl_AgentUser.Email', 'in', filters.emails)
+        }
 
         const result = await baseQuery.execute();
 

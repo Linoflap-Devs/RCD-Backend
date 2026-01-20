@@ -8,6 +8,7 @@ import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../ty
 import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
+import { TZDate } from "@date-fns/tz";
 
 export const getAgents = async (filters?: { name?: string, showInactive?: boolean, showNoDivision?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
     
@@ -753,6 +754,45 @@ export const getAgentRegistration = async (filters?: {agentId?: number, agentReg
             }
         }
     }
+}
+
+export const editAgentRegistration = async ( user: { agentId?: number, userId?: number }, agentRegistrationId: number, data: Partial<ITblAgentRegistration>): QueryResult<ITblAgentRegistration> => {
+    try {
+
+        if(!user.agentId && !user.userId){
+            throw new Error('Invalid user information.')
+        }
+
+        const updateData: Partial<ITblAgentRegistration> = {
+            LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+            UpdateBy: user.userId || user.agentId,
+            ...data,
+        }
+
+        const result = await db.updateTable('Tbl_AgentRegistration')
+            .set(updateData)
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+    
 }
 
 export const getAgentUserByAgentId = async (agentId: number): QueryResult<ITblAgentUser> => {

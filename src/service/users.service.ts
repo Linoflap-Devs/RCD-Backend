@@ -18,6 +18,7 @@ import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken } from "../repository/auth.repository";
+import { TZDate } from "@date-fns/tz";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1257,7 +1258,7 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
             RepresentativeName: `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName?.trim()}`.trim(),
             Email: item.Email,
             Gender: item.Gender,
-            ContactNumber: item.ContactNumber
+            ContactNumber: item.ContactNumber || null
         }
     })
 
@@ -1735,8 +1736,87 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
+    const obj: IInviteTokens[] = result.data.map((invite: IInviteTokens) => {
+        return {
+            InviteTokenID: invite.InviteTokenID,
+            InviteToken: invite.InviteToken,
+            Email: invite.Email,
+            LinkedUserID: invite.LinkedUserID,
+            DivisionID: invite.DivisionID,
+            IsUsed: invite.IsUsed,
+            ExpiryDate: new TZDate(invite.ExpiryDate, 'Asia/Manila'),
+            CreatedAt: new TZDate(invite.CreatedAt, 'Asia/Manila'),
+            UpdatedAt: invite.UpdatedAt ? new TZDate(invite.UpdatedAt, 'Asia/Manila') : null
+        }
+    })
+
     return {
         success: true,
-        data: result.data
+        data: obj
+    }
+}
+
+export const getInviteRegistrationDetailsService = async (inviteToken: string): QueryResult<IInviteTokens & Partial<IAgentRegistration>> => {
+    const result = await findInviteToken({ inviteToken: inviteToken, showUsed: true })
+
+    if(!result.success || result.data.length === 0){
+        return {
+            success: false,
+            data: {} as IInviteTokens & Partial<IAgentRegistration>,
+            error: {
+                message: 'Invite token not found',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await getAgentUsers({ emails: [result.data[0].Email ] })
+
+    if(!agentUser.success || agentUser.data.length === 0){
+        return {
+            success: false,
+            data: {} as IInviteTokens & Partial<IAgentRegistration>,
+            error: {
+                message: 'Agent user not found',
+                code: 400
+            }
+        }
+    }
+
+    const registration = await getAgentRegistrations({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0})
+
+    if(!registration.success || registration.data.length === 0){
+        return {
+            success: false,
+            data: {} as IInviteTokens & Partial<IAgentRegistration>,
+            error: {
+                message: 'Agent registration not found',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {
+            InviteTokenID: result.data[0].InviteTokenID,
+            InviteToken: result.data[0].InviteToken,
+            Email: result.data[0].Email,
+            LinkedUserID: result.data[0].LinkedUserID,
+            DivisionID: result.data[0].DivisionID,
+            IsUsed: result.data[0].IsUsed,
+            ExpiryDate: result.data[0].ExpiryDate,
+
+            FirstName: registration.data[0].FirstName,
+            LastName: registration.data[0].LastName,
+            MiddleName: registration.data[0].MiddleName,
+            Address: registration.data[0].Address,
+            Birthdate: registration.data[0].Birthdate,
+            Gender: registration.data[0].Gender,
+
+            CreatedAt: result.data[0].CreatedAt,
+            UpdatedAt: result.data[0].UpdatedAt
+        }
+
     }
 }
