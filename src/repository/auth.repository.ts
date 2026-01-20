@@ -887,6 +887,45 @@ export const registerAgentTransaction = async(
     }
 }
 
+
+export const deleteInviteRegistrationTransaction = async (agentRegistrationId: number, inviteToken: string, agentUserId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
+    try {
+        const deleteRegistration = await trx.deleteFrom('Tbl_AgentRegistration')
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const deleteToken = await trx.deleteFrom('InviteTokens')
+            .where('InviteToken', '=', inviteToken)
+            .executeTakeFirstOrThrow()
+        
+        const deleteUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        await trx.rollback().execute()
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const registerBrokerTransaction = async(
     data: IBrokerRegister, 
     profileImageMetadata?: IImage, 

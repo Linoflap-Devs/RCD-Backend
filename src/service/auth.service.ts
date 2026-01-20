@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -1042,6 +1042,91 @@ export const approveInviteRegistrationService = async (userId: number, inviteTok
     return {
         success: true,
         data: approve.data
+    }
+}
+
+export const rejectInviteRegistrationService = async (userId: number, inviteToken: string): QueryResult<null | ITblAgentRegistration> => {
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: tokenDetails.error?.message || 'Failed to get invite token details.',
+                code: tokenDetails.error?.code || 500
+            }
+        }
+    }
+
+    const umAgent = await findAgentDetailsByUserId(userId)
+
+    if(!umAgent.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: umAgent.error?.message || 'Failed to get agent details.',
+                code: umAgent.error?.code || 500
+            }
+        }
+    }
+
+    if(tokenDetails.data[0].LinkedUserID !== umAgent.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Invite token does not belong to the provided user ID.',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await getAgentUsers({ emails: [tokenDetails.data[0].Email] })
+
+    if(!agentUser.success || agentUser.data.length === 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Agent user not found for the provided invite token.',
+                code: 404
+            }
+        }
+    }
+
+    console.log(agentUser.data[0])
+
+    const registration = await getAgentRegistration({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0 })
+
+    if(!registration.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: registration.error?.message || 'Failed to get agent registration.',
+                code: registration.error?.code || 500
+            }
+        }
+    }
+
+    const reject = await deleteInviteRegistrationTransaction(registration.data.AgentRegistrationID, inviteToken, agentUser.data[0].AgentUserID)
+
+    if(!reject.success){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: reject.error?.message || 'Failed to reject agent registration.',
+                code: reject.error?.code || 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: reject.data
     }
 }
 

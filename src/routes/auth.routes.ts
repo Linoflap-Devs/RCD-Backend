@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema, registerBrokerSchema, registerInviteSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, approveBrokerRegistrationController, approveInviteRegistrationController, changeAgentUserPasswordAdminController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, registerInviteController, rejectAgentRegistrationController, rejectBrokerRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, approveBrokerRegistrationController, approveInviteRegistrationController, changeAgentUserPasswordAdminController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, registerInviteController, rejectAgentRegistrationController, rejectBrokerRegistrationController, rejectInviteRegistrationController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectBrokerRegistrationSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
@@ -16,6 +16,7 @@ router.route('/logout-agent').delete(validateSession, logoutAgentSessionControll
 
 router.route('/register-invite').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]),  validate(registerInviteSchema)], registerInviteController);
 router.route('/approve-invite-um').post([validateSession, validateRole(['UM'])], approveInviteRegistrationController)
+router.route('/reject-invite-um').post([validateSession, validateRole(['UM'])], rejectInviteRegistrationController)
 
 router.route('/register-employee').post(validate(registerEmployeeSchema), registerEmployeeController)
 router.route('/login-employee').post(validate(loginEmployeeSchema) ,loginEmployeeController)
