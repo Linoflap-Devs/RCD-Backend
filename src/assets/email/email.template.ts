@@ -89,7 +89,7 @@ export const emailInviteTemplate = (inviterName: string, domain: string, inviteT
 
 
                 <p style="font-size: 12px; color: #999999">Button not working? Copy-paste this link into your browser:</p>
-                <p style="font-size: 12px; color: #D75C3C">${domain + '/invite?token=' + inviteToken}</p>
+                <p style="font-size: 12px; color: #D75C3C">${domain + '/register?token=' + inviteToken}</p>
                 
                 <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e1e1e1; font-size: 14px; color: #666666;">
                     RCD Realty Marketing Corp.
