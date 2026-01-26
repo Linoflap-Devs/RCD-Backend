@@ -56,7 +56,7 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
     let divisionSales = null
     let divisionSalesData: any[] = []
     if(result.data.DivisionID){
-        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, isUnique: true, month: filters?.month, year: filters?.year})
+        const getDivSales = await getDivisionSales(Number(result.data.DivisionID), {amount: 3, agentId: result.data.AgentID, isUnique: true, month: filters?.month, year: filters?.year})
 
         if(!getDivSales.success){
             logger('Failed to find division.', {agentUserId: agentUserId})
@@ -77,6 +77,7 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
         divisionSales.results.map((sale: VwSalesTransactions) => {
             divisionSalesData.push({
                 salesId: sale.SalesTranID,
+                transactionId: sale.SalesTransDtlID,
                 salesCode: sale.SalesTranCode?.trim() || '',
                 projectName: sale.ProjectName?.trim() || '',
                 developerName: sale.DeveloperName?.trim() || '',

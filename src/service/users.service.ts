@@ -1726,7 +1726,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
-    const result = await findInviteToken({ userId: agent.data.AgentID })
+    const result = await findInviteToken({ userId: agent.data.AgentID, showUsed: true, showExpired: true })
 
     if(!result.success){
         return {
@@ -1757,7 +1757,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
 }
 
 export const getInviteRegistrationDetailsService = async (inviteToken: string): QueryResult<IInviteTokens & Partial<IAgentRegistration>> => {
-    const result = await findInviteToken({ inviteToken: inviteToken, showUsed: true })
+    const result = await findInviteToken({ inviteToken: inviteToken, showUsed: true, showExpired: true })
 
     if(!result.success || result.data.length === 0){
         return {

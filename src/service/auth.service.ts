@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -1042,6 +1042,76 @@ export const approveInviteRegistrationService = async (userId: number, inviteTok
     return {
         success: true,
         data: approve.data
+    }
+}
+
+export const revokeInviteTokenService = async (userId: number, inviteToken: string): QueryResult<null> => {
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+
+    if(!tokenDetails.success || tokenDetails.data.length === 0){
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: tokenDetails.error?.message || 'Failed to get invite token details.',
+                code: tokenDetails.error?.code || 500
+            }
+        }
+    }
+
+    const agentUser = await findAgentDetailsByUserId(userId)
+
+    if(!agentUser.success){
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: agentUser.error?.message || 'Failed to get agent details.',
+                code: agentUser.error?.code || 500
+            }
+        }
+    }
+
+    const token = tokenDetails.data[0]
+
+    if(token.LinkedUserID !== agentUser.data.AgentID){
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: 'Invite token does not belong to the provided user ID.',
+                code: 400
+            }
+        }
+    }
+
+    if(token.IsUsed == 1){
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: 'Cannot revoke an already used invite token.',
+                code: 400
+            }
+        }
+    }
+
+    const revoke = await deleteInviteToken(token.InviteTokenID)
+
+    if(!revoke.success){
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: revoke.error?.message || 'Failed to revoke invite token.',
+                code: revoke.error?.code || 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: null
     }
 }
 
