@@ -82,7 +82,7 @@ export const emailInviteTemplate = (inviterName: string, domain: string, inviteT
                 <p style="font-size: 16px; margin-bottom: 36px;">We're excited to have you on board. Click the button below to create your account and get started. This invite expires in 24 hours.</p>
                 
                 <div style="margin-bottom: 36px">
-                    <a href="${domain + '/invite?token=' + inviteToken}" style="display: inline-block; background-color: #D75C3C; color: #ffffff; text-decoration: none; padding: 15px 40px; border-radius: 5px; font-size: 16px; font-weight: 600;">
+                    <a href="${domain + '/register?token=' + inviteToken}" style="display: inline-block; background-color: #D75C3C; color: #ffffff; text-decoration: none; padding: 15px 40px; border-radius: 5px; font-size: 16px; font-weight: 600;">
                         Accept Invitation
                     </a>
                 </div>
