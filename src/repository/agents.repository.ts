@@ -332,7 +332,6 @@ export const getAgentRegistrations = async (filters?: {agentRegistrationId?: num
         }
 
         const baseAgentData = await baseAgentDataQuery
-            .where('Tbl_AgentRegistration.IsVerified', '=', 0)
             .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
             .execute();
 
