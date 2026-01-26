@@ -106,7 +106,7 @@ export const getAgentsService = async (
 }
 
 export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistrationListItem[]> => {
-    const result = await getAgentRegistrations()
+    const result = await getAgentRegistrations({ isVerified: 1 })
 
     if(!result.success){
         return {
