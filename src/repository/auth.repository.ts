@@ -1255,7 +1255,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         const [registration] = await Promise.all([
             db.selectFrom('Tbl_AgentRegistration')
                 .where('AgentRegistrationID', '=', agentRegistrationId)
-                .where('IsVerified', '=', 0)
+                .where('IsVerified', '>', 2)
                 .selectAll()
                 .executeTakeFirstOrThrow(),
             
@@ -1331,7 +1331,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                 console.log('Updating agent registration to verified for existing agent id: ', agentData.AgentID)
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
-                                                    .set('IsVerified', 1)
+                                                    .set('IsVerified', 2)
                                                     .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
@@ -1450,7 +1450,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                                                 .executeTakeFirstOrThrow()
 
                 const updateAgentRegistration = await trx.updateTable('Tbl_AgentRegistration')
-                                                    .set('IsVerified', 1)
+                                                    .set('IsVerified', 2)
                                                     .where('AgentRegistrationID', '=', agentRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
@@ -1546,11 +1546,6 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     message: error.message
                 }
             }
-        }
-
-        return {
-            success: false,
-            data: {} as IAgentUser
         }
     }
 
