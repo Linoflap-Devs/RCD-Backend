@@ -1248,7 +1248,7 @@ export const findBrokerRegistrationById = async(agentRegistrationId: number): Qu
     }
 }
 
-export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number): QueryResult<IAgentUser> => {
+export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number, referralCode?: string, referralId?: number): QueryResult<IAgentUser> => {
     try {
 
         // get all relevant data
@@ -1310,6 +1310,14 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         try {
             if(agentData){
                 // link existing agent to agent tables
+                if(referralCode || referralId){
+                    const updateAgent = await trx.updateTable('Tbl_Agents')
+                                                .set('ReferredCode', referralCode || '')
+                                                .set('ReferredByID', referralId || null)
+                                                .where('AgentID', '=', agentData.AgentID)
+                                                .executeTakeFirstOrThrow(); 
+                }
+                
                 const updateAgentUser = await trx.updateTable('Tbl_AgentUser')
                                             .set('IsVerified', 1)
                                             .set('AgentID', Number(agentData.AgentID))
@@ -1423,6 +1431,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     AddressEmergency: '',
                     AffiliationDate: new Date(),
                     PositionID: registration.PositionID || 5,
+                    ReferredCode: registration.ReferredCode ?? '',
 
                     IsActive: 1,
                     LastUpdate: new Date(),
