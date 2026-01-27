@@ -17,7 +17,7 @@ import { editDivisionBroker, getDivisionBrokers } from "../repository/division.r
 import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
-import { findInviteToken } from "../repository/auth.repository";
+import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
@@ -1726,7 +1726,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
-    const result = await findInviteToken({ userId: agent.data.AgentID, showUsed: true, showExpired: true })
+    const result = await findInviteTokenWithRegistration({ userId: agent.data.AgentID, showUsed: true, showExpired: true })
 
     if(!result.success){
         return {
@@ -1736,7 +1736,9 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
-    const obj: IInviteTokens[] = result.data.map((invite: IInviteTokens) => {
+    console.log(result.data.filter((invite: IInviteTokens & {IsVerified: number | null}) => invite.IsVerified && invite.IsVerified > 0))
+
+    const obj: (IInviteTokens & {IsUMApproved: boolean, IsSAApproved: boolean})[] = result.data.map((invite: IInviteTokens & {IsVerified: number | null}) => {
         return {
             InviteTokenID: invite.InviteTokenID,
             InviteToken: invite.InviteToken,
@@ -1744,6 +1746,8 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
             LinkedUserID: invite.LinkedUserID,
             DivisionID: invite.DivisionID,
             IsUsed: invite.IsUsed,
+            IsUMApproved: invite.IsVerified && invite.IsVerified > 0 ? true : false,
+            IsSAApproved: invite.IsVerified && invite.IsVerified > 1 ? true : false,
             ExpiryDate: new TZDate(invite.ExpiryDate, 'Asia/Manila'),
             CreatedAt: new TZDate(invite.CreatedAt, 'Asia/Manila'),
             UpdatedAt: invite.UpdatedAt ? new TZDate(invite.UpdatedAt, 'Asia/Manila') : null

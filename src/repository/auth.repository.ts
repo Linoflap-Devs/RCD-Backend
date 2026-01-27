@@ -643,6 +643,79 @@ export const findInviteToken = async (filters?: {
     }
 }
 
+export const findInviteTokenWithRegistration = async (filters?: {
+    inviteToken?: string, 
+    email?: string, 
+    divisionId?: number, 
+    userId?: number, 
+    expiryDate?: Date, 
+    showUsed?: boolean,
+    showExpired?: boolean,
+}): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string, IsVerified: number | null})[]> => {
+    try {
+        let baseQuery = db.selectFrom('InviteTokens')
+            .selectAll()
+            .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
+            .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
+            .leftJoin('Tbl_AgentUser', 'Tbl_AgentUser.Email', 'InviteTokens.Email')
+            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
+            .select([
+                'Tbl_Division.Division',
+                'Tbl_Agents.FirstName',
+                'Tbl_Agents.MiddleName',
+                'Tbl_Agents.LastName',
+                'Tbl_AgentRegistration.IsVerified'
+            ])
+            
+        if (filters?.inviteToken) {
+            baseQuery = baseQuery.where('InviteToken', '=', filters.inviteToken);
+        }
+
+        if (filters?.email) {
+            baseQuery = baseQuery.where('Email', '=', filters.email);
+        }
+
+        if (filters?.divisionId) {
+            baseQuery = baseQuery.where('DivisionID', '=', filters.divisionId);
+        }
+
+        if (filters?.userId) {
+            baseQuery = baseQuery.where('LinkedUserID', '=', filters.userId);
+        }
+
+        if (filters?.expiryDate) {
+            baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
+        }
+
+       if (filters?.showUsed === false) {
+            baseQuery = baseQuery.where('IsUsed', '=', 0);
+        }
+
+        if (filters?.showExpired !== true) {
+            baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
+        }
+        
+        const result = await baseQuery.execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as (IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string, IsVerified: number})[],
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
 export const updateInviteToken = async (inviteToken: string, data: Partial<IInviteTokens>): QueryResult<IInviteTokens> => {
     try {
         const result = await db.updateTable('InviteTokens')
