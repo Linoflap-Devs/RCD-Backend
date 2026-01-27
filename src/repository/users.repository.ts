@@ -1262,6 +1262,8 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
 
     console.log('userId: ', userId, 'agentUserId: ', agentUserId)
 
+
+
     const trx = await db.startTransaction().execute();
 
     try {
@@ -1274,9 +1276,14 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
+        const registration = await trx.selectFrom('Tbl_AgentRegistration')
+            .select(['IsVerified'])
+            .where('AgentRegistrationID', '=', result.AgentRegistrationID)
+            .executeTakeFirstOrThrow()
+
         const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
             .set({
-                IsVerified: 0
+                IsVerified: registration ? registration.IsVerified - 1 : 0 
             })
             .where('AgentRegistrationID', '=', result.AgentRegistrationID)
             .outputAll('inserted')
