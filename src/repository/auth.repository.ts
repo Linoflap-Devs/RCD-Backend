@@ -614,8 +614,8 @@ export const findInviteToken = async (filters?: {
             baseQuery = baseQuery.where('ExpiryDate', '=', filters.expiryDate);
         }
 
-        if (filters?.showUsed !== undefined) {
-            baseQuery = baseQuery.where('IsUsed', '=', filters.showUsed ? 1 : 0);
+       if (filters?.showUsed === false) {
+            baseQuery = baseQuery.where('IsUsed', '=', 0);
         }
 
         if (filters?.showExpired !== true) {
