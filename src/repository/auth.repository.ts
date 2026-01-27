@@ -1255,7 +1255,7 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         const [registration] = await Promise.all([
             db.selectFrom('Tbl_AgentRegistration')
                 .where('AgentRegistrationID', '=', agentRegistrationId)
-                .where('IsVerified', '>', 2)
+                .where('IsVerified', '<', 2)
                 .selectAll()
                 .executeTakeFirstOrThrow(),
             
