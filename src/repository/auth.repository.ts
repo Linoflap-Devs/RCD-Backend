@@ -654,7 +654,7 @@ export const findInviteTokenWithRegistration = async (filters?: {
 }): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string, IsVerified: number | null})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
-            .selectAll()
+            .selectAll('InviteTokens')
             .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
             .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
             .leftJoin('Tbl_AgentUser', 'Tbl_AgentUser.Email', 'InviteTokens.Email')
