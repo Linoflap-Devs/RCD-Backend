@@ -1300,7 +1300,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
         referralId = agent.data.AgentID
     }
 
-    const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId)
+    const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId, referralCode ? referralCode : undefined, referralId ? referralId : undefined)
 
     if(!result.success){
         logger((result.error?.message || 'Failed to approve agent registration.'), {agentRegistrationId: agentRegistrationId, agentId: agentId})
