@@ -1252,9 +1252,9 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
 
 
         // Find agent user row
-        const agentUser = await getAgentUsers({ ids: [registration.data.AgentRegistrationID] })
+        const agentUser = await getAgentUsers({ agentRegistrationIds: [registration.data.AgentRegistrationID] })
     
-        if(!agentUser.success){
+        if(!agentUser.success || agentUser.data.length === 0){
             logger((agentUser.error?.message || 'Failed to find agent user.'), {agentRegistrationId: agentRegistrationId})
             return {
                 success: false,
