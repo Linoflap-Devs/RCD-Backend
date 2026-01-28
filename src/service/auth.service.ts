@@ -20,7 +20,7 @@ import { getPositions } from "../repository/position.repository";
 import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
-import { editAgentRegistration, getAgent, getAgentRegistration } from "../repository/agents.repository";
+import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -1230,6 +1230,75 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
 
     }
 
+    const registration = await getAgentRegistration({ agentRegistrationId: agentRegistrationId })
+
+    if(!registration.success){
+        logger((registration.error?.message || 'Failed to find agent registration.'), {agentRegistrationId: agentRegistrationId})
+        return {
+            success: false,
+            data: {} as {token: string, email: string},
+            error: {
+                message: registration.error?.message || 'Failed to find agent registration.',
+                code: 404
+            }
+        }
+    }
+
+    let referralCode = undefined
+    let referralId = undefined
+
+    if(registration.data.IsVerified == 1){
+        // Invited by UM
+
+
+        // Find agent user row
+        const agentUser = await getAgentUsers({ ids: [registration.data.AgentRegistrationID] })
+    
+        if(!agentUser.success){
+            logger((agentUser.error?.message || 'Failed to find agent user.'), {agentRegistrationId: agentRegistrationId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: agentUser.error?.message || 'Failed to find agent user.',
+                    code: 404
+                }
+            }
+        }
+
+        // Find related invite token
+        const inviteToken = await findInviteToken({email: agentUser.data[0].Email, showUsed: true, showExpired: true})
+
+        if(!inviteToken.success || inviteToken.data.length === 0){
+            logger((inviteToken.error?.message || 'Failed to find invite token.'), {agentRegistrationId: agentRegistrationId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: inviteToken.error?.message || 'Failed to find invite token.',
+                    code: 404
+                }
+            }
+        }
+
+        // Find agent from LinkedUserID
+        const agent = await findAgentDetailsByAgentId(inviteToken.data[0].LinkedUserID)
+    
+        if(!agent.success){
+            logger((agent.error?.message || 'Failed to find agent.'), {agentRegistrationId: agentRegistrationId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: agent.error?.message || 'Failed to find agent.',
+                    code: 404
+                }
+            }
+        }
+
+        referralCode = agent.data.AgentCode
+        referralId = agent.data.AgentID
+    }
 
     const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId)
 
