@@ -682,6 +682,16 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
         }
     }
 
+    const agentUser = await findAgentUserById(agentId)
+
+    if(!agentUser.success) {
+        return {
+            success: false,
+            data: {},
+            error: agentUser.error
+        }
+    }
+
     const filename = `${agentUserDetails.data.LastName}-${agentUserDetails.data.FirstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
     
     let metadata: IImage = {
@@ -694,8 +704,11 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
 
     let result: IImageBase64 | undefined = undefined
 
-    if(agentUserDetails.data.Image){
+    console.log(agentUserDetails.data)
+    console.log(agentUser.data)
 
+    if(agentUser.data.imageId && agentUserDetails.data.Image){
+        console.log('existing image')
         // update existing image
         const editImage = await editAgentImage(agentUserDetails.data.Image?.ImageID, metadata)
 
@@ -709,6 +722,7 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
     }
 
     else {
+        console.log('new image')
         // add new image + update user agent image id
 
         const transaction = await addAgentImage(agentUserDetails.data.AgentID, metadata)

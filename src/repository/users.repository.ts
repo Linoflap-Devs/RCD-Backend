@@ -391,11 +391,18 @@ export const findBrokerUserByEmail = async (email: string): QueryResult<{brokerU
     }
 }
 
-export const findAgentUserById = async (agentUserId: number): QueryResult<{agentUserId: number, agentRegistrationId: number | null, email: string, isVerified: boolean, password: string}> => {
+export const findAgentUserById = async (agentUserId: number): QueryResult<{
+    agentUserId: number, 
+    agentRegistrationId: number | null, 
+    email: string, 
+    isVerified: boolean, 
+    password: string,
+    imageId: number | null
+}> => {
     try {
         const user = await db.selectFrom('Tbl_AgentUser')
             .where('AgentUserID', '=', agentUserId)
-            .select(['AgentUserID', 'Email', 'IsVerified', 'Password', 'AgentRegistrationID'])
+            .select(['AgentUserID', 'Email', 'IsVerified', 'Password', 'AgentRegistrationID', 'ImageID'])
             .executeTakeFirstOrThrow()
 
         if(!user){
@@ -409,7 +416,8 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{agent
                 agentRegistrationId: user.AgentRegistrationID || null,
                 email: user.Email, 
                 isVerified: user.IsVerified == 1 ? true : false, 
-                password: user.Password 
+                password: user.Password ,
+                imageId: user.ImageID
             }
         }
     }
@@ -418,7 +426,7 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{agent
         const error = err as Error
         return {
             success: false,
-            data: {} as {agentUserId: number, agentRegistrationId: number | null, email: string,  isVerified: boolean, password: string},
+            data: {} as {agentUserId: number, agentRegistrationId: number | null, email: string,  isVerified: boolean, password: string, imageId: number | null},
             error: {
                 code: 400,
                 message: error.message
@@ -812,7 +820,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
 
-        const updateAgent = trx.updateTable('Tbl_AgentUser')
+        const updateAgent = await trx.updateTable('Tbl_AgentUser')
             .where('AgentID', '=', agentId)
             .set({
                 ImageID: addImage.ImageID
@@ -820,7 +828,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
 
-        trx.commit().execute()
+        await trx.commit().execute()
 
         const obj = {
             ContentType: addImage.ContentType,
@@ -841,7 +849,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
 
     catch (err: unknown){
         const error = err as Error
-        trx.rollback().execute();
+        await trx.rollback().execute()
         return {
             success: false,
             data: {} as IImageBase64,
