@@ -1233,6 +1233,7 @@ export const getPendingSales = async (
         brokerName?: string,
         createdBy?: number,
         createdByWeb?: number,
+        assignedUM?: number | null,
         developerId?: number,
         isUnique?: boolean,
         approvalStatus?: number[],
@@ -1287,6 +1288,16 @@ export const getPendingSales = async (
         if(filters && filters.salesBranch){
             result = result.where('SalesBranchID', '=', filters.salesBranch)
             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
+
+        if(filters && filters.assignedUM){
+            result = result.where('AssignedUM', '=', filters.assignedUM)
+            totalCountResult = totalCountResult.where('AssignedUM', '=', filters.assignedUM)
+        }
+
+        if(filters && filters.assignedUM === null){
+            result = result.where('AssignedUM', 'is', null)
+            totalCountResult = totalCountResult.where('AssignedUM', 'is', null)
         }
 
         if(filters && filters.agentId){
@@ -1475,6 +1486,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.AgentPendingSalesID',
                 'Tbl_AgentPendingSales.ApprovalStatus',
                 'Tbl_AgentPendingSales.ApprovedSalesTranID',
+                'Tbl_AgentPendingSales.AssignedUM',
                 'Tbl_AgentPendingSales.Block',
                 'Tbl_AgentPendingSales.BuyersAddress',
                 'Tbl_AgentPendingSales.BuyersContactNumber',
@@ -1601,7 +1613,8 @@ export const addPendingSale = async (
         reservationDate: Date,
         divisionID: number,
         salesBranchID: number,
-        sectorID: number
+        sectorID: number,
+        assignedUM?: number,
         buyer: {
             buyersName: string,
             address: string,
@@ -1700,6 +1713,8 @@ export const addPendingSale = async (
                 BuyersAddress: data.buyer.address,
                 BuyersContactNumber: data.buyer.phoneNumber,
                 BuyersOccupation: data.buyer.occupation,
+
+                AssignedUM: data.assignedUM || null,
 
                 ProjectID: data.property.projectID,
                 Block: data.property.blkFlr,
@@ -2144,6 +2159,7 @@ export const editPendingSale = async (
         monthlyPayment?: number
         dpStartDate?: Date | null,
         sellerName?: string,
+        assignedUM?: number,
         images?: {
             receipt?: IImage,
             agreement?: IImage,
@@ -2212,6 +2228,7 @@ export const editPendingSale = async (
         if(data.monthlyPayment !== undefined) updateData.MonthlyDP = data.monthlyPayment;
         if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate ? data.dpStartDate : null;
         if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
+        if(data.assignedUM !== undefined) updateData.AssignedUM = data.assignedUM;
 
         // Update the pending sale
         console.log(data)

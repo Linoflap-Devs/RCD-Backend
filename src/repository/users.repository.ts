@@ -1299,7 +1299,7 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
 
         const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
             .set({
-                IsVerified: registration ? registration.IsVerified - 1 : 0 
+                IsVerified: registration.IsVerified == 2 ? 1 : 0 
             })
             .where('AgentRegistrationID', '=', result.AgentRegistrationID)
             .outputAll('inserted')

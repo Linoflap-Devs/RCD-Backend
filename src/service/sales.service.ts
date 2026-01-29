@@ -586,6 +586,7 @@ export const addPendingSalesService = async (
     let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
     let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
     let role = ''
+    let assignedUM = undefined
 
     if(user.agentUserId){
         const agentData = await findAgentDetailsByUserId(user.agentUserId)
@@ -621,7 +622,7 @@ export const addPendingSalesService = async (
                 }
             }
         }
-
+        
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
         user.agentUserId = agentData.data.AgentID
@@ -637,6 +638,12 @@ export const addPendingSalesService = async (
                     code: 400
                 }
             }
+        }
+
+        console.log("agentData", agentData)
+
+        if(agentData.data.ReferredByID){
+            assignedUM = agentData.data.ReferredByID
         }
     }
 
@@ -826,6 +833,7 @@ export const addPendingSalesService = async (
 
     const updatedData = {
         ...data,
+        assignedUM: assignedUM || undefined,
         divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
@@ -876,6 +884,95 @@ export const addPendingSalesService = async (
     }
 }
 
+export const assignUMToPendingSaleService = async (
+    userId: number,
+    pendingSaleId: number,
+    unitManagerId: number
+): QueryResult<IAgentPendingSale> => {
+
+
+    // verify user
+    const salesDirector = await findAgentDetailsByUserId(userId)
+
+    if(!salesDirector.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const unitManager = await findAgentDetailsByAgentId(unitManagerId)
+
+    if(!unitManager.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(unitManager.data.Position !== 'UNIT MANAGER'){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User is not a unit manager.',
+                code: 400
+            }
+        }
+    }
+
+    const transactionDetails = await getPendingSaleById(pendingSaleId)
+
+    if(!transactionDetails.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No transaction found',
+                code: 400
+            }
+        }
+    }
+
+    if(transactionDetails.data.AssignedUM){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Unit manager already assigned.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editPendingSale({ agentUserId: userId }, "", pendingSaleId, { assignedUM: unitManagerId })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Assigning unit manager failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
+}
+
 export const getPendingSalesService = async (
     agentUserId: number,
     filters: {
@@ -923,12 +1020,25 @@ export const getPendingSalesService = async (
         }
     }
 
+    let assignedUMFilter = undefined
+
+    if(agentData.data.Position == 'UNIT MANAGER'){
+        assignedUMFilter = Number(agentData.data.AgentID)
+    }
+    else if(agentData.data.Position == 'SALES DIRECTOR'){
+        assignedUMFilter = null
+    }
+    else {
+        assignedUMFilter = undefined
+    }
+
     const result = await getPendingSales(
         Number(agentData.data.DivisionID), 
         { 
             ...filters, 
             agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined,
             approvalStatus: [1,2],
+            assignedUM: assignedUMFilter,
             isUnique: true
         }, 
         pagination
@@ -961,7 +1071,8 @@ export const getPendingSalesService = async (
             CreatedBy: item.CreatedBy,
             CreatedByWeb: item.CreatedByWeb,
             CreatedByName: (item.CreatedByName || item.CreatedByWebName || '').trim(),
-            CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim()
+            CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim(),
+            AssignedUM: item.AssignedUM
         }
     })
 
