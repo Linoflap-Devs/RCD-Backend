@@ -209,7 +209,7 @@ export const inviteNewUserService = async (userId: number, email: string) => {
 export const getInviteTokenDetailsService = async (token: string): QueryResult<Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string}> => {
 
     console.log('getInviteTokenDetailsService', token)
-    const tokenDetails = await findInviteToken({inviteToken: token})
+    const tokenDetails = await findInviteToken({inviteToken: token, showUsed: false, showExpired: false})
 
     console.log('tokenDetails', tokenDetails)
     if(!tokenDetails.success || tokenDetails.data.length === 0){
