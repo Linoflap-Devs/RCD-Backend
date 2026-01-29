@@ -115,6 +115,7 @@ export interface AgentPendingSalesWithDetails {
     AgentPendingSalesID: number;
     ApprovalStatus: number;
     ApprovedSalesTranID: number | null;
+    AssignedUM: number | null;
     Block: string;
     BuyersAddress: string | null;
     BuyersContactNumber: string | null;

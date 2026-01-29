@@ -1481,6 +1481,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                 'Tbl_AgentPendingSales.AgentPendingSalesID',
                 'Tbl_AgentPendingSales.ApprovalStatus',
                 'Tbl_AgentPendingSales.ApprovedSalesTranID',
+                'Tbl_AgentPendingSales.AssignedUM',
                 'Tbl_AgentPendingSales.Block',
                 'Tbl_AgentPendingSales.BuyersAddress',
                 'Tbl_AgentPendingSales.BuyersContactNumber',
@@ -2153,6 +2154,7 @@ export const editPendingSale = async (
         monthlyPayment?: number
         dpStartDate?: Date | null,
         sellerName?: string,
+        assignedUM?: number,
         images?: {
             receipt?: IImage,
             agreement?: IImage,
@@ -2221,6 +2223,7 @@ export const editPendingSale = async (
         if(data.monthlyPayment !== undefined) updateData.MonthlyDP = data.monthlyPayment;
         if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate ? data.dpStartDate : null;
         if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
+        if(data.assignedUM !== undefined) updateData.AssignedUM = data.assignedUM;
 
         // Update the pending sale
         console.log(data)

@@ -884,6 +884,95 @@ export const addPendingSalesService = async (
     }
 }
 
+export const assignUMToPendingSaleService = async (
+    userId: number,
+    pendingSaleId: number,
+    unitManagerId: number
+): QueryResult<IAgentPendingSale> => {
+
+
+    // verify user
+    const salesDirector = await findAgentDetailsByUserId(userId)
+
+    if(!salesDirector.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const unitManager = await findAgentDetailsByAgentId(unitManagerId)
+
+    if(!unitManager.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    if(unitManager.data.Position !== 'UNIT MANAGER'){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User is not a unit manager.',
+                code: 400
+            }
+        }
+    }
+
+    const transactionDetails = await getPendingSaleById(pendingSaleId)
+
+    if(!transactionDetails.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No transaction found',
+                code: 400
+            }
+        }
+    }
+
+    if(transactionDetails.data.AssignedUM){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Unit manager already assigned.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editPendingSale({ agentUserId: userId }, "", pendingSaleId, { assignedUM: unitManagerId })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'Assigning unit manager failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
+}
+
 export const getPendingSalesService = async (
     agentUserId: number,
     filters: {

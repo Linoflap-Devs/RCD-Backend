@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSalesTransactionService, archiveSalesTransactionService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -429,6 +429,33 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Sales added', data: result.data})
+}
+
+export const assignUMPendingSaleController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { pendingSalesId } = req.params
+
+    const { unitManagerId } = req.body
+
+    const result = await assignUMToPendingSaleService(session.userID, Number(pendingSalesId), Number(unitManagerId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to assign unit manager', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Unit manager assigned', data: result.data})
 }
 
 export const addWebPendingSaleController = async (req: Request, res: Response) => {
