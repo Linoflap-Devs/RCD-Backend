@@ -1233,6 +1233,7 @@ export const getPendingSales = async (
         brokerName?: string,
         createdBy?: number,
         createdByWeb?: number,
+        assignedUM?: number | null,
         developerId?: number,
         isUnique?: boolean,
         approvalStatus?: number[],
@@ -1287,6 +1288,11 @@ export const getPendingSales = async (
         if(filters && filters.salesBranch){
             result = result.where('SalesBranchID', '=', filters.salesBranch)
             totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
+
+        if(filters && filters.assignedUM){
+            result = result.where('AssignedUM', '=', filters.assignedUM)
+            totalCountResult = totalCountResult.where('AssignedUM', '=', filters.assignedUM)
         }
 
         if(filters && filters.agentId){

@@ -923,12 +923,25 @@ export const getPendingSalesService = async (
         }
     }
 
+    let assignedUMFilter = undefined
+
+    if(agentData.data.Position == 'UNIT MANAGER'){
+        assignedUMFilter = Number(agentData.data.AgentID)
+    }
+    else if(agentData.data.Position == 'SALES DIRECTOR'){
+        assignedUMFilter = null
+    }
+    else {
+        assignedUMFilter = undefined
+    }
+
     const result = await getPendingSales(
         Number(agentData.data.DivisionID), 
         { 
             ...filters, 
             agentId: agentData.data.Position == 'SALES PERSON' ? Number(agentData.data.AgentID) : undefined,
             approvalStatus: [1,2],
+            assignedUM: assignedUMFilter,
             isUnique: true
         }, 
         pagination
@@ -961,7 +974,8 @@ export const getPendingSalesService = async (
             CreatedBy: item.CreatedBy,
             CreatedByWeb: item.CreatedByWeb,
             CreatedByName: (item.CreatedByName || item.CreatedByWebName || '').trim(),
-            CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim()
+            CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim(),
+            AssignedUM: item.AssignedUM
         }
     })
 
