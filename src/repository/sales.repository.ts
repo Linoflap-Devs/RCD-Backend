@@ -1607,7 +1607,8 @@ export const addPendingSale = async (
         reservationDate: Date,
         divisionID: number,
         salesBranchID: number,
-        sectorID: number
+        sectorID: number,
+        assignedUM?: number,
         buyer: {
             buyersName: string,
             address: string,
@@ -1706,6 +1707,8 @@ export const addPendingSale = async (
                 BuyersAddress: data.buyer.address,
                 BuyersContactNumber: data.buyer.phoneNumber,
                 BuyersOccupation: data.buyer.occupation,
+
+                AssignedUM: data.assignedUM || null,
 
                 ProjectID: data.property.projectID,
                 Block: data.property.blkFlr,

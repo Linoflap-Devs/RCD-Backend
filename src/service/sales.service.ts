@@ -586,6 +586,7 @@ export const addPendingSalesService = async (
     let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
     let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
     let role = ''
+    let assignedUM = undefined
 
     if(user.agentUserId){
         const agentData = await findAgentDetailsByUserId(user.agentUserId)
@@ -621,7 +622,7 @@ export const addPendingSalesService = async (
                 }
             }
         }
-
+        
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
         user.agentUserId = agentData.data.AgentID
@@ -637,6 +638,10 @@ export const addPendingSalesService = async (
                     code: 400
                 }
             }
+        }
+
+        if(agentData.data.ReferredByID){
+            assignedUM = agentData.data.ReferredByID
         }
     }
 
