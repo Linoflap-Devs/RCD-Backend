@@ -1295,6 +1295,11 @@ export const getPendingSales = async (
             totalCountResult = totalCountResult.where('AssignedUM', '=', filters.assignedUM)
         }
 
+        if(filters && filters.assignedUM === null){
+            result = result.where('AssignedUM', 'is', null)
+            totalCountResult = totalCountResult.where('AssignedUM', 'is', null)
+        }
+
         if(filters && filters.agentId){
             const agentId = filters.agentId; // Capture the value
 
