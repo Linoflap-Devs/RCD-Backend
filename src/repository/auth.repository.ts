@@ -1434,8 +1434,9 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     AddressEmergency: '',
                     AffiliationDate: new Date(),
                     PositionID: registration.PositionID || 5,
-                    ReferredCode: registration.ReferredCode ?? '',
-
+                    ReferredCode: registration.ReferredCode || null,
+                    ReferredByID: registration.ReferredByID || null,
+                    DivisionID: registration.DivisionID || null,
                     IsActive: 1,
                     LastUpdate: new Date(),
                     UpdateBy: 0
