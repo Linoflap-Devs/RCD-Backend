@@ -99,6 +99,7 @@ export interface TblAgentPendingSales {
   AgentPendingSalesID: Generated<number>;
   ApprovalStatus: Generated<number>;
   ApprovedSalesTranID: number | null;
+  AssignedUM: number | null;
   Block: string;
   BuyersAddress: string | null;
   BuyersContactNumber: string | null;
@@ -1381,6 +1382,7 @@ export interface VwPendingSalesTransactions {
   AgentPendingSalesID: number;
   ApprovalStatus: number;
   ApprovedSalesTranID: number | null;
+  AssignedUM: number | null;
   Block: string;
   BuyersAddress: string | null;
   BuyersContactNumber: string | null;
