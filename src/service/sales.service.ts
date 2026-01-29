@@ -640,6 +640,8 @@ export const addPendingSalesService = async (
             }
         }
 
+        console.log("agentData", agentData)
+
         if(agentData.data.ReferredByID){
             assignedUM = agentData.data.ReferredByID
         }
@@ -831,6 +833,7 @@ export const addPendingSalesService = async (
 
     const updatedData = {
         ...data,
+        assignedUM: assignedUM || undefined,
         divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
