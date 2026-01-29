@@ -882,6 +882,9 @@ export const registerAgentTransaction = async(
             AffiliationDate: new Date(),
             GovImageID: govImageId > 0 ? govImageId : null,
             SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
+            ReferredByID: data.referredById ? data.referredById : null,
+            ReferredCode: data.referredCode ? data.referredCode : null,
+            DivisionID: data.divisionId ? data.divisionId.toString() : null,
             IsVerified: agentId ? 1 : 0 // Only if agent id is present
         }).outputAll('inserted').executeTakeFirstOrThrow();
 

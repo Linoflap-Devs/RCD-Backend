@@ -1247,7 +1247,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
     let referralCode = undefined
     let referralId = undefined
 
-    if(registration.data.IsVerified == 1){
+    if(registration.data.IsVerified == 1 && registration.data.ReferredCode && registration.data.ReferredByID){
         // Invited by UM
 
 
@@ -1292,6 +1292,18 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
                 error: {
                     message: agent.error?.message || 'Failed to find agent.',
                     code: 404
+                }
+            }
+        }
+
+        if(agent.data.AgentCode !== registration.data.ReferredCode || agent.data.AgentID !== registration.data.ReferredByID){
+            logger(('Agent code/ID mismatch.'), {agentRegistrationId: agentRegistrationId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: 'Agent code mismatch.',
+                    code: 400
                 }
             }
         }
