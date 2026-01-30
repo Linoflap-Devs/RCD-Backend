@@ -1265,7 +1265,7 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
         ContactNumber: item.ContactNumber
     }))
 
-    const handsOn: IBrokerRegistrationListItem[] = handsOnRegistrations.data.map((item: IAgentRegistration) => {
+    const handsOn: IBrokerRegistrationListItem[] = handsOnRegistrations.data.result.map((item: IAgentRegistration) => {
         return {
             AgentRegistrationID: item.AgentRegistrationID,
             BrokerRegistrationID: null,
@@ -1803,7 +1803,7 @@ export const getInviteRegistrationDetailsService = async (inviteToken: string): 
 
     const registration = await getAgentRegistrations({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0})
 
-    if(!registration.success || registration.data.length === 0){
+    if(!registration.success || registration.data.result.length === 0){
         return {
             success: false,
             data: {} as IInviteTokens & Partial<IAgentRegistration>,
@@ -1825,12 +1825,12 @@ export const getInviteRegistrationDetailsService = async (inviteToken: string): 
             IsUsed: result.data[0].IsUsed,
             ExpiryDate: result.data[0].ExpiryDate,
 
-            FirstName: registration.data[0].FirstName,
-            LastName: registration.data[0].LastName,
-            MiddleName: registration.data[0].MiddleName,
-            Address: registration.data[0].Address,
-            Birthdate: registration.data[0].Birthdate,
-            Gender: registration.data[0].Gender,
+            FirstName: registration.data.result[0].FirstName,
+            LastName: registration.data.result[0].LastName,
+            MiddleName: registration.data.result[0].MiddleName,
+            Address: registration.data.result[0].Address,
+            Birthdate: registration.data.result[0].Birthdate,
+            Gender: registration.data.result[0].Gender,
 
             CreatedAt: result.data[0].CreatedAt,
             UpdatedAt: result.data[0].UpdatedAt

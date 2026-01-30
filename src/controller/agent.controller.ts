@@ -60,7 +60,12 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
 export const getAgentRegistrationsController = async (req: Request, res: Response) => {
 
-    const result = await getAgentRegistrationsService();
+    const { page, pageSize } = req.query
+
+    const result = await getAgentRegistrationsService({
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined
+    });
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agent registrations.', data: {}})

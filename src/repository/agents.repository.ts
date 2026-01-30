@@ -303,8 +303,23 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
 //     }
 // }
 
-export const getAgentRegistrations = async (filters?: {agentRegistrationId?: number, positionID?: number, isVerified?: number}): QueryResult<IAgentRegistration[]> => {
+export const getAgentRegistrations = async (
+    filters?: {
+        agentRegistrationId?: number, 
+        positionID?: number, 
+        isVerified?: number
+    },
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, result: IAgentRegistration[]}> => {
     try {
+
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined;
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
         // 1. Get base agent registration data with user info and all three images
         let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
             .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
@@ -358,29 +373,50 @@ export const getAgentRegistrations = async (filters?: {agentRegistrationId?: num
                 'SelfieImage.FileContent as SelfieFileContent'
             ])
 
+        let totalCountResult = await db.selectFrom('Tbl_AgentRegistration')
+            .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            // Join for profile image
+            .leftJoin('Tbl_Image as ProfileImage', 'Tbl_AgentUser.ImageID', 'ProfileImage.ImageID')
+            // Join for government ID image
+            .leftJoin('Tbl_Image as GovImage', 'Tbl_AgentRegistration.GovImageID', 'GovImage.ImageID')
+            // Join for selfie image
+            .leftJoin('Tbl_Image as SelfieImage', 'Tbl_AgentRegistration.SelfieImageID', 'SelfieImage.ImageID')
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+
         console.log(filters)
         if(filters && filters.agentRegistrationId){
              baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+             totalCountResult = totalCountResult.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
         }
 
         if(filters && filters.positionID){
             baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
+            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
         }
 
         if(filters && filters.isVerified){
             baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.IsVerified', '=', filters.isVerified)
+            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.IsVerified', '=', filters.isVerified)
+        }
+
+        if(pagination && pagination.page && pagination.pageSize){
+            baseAgentDataQuery = baseAgentDataQuery.offset(offset).fetch(pagination.pageSize)
         }
 
         const baseAgentData = await baseAgentDataQuery
             .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
             .execute();
+        
+        const countResult = await totalCountResult.execute();
 
         if (baseAgentData.length === 0) {
             return {
                 success: true,
-                data: []
+                data: {} as { totalPages: number, result: IAgentRegistration[] },
             };
         }
+
+        
 
         const agentRegistrationIds = baseAgentData.map(agent => agent.AgentRegistrationID);
 
@@ -510,15 +546,21 @@ export const getAgentRegistrations = async (filters?: {agentRegistrationId?: num
             };
         });
 
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+    
         return {
             success: true,
-            data: result
+            data: {
+                totalPages: totalPages,
+                result: result
+            }
         };
     } catch (err: unknown) {
         const error = err as Error;
         return {
             success: false,
-            data: [] as IAgentRegistration[],
+            data: {} as { totalPages: number; result: IAgentRegistration[] },
             error: {
                 code: 500,
                 message: error.message

@@ -115,18 +115,18 @@ export const getAgentsService = async (
     }
 }
 
-export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistrationListItem[]> => {
-    const result = await getAgentRegistrations({ isVerified: 1 })
+export const getAgentRegistrationsService = async (pagination?: {page?: number, pageSize?: number}): QueryResult<{totalPages: number, result: IAgentRegistrationListItem[]}> => {
+    const result = await getAgentRegistrations({ isVerified: 1 }, pagination)
 
     if(!result.success){
         return {
             success: false,
-            data: [] as IAgentRegistrationListItem[],
+            data: {} as {totalPages: number, result: IAgentRegistrationListItem[]},
             error: result.error
         }
     }
 
-    const obj: IAgentRegistrationListItem[] = result.data.map((item: IAgentRegistration) => ({
+    const obj: IAgentRegistrationListItem[] = result.data.result.map((item: IAgentRegistration) => ({
         AgentRegistrationID: item.AgentRegistrationID,
         FirstName: item.FirstName,
         MiddleName: item.MiddleName || '',
@@ -138,7 +138,10 @@ export const getAgentRegistrationsService = async (): QueryResult<IAgentRegistra
 
     return {
         success: true,
-        data: obj
+        data: {
+            totalPages: result.data.totalPages,
+            result: obj
+        }
     }
 }
 
@@ -283,7 +286,7 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
 
     return {
         success: true,
-        data: result.data[0]
+        data: result.data.result[0]
     }
 }
 
