@@ -11,6 +11,9 @@ export const getAgentsController = async (req: Request, res: Response) => {
         division,
         position,
         showSales,
+        showRegistration, 
+        isVerified,
+        isRegistered,
         month,
         year,
         search,
@@ -41,14 +44,17 @@ export const getAgentsController = async (req: Request, res: Response) => {
             position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined,
-            searchTerm: search ? search.toString() : undefined
+            searchTerm: search ? search.toString() : undefined,
+            isRegistered: isRegistered ? isRegistered === 'true' ? true : false : undefined,
+            isVerified: isVerified ? isVerified === 'true' ? true : false : undefined
         }, 
         {
             page: page ? Number(page) : undefined,
             pageSize: pageSize ? Number(pageSize) : undefined
         },
+        showRegistration ? true : false,
         showSales ? true : false,
-        showBrokerDivisions ? true : false
+        showBrokerDivisions ? true : false,
     );
 
     if(!result.success) {

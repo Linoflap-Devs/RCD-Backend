@@ -4,9 +4,9 @@ import { editDivisionBroker, getDivisionBrokers } from "../repository/division.r
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
 import { getAgentTaxRate } from "../repository/tax.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, getAgentUsers } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
-import { IAgentRegistration, IAgentRegistrationListItem } from "../types/auth.types";
+import { IAgentRegistration, IAgentRegistrationListItem, ITblAgentUser } from "../types/auth.types";
 import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
@@ -19,6 +19,8 @@ export const getAgentsService = async (
         showNoDivision?: boolean,
         division?: number, 
         position?: 'SP' | 'UM' | 'SD' | 'BR',
+        isRegistered?: boolean,
+        isVerified?: boolean,
         month?: number,
         year?: number,
         searchTerm?: string
@@ -27,6 +29,7 @@ export const getAgentsService = async (
         page?: number,
         pageSize?: number
     },
+    showRegistration: boolean = false,
     showSales: boolean = false,
     showBrokerDivisions: boolean = false
 ): QueryResult<{totalPages: number, results: IAgent[]}> => {
@@ -99,11 +102,13 @@ export const getAgentsService = async (
         }
     }
 
-    const obj = result.data.results.map((item: IAgent) => {
+    const obj = result.data.results.map((item: (IAgent & { IsVerified: number | null })) => {
         return {
             ...item,
+            IsVerified: item.IsVerified == 1 ? true : false,
             ...(showSales && { TotalSales: agentSalesMap.get(item.AgentID) || 0 } ),
             ...((showBrokerDivisions && positionMap.get('BR')?.includes(item.PositionID || 0)) && { BrokerDivisions: brokerDivisionMap.get(item.AgentID) || [] })
+
         }
     })
 

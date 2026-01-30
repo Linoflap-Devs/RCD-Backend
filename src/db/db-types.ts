@@ -1658,6 +1658,7 @@ export interface VwUniqueAgents {
   EmployeeIDNumber: string | null;
   FirstName: string;
   IsActive: number;
+  IsVerified: number | null;
   LastName: string;
   LastUpdate: Date;
   MiddleName: string;
