@@ -15,6 +15,8 @@ export const getAgents = async (
         name?: string, 
         showInactive?: boolean, 
         showNoDivision?: boolean, 
+        isRegistered?: boolean,
+        isVerified?: boolean,
         division?: number, 
         searchTerm?: string,
         positionId?: number[] 
@@ -23,7 +25,7 @@ export const getAgents = async (
         page?: number,
         pageSize?: number
     }
-): QueryResult<{totalPages: number, results: IAgent[]}> => {
+): QueryResult<{totalPages: number, results: (IAgent & {IsVerified: number | null})[]}> => {
     
     console.log(filters, pagination)
     try {
@@ -56,6 +58,28 @@ export const getAgents = async (
         if(!filters || !filters.showNoDivision){
             result = result.where('DivisionID', 'is not', null)
             totalCount = totalCount.where('DivisionID', 'is not', null)
+        }
+
+        if(filters && filters.isRegistered !== undefined){
+            if(filters.isRegistered === true){
+                result = result.where('AgentUserID', 'is not', null)
+                totalCount = totalCount.where('AgentUserID', 'is not', null)
+            }
+            else if(filters.isRegistered === false){
+                result = result.where('AgentUserID', 'is', null)
+                totalCount = totalCount.where('AgentUserID', 'is', null)
+            }
+        }
+
+        if(filters && filters.isVerified !== undefined){
+            if(filters.isVerified === true){
+                result = result.where('IsVerified', '=', 1)
+                totalCount = totalCount.where('IsVerified', '=', 1)
+            }
+            else if(filters.isVerified === false){
+                result = result.where('IsVerified', '=', 0)
+                totalCount = totalCount.where('IsVerified', '=', 0)
+            }
         }
 
         if(filters && filters.positionId){
@@ -115,7 +139,7 @@ export const getAgents = async (
         const totalPages = pageSize ? Math.ceil(totalCountResult / pageSize) : 1;
         
 
-        const obj: IAgent[] = queryResult.map((item: VwUniqueAgents) => {
+        const obj: (IAgent & {IsVerified: number | null})[] = queryResult.map((item: VwUniqueAgents) => {
             return {
                 ...item,
                 FullName: ( `${item.LastName.trim()}, ${item.FirstName.trim()} ${item.MiddleName.trim()}` ).trim(),
@@ -136,7 +160,7 @@ export const getAgents = async (
         const error = err as Error;
         return {
             success: false,
-            data: {} as { totalPages: number, results: IAgent[] },
+            data: {} as { totalPages: number, results: (IAgent & {IsVerified: number | null})[] },
             error: {
                 code: 500,
                 message: error.message
