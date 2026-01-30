@@ -22,9 +22,13 @@ export const getAgentsService = async (
         month?: number,
         year?: number
     }, 
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    },
     showSales: boolean = false,
     showBrokerDivisions: boolean = false
-): QueryResult<IAgent[]> => {
+): QueryResult<{totalPages: number, results: IAgent[]}> => {
 
     const positionMap = new Map<string, number[]>(
         [
@@ -40,15 +44,18 @@ export const getAgentsService = async (
     console.log('showSales', showSales)
     // const brokerPositionIds = [72, 73, 76]
 
-    const result = await getAgents({
-        ...filters,
-        positionId: filters && filters.position ? positionMap.get(filters.position) : undefined
-    })
+    const result = await getAgents(
+        {
+            ...filters,
+            positionId: filters && filters.position ? positionMap.get(filters.position) : undefined,
+        },
+        pagination
+    )
 
     if(!result.success){
         return {
             success: false,
-            data: [] as IAgent[],
+            data: {} as {totalPages: number, results: IAgent[]},
             error: result.error
         }
     }
@@ -59,7 +66,7 @@ export const getAgentsService = async (
 
     if (showSales) {
         const agentSales = await getMultipleTotalPersonalSales(
-            { agentIds: result.data.map((b: IAgent) => b.AgentID) },
+            { agentIds: result.data.results.map((b: IAgent) => b.AgentID) },
             filters
         )
 
@@ -75,7 +82,7 @@ export const getAgentsService = async (
         
         const brokerPositions = positionMap.get('BR') || []
         
-        const validBrokers = result.data.filter((a: IAgent) => brokerPositions.includes(a.PositionID || 0))
+        const validBrokers = result.data.results.filter((a: IAgent) => brokerPositions.includes(a.PositionID || 0))
 
         const brokerDivisions = await getDivisionBrokers({ agentIds: validBrokers.map((agent: IAgent) => agent.AgentID)})
 
@@ -91,7 +98,7 @@ export const getAgentsService = async (
         }
     }
 
-    const obj = result.data.map((item: IAgent) => {
+    const obj = result.data.results.map((item: IAgent) => {
         return {
             ...item,
             ...(showSales && { TotalSales: agentSalesMap.get(item.AgentID) || 0 } ),
@@ -101,7 +108,10 @@ export const getAgentsService = async (
 
     return {
         success: true,
-        data: obj
+        data: {
+            totalPages: result.data.totalPages,
+            results: obj
+        }
     }
 }
 

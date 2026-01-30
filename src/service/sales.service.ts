@@ -798,8 +798,8 @@ export const addPendingSalesService = async (
                 if(commission.agentName){
                     const findAgent = await getAgents({ name: commission.agentName })
 
-                    if(findAgent.success && findAgent.data[0]){
-                        commission.agentId = Number(findAgent.data[0].AgentID)
+                    if(findAgent.success && findAgent.data.results[0]){
+                        commission.agentId = Number(findAgent.data.results[0].AgentID)
                     }
                 }
 
@@ -1847,8 +1847,8 @@ export const editPendingSaleService = async (
                     const findAgent = await getAgents({ name: commission.agentName })
                     console.log(commission.agentName)
                     console.log(findAgent)
-                    if(findAgent.success && findAgent.data[0]){
-                        commission.agentId = findAgent.data[0].AgentID
+                    if(findAgent.success && findAgent.data.results[0]){
+                        commission.agentId = findAgent.data.results[0].AgentID
                     }
                 }
 
@@ -2001,8 +2001,8 @@ export const editPendingSalesDetailsService = async (
                     const findAgent = await getAgents({ name: detail.agentName })
                     console.log(detail.agentName)
                     console.log(findAgent)
-                    if(findAgent.success && findAgent.data[0]){
-                        detail.agentId = findAgent.data[0].AgentID
+                    if(findAgent.success && findAgent.data.results[0]){
+                        detail.agentId = findAgent.data.results[0].AgentID
                     }
                 }
 

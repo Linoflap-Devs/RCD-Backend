@@ -10,41 +10,78 @@ import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "..
 import { it } from "zod/v4/locales/index.cjs";
 import { TZDate } from "@date-fns/tz";
 
-export const getAgents = async (filters?: { name?: string, showInactive?: boolean, showNoDivision?: boolean, division?: number, positionId?: number[] }): QueryResult<IAgent[]> => {
+export const getAgents = async (
+    filters?: { 
+        name?: string, 
+        showInactive?: boolean, 
+        showNoDivision?: boolean, 
+        division?: number, 
+        positionId?: number[] 
+    },
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, results: IAgent[]}> => {
     
-    console.log(filters)
+    console.log(filters, pagination)
     try {
+
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
         let result = await db.selectFrom('Vw_UniqueAgents')
             .selectAll()
 
+        let totalCount = await db.selectFrom('Vw_UniqueAgents')
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())
+            totalCount = totalCount.where('DivisionID' , '=', filters.division.toString())
         }
 
         if(filters && filters.name){
             result = result.where('AgentName', '=', `${filters.name}`)
+            totalCount = totalCount.where('AgentName', '=', `${filters.name}`)
         }
 
         if(!filters || !filters.showInactive){
             result = result.where('IsActive', '=', 1)
+            totalCount = totalCount.where('IsActive', '=', 1)
         }
 
         if(!filters || !filters.showNoDivision){
             result = result.where('DivisionID', 'is not', null)
+            totalCount = totalCount.where('DivisionID', 'is not', null)
         }
 
         if(filters && filters.positionId){
             result = result.where('PositionID', 'in', filters.positionId)
+            totalCount = totalCount.where('PositionID', 'in', filters.positionId)
         }
         else {
             result = result.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
+            totalCount = totalCount.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
         }
 
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
+
+        result = result.orderBy('AgentID', 'desc')
+
         const queryResult = await result.execute();
+        const countResult = await totalCount.execute();
 
         if(!queryResult){
             throw new Error('No agents found.');
         }
+
+        const totalCountResult = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCountResult / pageSize) : 1;
+        
 
         const obj: IAgent[] = queryResult.map((item: VwUniqueAgents) => {
             return {
@@ -56,7 +93,10 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
 
         return {
             success: true,
-            data: obj
+            data: {
+                totalPages: totalPages,
+                results: obj,
+            }
         }
     }
 
@@ -64,7 +104,7 @@ export const getAgents = async (filters?: { name?: string, showInactive?: boolea
         const error = err as Error;
         return {
             success: false,
-            data: [] as IAgent[],
+            data: {} as { totalPages: number, results: IAgent[] },
             error: {
                 code: 500,
                 message: error.message
