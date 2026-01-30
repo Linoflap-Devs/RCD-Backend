@@ -12,7 +12,9 @@ export const getAgentsController = async (req: Request, res: Response) => {
         position,
         showSales,
         month,
-        year
+        year,
+        page,
+        pageSize
     } = req.query
 
     const validPositions = ['SP', 'UM', 'SD', 'BR'] as const;
@@ -39,6 +41,10 @@ export const getAgentsController = async (req: Request, res: Response) => {
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined
         }, 
+        {
+            page: page ? Number(page) : undefined,
+            pageSize: pageSize ? Number(pageSize) : undefined
+        },
         showSales ? true : false,
         showBrokerDivisions ? true : false
     );
