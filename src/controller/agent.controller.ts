@@ -13,6 +13,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
         showSales,
         month,
         year,
+        search,
         page,
         pageSize
     } = req.query
@@ -39,7 +40,8 @@ export const getAgentsController = async (req: Request, res: Response) => {
             division: Number(division), 
             position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
             month: month ? Number(month) : undefined,
-            year: year ? Number(year) : undefined
+            year: year ? Number(year) : undefined,
+            searchTerm: search ? search.toString() : undefined
         }, 
         {
             page: page ? Number(page) : undefined,
@@ -60,7 +62,12 @@ export const getAgentsController = async (req: Request, res: Response) => {
 
 export const getAgentRegistrationsController = async (req: Request, res: Response) => {
 
-    const result = await getAgentRegistrationsService();
+    const { page, pageSize } = req.query
+
+    const result = await getAgentRegistrationsService({
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined
+    });
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get agent registrations.', data: {}})
