@@ -1044,7 +1044,6 @@ export const getPendingSalesService = async (
         pagination
     )
 
-
     if(!result.success){
         logger(result.error?.message || '', {data: filters})
         return {
@@ -1057,7 +1056,7 @@ export const getPendingSalesService = async (
         }
     }
 
-    const obj = result.data.results.map((item: AgentPendingSale) => {
+    let obj = result.data.results.map((item: AgentPendingSale) => {
         return {
             AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
@@ -1074,6 +1073,44 @@ export const getPendingSalesService = async (
             CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim(),
             AssignedUM: item.AssignedUM
         }
+    })
+
+    if(agentData.data.Position == 'SALES DIRECTOR'){
+        const sdResult = await getPendingSales(
+            Number(agentData.data.DivisionID), 
+            { 
+                ...filters, 
+                approvalStatus: [2],
+                isUnique: true
+            }, 
+            pagination
+        )
+
+        let sdObj = sdResult.data.results.map((item: AgentPendingSale) => {
+            return {
+                AgentPendingSalesID: item.AgentPendingSalesID,
+                PendingSalesTransCode: item.PendingSalesTranCode,
+                SellerName: item.SellerName || 'N/A',
+                FinancingScheme: item.FinancingScheme,
+                ReservationDate: item.ReservationDate,
+                DateFiled: item.DateFiled,
+                ApprovalStatus: item.ApprovalStatus,
+                HasRemark: item.Remarks ? true : false,
+                IsRejected: item.IsRejected,
+                CreatedBy: item.CreatedBy,
+                CreatedByWeb: item.CreatedByWeb,
+                CreatedByName: (item.CreatedByName || item.CreatedByWebName || '').trim(),
+                CreatedByRole: (item.CreatorAgentPosition || item.CreatorEmployeePosition || '').trim(),
+                AssignedUM: item.AssignedUM
+            }
+        })
+
+        obj.push(...sdObj)
+    }   
+
+    // sort by reservation date
+    obj.sort((a: any, b: any) => {
+        return new Date(b.ReservationDate).getTime() - new Date(a.ReservationDate).getTime()
     })
 
     return {
