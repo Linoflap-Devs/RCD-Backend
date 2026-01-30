@@ -13,6 +13,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
         showSales,
         month,
         year,
+        search,
         page,
         pageSize
     } = req.query
@@ -39,7 +40,8 @@ export const getAgentsController = async (req: Request, res: Response) => {
             division: Number(division), 
             position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
             month: month ? Number(month) : undefined,
-            year: year ? Number(year) : undefined
+            year: year ? Number(year) : undefined,
+            searchTerm: search ? search.toString() : undefined
         }, 
         {
             page: page ? Number(page) : undefined,

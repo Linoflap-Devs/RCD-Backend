@@ -16,6 +16,7 @@ export const getAgents = async (
         showInactive?: boolean, 
         showNoDivision?: boolean, 
         division?: number, 
+        searchTerm?: string,
         positionId?: number[] 
     },
     pagination?: {
@@ -64,6 +65,37 @@ export const getAgents = async (
         else {
             result = result.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
             totalCount = totalCount.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
+        }
+
+        if(filters && filters.searchTerm){
+            const searchTerm = `%${filters.searchTerm}%`;
+            console.log(    )
+            const searchAsNumber = Number(filters.searchTerm);
+            const isValidNumber = !isNaN(searchAsNumber) && filters.searchTerm.trim() !== '';
+            
+            result = result.where(({ or, eb }) => 
+                or([
+                    // String columns - always search these
+                    eb('FirstName', 'like', searchTerm),
+                    eb('MiddleName', 'like', searchTerm),
+                    eb('LastName', 'like', searchTerm),
+                    eb('AgentCode', 'like', searchTerm),
+                    // Numeric column - only search if valid number
+                    //...(isValidNumber ? [eb('DeveloperID', '=', searchAsNumber)] : [])
+                ])
+            );
+            
+            totalCount = totalCount.where(({ or, eb }) => 
+                or([
+                    // String columns - always search these
+                    eb('FirstName', 'like', searchTerm),
+                    eb('MiddleName', 'like', searchTerm),
+                    eb('LastName', 'like', searchTerm),
+                    eb('AgentCode', 'like', searchTerm),
+                    // Numeric column - only search if valid number
+                    //...(isValidNumber ? [eb('DeveloperID', '=', searchAsNumber)] : [])
+                ])
+            );
         }
 
         if(pagination && pagination.page && pagination.pageSize){

@@ -20,7 +20,8 @@ export const getAgentsService = async (
         division?: number, 
         position?: 'SP' | 'UM' | 'SD' | 'BR',
         month?: number,
-        year?: number
+        year?: number,
+        searchTerm?: string
     }, 
     pagination?: {
         page?: number,
