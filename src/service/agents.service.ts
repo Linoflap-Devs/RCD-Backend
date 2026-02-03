@@ -139,7 +139,8 @@ export const getAgentRegistrationsService = async (pagination?: {page?: number, 
         LastName: item.LastName,
         Email: item.Email,
         Gender: item.Gender,
-        ContactNumber: item.ContactNumber
+        ContactNumber: item.ContactNumber,
+        Division: item.Division
     }))
 
     return {

@@ -385,6 +385,9 @@ export const getAgentRegistrations = async (
             .leftJoin('Tbl_Image as GovImage', 'Tbl_AgentRegistration.GovImageID', 'GovImage.ImageID')
             // Join for selfie image
             .leftJoin('Tbl_Image as SelfieImage', 'Tbl_AgentRegistration.SelfieImageID', 'SelfieImage.ImageID')
+            // Join for division info
+            .leftJoin('Tbl_Agents', 'Tbl_AgentRegistration.ReferredByID', 'Tbl_Agents.AgentID')
+            .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
             .select([
                 'Tbl_AgentRegistration.AgentRegistrationID',
                 'Tbl_AgentRegistration.IsVerified',
@@ -426,7 +429,9 @@ export const getAgentRegistrations = async (
                 'SelfieImage.ContentType as SelfieContentType',
                 'SelfieImage.FileExtension as SelfieFileExtension',
                 'SelfieImage.FileSize as SelfieFileSize',
-                'SelfieImage.FileContent as SelfieFileContent'
+                'SelfieImage.FileContent as SelfieFileContent',
+                // Division
+                'Tbl_Division.Division'
             ])
 
         let totalCountResult = await db.selectFrom('Tbl_AgentRegistration')
@@ -440,6 +445,7 @@ export const getAgentRegistrations = async (
             .select(({ fn }) => [fn.countAll<number>().as("count")])
 
         console.log(filters)
+
         if(filters && filters.agentRegistrationId){
              baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
              totalCountResult = totalCountResult.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
@@ -581,6 +587,7 @@ export const getAgentRegistrations = async (
                 MiddleName: agent.MiddleName,
                 LastName: agent.LastName,
                 Email: agent.Email,
+                Division: agent.Division,
                 Gender: agent.Sex as ('Male' | 'Female'),
                 CivilStatus: agent.CivilStatus as ('Single' | 'Married'),
                 Religion: agent.Religion || '',
@@ -598,7 +605,7 @@ export const getAgentRegistrations = async (
                 EmployeeIdNumber: agent.EmployeeIDNumber,
                 Images: images,
                 Experience: workExpByAgentId[agent.AgentRegistrationID] || [],
-                Education: educationByAgentId[agent.AgentRegistrationID] || []
+                Education: educationByAgentId[agent.AgentRegistrationID] || [],
             };
         });
 
