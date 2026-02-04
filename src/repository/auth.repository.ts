@@ -581,13 +581,24 @@ export const findInviteToken = async (filters?: {
     expiryDate?: Date, 
     showUsed?: boolean,
     showExpired?: boolean,
+    showInactive?: boolean,
 }): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
-            .selectAll()
             .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
             .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
             .select([
+                'InviteTokens.InviteTokenID',
+                'InviteTokens.InviteToken',
+                'InviteTokens.Email',
+                'InviteTokens.ExpiryDate',
+                'InviteTokens.LinkedUserID',
+                'InviteTokens.DivisionID',
+                'InviteTokens.CreatedAt',
+                'InviteTokens.UpdatedAt',
+                'InviteTokens.IsUsed',
+                'InviteTokens.AgentRegistration',
+                'InviteTokens.IsActive', // Explicitly qualify this column
                 'Tbl_Division.Division',
                 'Tbl_Agents.FirstName',
                 'Tbl_Agents.MiddleName',
@@ -618,9 +629,15 @@ export const findInviteToken = async (filters?: {
             baseQuery = baseQuery.where('IsUsed', '=', 0);
         }
 
+        if (filters?.showInactive === false) {
+            baseQuery = baseQuery.where('InviteTokens.IsActive', '=', 1);
+        }
+
         if (filters?.showExpired !== true) {
             baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
         }
+
+        baseQuery = baseQuery.orderBy('ExpiryDate', 'desc');
         
         const result = await baseQuery.execute();
 
@@ -657,8 +674,7 @@ export const findInviteTokenWithRegistration = async (filters?: {
             .selectAll('InviteTokens')
             .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
             .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
-            .leftJoin('Tbl_AgentUser', 'Tbl_AgentUser.Email', 'InviteTokens.Email')
-            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
+            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentRegistration.AgentRegistrationID', 'InviteTokens.AgentRegistration')
             .select([
                 'Tbl_Division.Division',
                 'Tbl_Agents.FirstName',
@@ -694,6 +710,8 @@ export const findInviteTokenWithRegistration = async (filters?: {
         if (filters?.showExpired !== true) {
             baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
         }
+
+        baseQuery = baseQuery.orderBy('CreatedAt', 'desc');
         
         const result = await baseQuery.execute();
 
@@ -783,6 +801,36 @@ export const deleteAllInviteTokensByEmail = async (email: string): QueryResult<n
             data: null,
         }
 
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const invalidateTokens = async (filters?: { email?: string} ): QueryResult<null> => {
+    try {
+        let baseQuery = await db.updateTable('InviteTokens')
+            .set({ IsActive: 0 })
+        
+        if(filters?.email) {
+            baseQuery = baseQuery.where('Email', '=', filters.email);
+        }
+
+        const result = await baseQuery.execute();
+
+        return {
+            success: true,
+            data: null,
+        }
     }
 
     catch(err: unknown){
@@ -973,6 +1021,46 @@ export const deleteInviteRegistrationTransaction = async (agentRegistrationId: n
             .executeTakeFirstOrThrow()
 
         const deleteToken = await trx.deleteFrom('InviteTokens')
+            .where('InviteToken', '=', inviteToken)
+            .executeTakeFirstOrThrow()
+        
+        const deleteUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        await trx.rollback().execute()
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const rejectInviteRegistrationTransaction = async (agentRegistrationId: number, inviteToken: string, agentUserId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
+    try {
+        const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
+            .set({ IsVerified: -1 })
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const updateToken = await trx.updateTable('InviteTokens')
+            .set({ IsActive: 0 })
             .where('InviteToken', '=', inviteToken)
             .executeTakeFirstOrThrow()
         
@@ -1576,11 +1664,24 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
 }
 
 export const rejectAgentRegistration = async (agentRegistrationId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
     try {
-        const result = await db.updateTable('Tbl_AgentRegistration')
-            .set('IsVerified', 2)
+        const result = await trx.updateTable('Tbl_AgentRegistration')
+            .set('IsVerified', -2)
             .where('AgentRegistrationID', '=', agentRegistrationId)
             .executeTakeFirstOrThrow();
+
+        const deleteAgentUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const updateInviteToken = await trx.updateTable('InviteTokens')
+            .set('IsActive', 0)
+            .where('AgentRegistration', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
 
         return {
             success: true,
@@ -1589,6 +1690,7 @@ export const rejectAgentRegistration = async (agentRegistrationId: number): Quer
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error;
         return {
             success: false,

@@ -19,12 +19,14 @@ export interface DatabaseFirewallRules {
 }
 
 export interface InviteTokens {
+  AgentRegistration: number | null;
   CreatedAt: Generated<Date>;
   DivisionID: number;
   Email: string;
   ExpiryDate: Date;
   InviteToken: string;
   InviteTokenID: Generated<number>;
+  IsActive: Generated<number>;
   IsUsed: Generated<number>;
   LinkedUserID: number;
   UpdatedAt: Date | null;

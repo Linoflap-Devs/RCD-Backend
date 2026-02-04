@@ -223,6 +223,7 @@ export interface IAgentRegistrationListItem {
     Email: string,
     Gender: string,
     ContactNumber?: string | null,
+    Division?: string | null
 }
 
 export interface IAgentRegistration {
@@ -247,6 +248,7 @@ export interface IAgentRegistration {
     DshudNumber?: string | null,
     EmployeeIdNumber?: string | null,
     Email: string,
+    Division?: string | null,
 
     Images?: ITypedImageBase64[] | null
 
@@ -301,6 +303,8 @@ export interface IInviteTokens {
     InviteToken: string;
     InviteTokenID: number;
     IsUsed: number;
+    IsActive: number; 
     LinkedUserID: number;
     UpdatedAt: Date | null;
+    AgentRegistration: number | null
 }
