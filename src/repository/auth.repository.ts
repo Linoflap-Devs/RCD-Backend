@@ -581,13 +581,24 @@ export const findInviteToken = async (filters?: {
     expiryDate?: Date, 
     showUsed?: boolean,
     showExpired?: boolean,
+    showInactive?: boolean,
 }): QueryResult<(IInviteTokens & {Division: string, FirstName: string, MiddleName: string, LastName: string})[]> => {
     try {
         let baseQuery = db.selectFrom('InviteTokens')
-            .selectAll()
             .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
             .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
             .select([
+                'InviteTokens.InviteTokenID',
+                'InviteTokens.InviteToken',
+                'InviteTokens.Email',
+                'InviteTokens.ExpiryDate',
+                'InviteTokens.LinkedUserID',
+                'InviteTokens.DivisionID',
+                'InviteTokens.CreatedAt',
+                'InviteTokens.UpdatedAt',
+                'InviteTokens.IsUsed',
+                'InviteTokens.AgentRegistration',
+                'InviteTokens.IsActive', // Explicitly qualify this column
                 'Tbl_Division.Division',
                 'Tbl_Agents.FirstName',
                 'Tbl_Agents.MiddleName',
@@ -618,9 +629,15 @@ export const findInviteToken = async (filters?: {
             baseQuery = baseQuery.where('IsUsed', '=', 0);
         }
 
+        if (filters?.showInactive === false) {
+            baseQuery = baseQuery.where('InviteTokens.IsActive', '=', 1);
+        }
+
         if (filters?.showExpired !== true) {
             baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
         }
+
+        baseQuery = baseQuery.orderBy('ExpiryDate', 'desc');
         
         const result = await baseQuery.execute();
 
@@ -783,6 +800,36 @@ export const deleteAllInviteTokensByEmail = async (email: string): QueryResult<n
             data: null,
         }
 
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                message: error.message,
+                code: 500
+            }
+        }
+    }
+}
+
+export const invalidateTokens = async (filters?: { email?: string} ): QueryResult<null> => {
+    try {
+        let baseQuery = await db.updateTable('InviteTokens')
+            .set({ IsActive: 0 })
+        
+        if(filters?.email) {
+            baseQuery = baseQuery.where('Email', '=', filters.email);
+        }
+
+        const result = await baseQuery.execute();
+
+        return {
+            success: true,
+            data: null,
+        }
     }
 
     catch(err: unknown){
@@ -1000,6 +1047,10 @@ export const deleteInviteRegistrationTransaction = async (agentRegistrationId: n
             }
         }
     }
+}
+
+export const rejectInviteRegistrationTransaction = async () => {
+    
 }
 
 export const registerBrokerTransaction = async(

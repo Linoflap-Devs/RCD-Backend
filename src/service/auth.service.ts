@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -160,18 +160,19 @@ export const inviteNewUserService = async (userId: number, email: string) => {
     const existingInvite = await findInviteToken({email: email})
 
     if(existingInvite.data){
-        if(existingInvite.data.some(invite => invite.IsUsed == 1)){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Email is already registered.'
-                }
-            }
-        }
 
-        const deleteAllTokens = await deleteAllInviteTokensByEmail(email)
+        console.log('valid invites', existingInvite.data)
+        const invalidateEmailTokens = await invalidateTokens({ email: email })
+        // if(existingInvite.data.some(invite => invite.IsUsed == 1)){
+        //     return {
+        //         success: false,
+        //         data: {},
+        //         error: {
+        //             code: 400,
+        //             message: 'Email is already registered.'
+        //         }
+        //     }
+        // }
     }
 
     const existingRegistration = await getAgentUsers({emails: [email]})
@@ -209,7 +210,7 @@ export const inviteNewUserService = async (userId: number, email: string) => {
 export const getInviteTokenDetailsService = async (token: string): QueryResult<Partial<IInviteTokens> & { AgentID: number, Division: string, FirstName: string, MiddleName: string, LastName: string}> => {
 
     console.log('getInviteTokenDetailsService', token)
-    const tokenDetails = await findInviteToken({inviteToken: token, showUsed: false, showExpired: false})
+    const tokenDetails = await findInviteToken({inviteToken: token, showUsed: false, showExpired: false, showInactive: false})
 
     console.log('tokenDetails', tokenDetails)
     if(!tokenDetails.success || tokenDetails.data.length === 0){
