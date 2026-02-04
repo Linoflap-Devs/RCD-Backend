@@ -674,8 +674,7 @@ export const findInviteTokenWithRegistration = async (filters?: {
             .selectAll('InviteTokens')
             .innerJoin('Tbl_Division', 'Tbl_Division.DivisionID', 'InviteTokens.DivisionID')
             .innerJoin('Tbl_Agents', 'Tbl_Agents.AgentID', 'InviteTokens.LinkedUserID')
-            .leftJoin('Tbl_AgentUser', 'Tbl_AgentUser.Email', 'InviteTokens.Email')
-            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentRegistration.AgentRegistrationID', 'Tbl_AgentUser.AgentRegistrationID')
+            .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentRegistration.AgentRegistrationID', 'InviteTokens.AgentRegistration')
             .select([
                 'Tbl_Division.Division',
                 'Tbl_Agents.FirstName',
@@ -711,6 +710,8 @@ export const findInviteTokenWithRegistration = async (filters?: {
         if (filters?.showExpired !== true) {
             baseQuery = baseQuery.where('ExpiryDate', '>', new Date());
         }
+
+        baseQuery = baseQuery.orderBy('CreatedAt', 'desc');
         
         const result = await baseQuery.execute();
 

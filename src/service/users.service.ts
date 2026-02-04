@@ -1740,7 +1740,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
         }
     }
 
-    const result = await findInviteTokenWithRegistration({ userId: agent.data.AgentID, showUsed: true, showExpired: true })
+    const result = await findInviteTokenWithRegistration({ userId: agent.data.AgentID, showUsed: true, showExpired: true, })
 
     if(!result.success){
         return {
@@ -1752,7 +1752,18 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
 
     console.log(result.data.filter((invite: IInviteTokens & {IsVerified: number | null}) => invite.IsVerified && invite.IsVerified > 0))
 
-    const obj: (IInviteTokens & {IsUMApproved: boolean, IsSAApproved: boolean})[] = result.data.map((invite: IInviteTokens & {IsVerified: number | null}) => {
+    const obj: (IInviteTokens & {IsUMApproved: boolean, IsSAApproved: boolean, IsVerified: number | null, RejectedBy: string | null})[] = result.data.map((invite: IInviteTokens & {IsVerified: number | null}) => {
+        let rejectedBy = null
+        if(invite.IsVerified == -1){
+            rejectedBy = 'UNIT MANAGER'
+        }
+        else if(invite.IsVerified == -2){
+            rejectedBy = 'SALES ADMIN'
+        }
+        else {
+            rejectedBy = null
+        }
+
         return {
             AgentRegistration: invite.AgentRegistration,
             InviteTokenID: invite.InviteTokenID,
@@ -1762,6 +1773,8 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
             DivisionID: invite.DivisionID,
             IsActive: invite.IsActive,
             IsUsed: invite.IsUsed,
+            IsVerified: invite.IsVerified,
+            RejectedBy: rejectedBy,
             IsUMApproved: invite.IsVerified && invite.IsVerified > 0 ? true : false,
             IsSAApproved: invite.IsVerified && invite.IsVerified > 1 ? true : false,
             ExpiryDate: new TZDate(invite.ExpiryDate, 'Asia/Manila'),
