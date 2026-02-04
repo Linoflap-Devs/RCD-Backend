@@ -1049,8 +1049,44 @@ export const deleteInviteRegistrationTransaction = async (agentRegistrationId: n
     }
 }
 
-export const rejectInviteRegistrationTransaction = async () => {
-    
+export const rejectInviteRegistrationTransaction = async (agentRegistrationId: number, inviteToken: string, agentUserId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
+    try {
+        const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
+            .set({ IsVerified: -1 })
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const updateToken = await trx.updateTable('InviteTokens')
+            .set({ IsActive: 0 })
+            .where('InviteToken', '=', inviteToken)
+            .executeTakeFirstOrThrow()
+        
+        const deleteUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        await trx.rollback().execute()
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
 }
 
 export const registerBrokerTransaction = async(

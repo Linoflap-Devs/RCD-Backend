@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -962,7 +962,7 @@ export const loginEmployeeService = async (username: string, password: string): 
 
 export const approveInviteRegistrationService = async (userId: number, inviteToken: string): QueryResult<ITblAgentRegistration> => {
 
-    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true})
+    const tokenDetails = await findInviteToken({inviteToken: inviteToken, showUsed: true, showExpired: true, showInactive: false})
 
     if(!tokenDetails.success || tokenDetails.data.length === 0){
         return {
@@ -1023,6 +1023,17 @@ export const approveInviteRegistrationService = async (userId: number, inviteTok
             error: {
                 message: registration.error?.message || 'Failed to get agent registration.',
                 code: registration.error?.code || 500
+            }
+        }
+    }
+
+    if(registration.data.IsVerified > 0){
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                message: 'Invite registration has already been approved.',
+                code: 400
             }
         }
     }
@@ -1182,7 +1193,7 @@ export const rejectInviteRegistrationService = async (userId: number, inviteToke
         }
     }
 
-    const reject = await deleteInviteRegistrationTransaction(registration.data.AgentRegistrationID, inviteToken, agentUser.data[0].AgentUserID)
+    const reject = await rejectInviteRegistrationTransaction(registration.data.AgentRegistrationID, inviteToken, agentUser.data[0].AgentUserID)
 
     if(!reject.success){
         return {
