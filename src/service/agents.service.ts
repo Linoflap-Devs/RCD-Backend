@@ -31,7 +31,8 @@ export const getAgentsService = async (
     },
     showRegistration: boolean = false,
     showSales: boolean = false,
-    showBrokerDivisions: boolean = false
+    showBrokerDivisions: boolean = false,
+    showHandsOffBrokers: boolean = false
 ): QueryResult<{totalPages: number, results: IAgent[]}> => {
 
     const positionMap = new Map<string, number[]>(

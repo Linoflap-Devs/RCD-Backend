@@ -201,7 +201,13 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
     }
 }
 
-export const getDivisionBrokers = async (filters?: {agentIds?: number[], brokerIds?: number[]}): QueryResult<IBrokerDivision[]> => {
+export const getDivisionBrokers = async (filters?: {
+    agentIds?: number[], 
+    brokerIds?: number[], 
+    excludeHandsOn?: boolean, 
+    excludeHandsOff?: boolean,
+    divisionIds?: number[] | null
+}): QueryResult<IBrokerDivision[]> => {
 
     try {
         let baseQuery = await db.selectFrom('Tbl_BrokerDivision')
@@ -211,6 +217,14 @@ export const getDivisionBrokers = async (filters?: {agentIds?: number[], brokerI
         
         const hasAgentFilter = filters?.agentIds && filters.agentIds.length > 0;
         const hasBrokerFilter = filters?.brokerIds && filters.brokerIds.length > 0;
+
+        if ( filters && filters?.excludeHandsOn) {
+            baseQuery = baseQuery.where('Tbl_BrokerDivision.BrokerID', '<>', null);
+        }
+
+        if( filters && filters?.excludeHandsOff) {
+            baseQuery = baseQuery.where('Tbl_BrokerDivision.AgentID', '<>', null);
+        }
 
         if (hasAgentFilter && hasBrokerFilter) {
         // Use OR condition to match either AgentID or BrokerID
@@ -224,6 +238,15 @@ export const getDivisionBrokers = async (filters?: {agentIds?: number[], brokerI
             baseQuery = baseQuery.where('AgentID', 'in', filters.agentIds!);
         } else if (hasBrokerFilter) {
             baseQuery = baseQuery.where('BrokerID', 'in', filters.brokerIds!);
+        }
+
+        if (filters && filters?.divisionIds) {
+            if(filters.divisionIds && filters.divisionIds.length > 0){
+                baseQuery = baseQuery.where('Tbl_BrokerDivision.DivisionID', 'in', filters.divisionIds)
+            }
+            else {
+                baseQuery = baseQuery.where('Tbl_BrokerDivision.DivisionID', '=', null)
+            }
         }
 
         const result = await baseQuery.execute()
