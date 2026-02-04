@@ -1754,6 +1754,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
 
     const obj: (IInviteTokens & {IsUMApproved: boolean, IsSAApproved: boolean})[] = result.data.map((invite: IInviteTokens & {IsVerified: number | null}) => {
         return {
+            AgentRegistration: invite.AgentRegistration,
             InviteTokenID: invite.InviteTokenID,
             InviteToken: invite.InviteToken,
             Email: invite.Email,
@@ -1817,6 +1818,7 @@ export const getInviteRegistrationDetailsService = async (inviteToken: string): 
     return {
         success: true,
         data: {
+            AgentRegistration: result.data[0].AgentRegistration || null,
             InviteTokenID: result.data[0].InviteTokenID,
             InviteToken: result.data[0].InviteToken,
             Email: result.data[0].Email,

@@ -305,4 +305,5 @@ export interface IInviteTokens {
     IsUsed: number;
     LinkedUserID: number;
     UpdatedAt: Date | null;
+    AgentRegistration: number | null
 }
