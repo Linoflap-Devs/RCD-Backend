@@ -383,7 +383,7 @@ export const registerInviteService = async (
         }
     }
 
-    const updateIsUsed = await updateInviteToken(inviteToken, { IsUsed: 1 })
+    const updateIsUsed = await updateInviteToken(inviteToken, { IsUsed: 1, AgentRegistration: result.data.AgentRegistrationID })
 
     return result
 }
