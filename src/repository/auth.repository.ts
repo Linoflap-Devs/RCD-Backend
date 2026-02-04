@@ -1663,11 +1663,24 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
 }
 
 export const rejectAgentRegistration = async (agentRegistrationId: number): QueryResult<null> => {
+    const trx = await db.startTransaction().execute()
+
     try {
-        const result = await db.updateTable('Tbl_AgentRegistration')
-            .set('IsVerified', 2)
+        const result = await trx.updateTable('Tbl_AgentRegistration')
+            .set('IsVerified', -2)
             .where('AgentRegistrationID', '=', agentRegistrationId)
             .executeTakeFirstOrThrow();
+
+        const deleteAgentUser = await trx.deleteFrom('Tbl_AgentUser')
+            .where('AgentRegistrationID', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        const updateInviteToken = await trx.updateTable('InviteTokens')
+            .set('IsActive', 0)
+            .where('AgentRegistration', '=', agentRegistrationId)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
 
         return {
             success: true,
@@ -1676,6 +1689,7 @@ export const rejectAgentRegistration = async (agentRegistrationId: number): Quer
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error;
         return {
             success: false,

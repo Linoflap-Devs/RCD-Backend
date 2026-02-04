@@ -1418,7 +1418,7 @@ export const rejectAgentRegistrationService = async (agentRegistrationId: number
         }
     }
 
-    if(agentRegistration.data.IsVerified !== 0){
+    if(agentRegistration.data.IsVerified > 1){
         logger(('Agent registration is already processed.'), {agentRegistrationId: agentRegistrationId})
         return {
             success: false,
