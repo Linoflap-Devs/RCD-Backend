@@ -474,7 +474,7 @@ export const getAgentRegistrations = async (
         if (baseAgentData.length === 0) {
             return {
                 success: true,
-                data: {} as { totalPages: number, result: IAgentRegistration[] },
+                data: {totalPages: 0, result: []},
             };
         }
 
@@ -623,7 +623,7 @@ export const getAgentRegistrations = async (
         const error = err as Error;
         return {
             success: false,
-            data: {} as { totalPages: number; result: IAgentRegistration[] },
+            data: {totalPages: 0, result: []} as { totalPages: number; result: IAgentRegistration[] },
             error: {
                 code: 500,
                 message: error.message
@@ -866,6 +866,48 @@ export const getAgentRegistration = async (filters?: {agentId?: number, agentReg
         if(filters?.agentId){
             registrationQuery = registrationQuery.where('Tbl_AgentUser.AgentID', '=', filters.agentId)
         }
+
+        if(filters?.agentRegistrationId){
+            registrationQuery = registrationQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId)
+        }
+
+        const registration = await registrationQuery.executeTakeFirst()
+
+        if(!registration){
+            return {
+                success: false,
+                data: {} as ITblAgentRegistration,
+                error: {
+                    message: 'No agent registration found.',
+                    code: 404
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: registration
+        }
+        
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentRegistration,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getAgentRegistrationWithoutUser = async (filters?: {agentRegistrationId?: number}): QueryResult<ITblAgentRegistration> => {
+    try {
+        let registrationQuery = await db.selectFrom('Tbl_AgentRegistration')
+            .selectAll('Tbl_AgentRegistration')
 
         if(filters?.agentRegistrationId){
             registrationQuery = registrationQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId)

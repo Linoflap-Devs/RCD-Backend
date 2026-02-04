@@ -6,7 +6,7 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducati
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -1760,6 +1760,7 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
             Email: invite.Email,
             LinkedUserID: invite.LinkedUserID,
             DivisionID: invite.DivisionID,
+            IsActive: invite.IsActive,
             IsUsed: invite.IsUsed,
             IsUMApproved: invite.IsVerified && invite.IsVerified > 0 ? true : false,
             IsSAApproved: invite.IsVerified && invite.IsVerified > 1 ? true : false,
@@ -1775,13 +1776,13 @@ export const getInvitedEmailsService = async (userId: number): QueryResult<Parti
     }
 }
 
-export const getInviteRegistrationDetailsService = async (inviteToken: string): QueryResult<IInviteTokens & Partial<IAgentRegistration>> => {
+export const getInviteRegistrationDetailsService = async (inviteToken: string): QueryResult<IInviteTokens & Partial<IAgentRegistration> & {RejectedBy: string | null}> => {
     const result = await findInviteToken({ inviteToken: inviteToken, showUsed: true, showExpired: true })
 
     if(!result.success || result.data.length === 0){
         return {
             success: false,
-            data: {} as IInviteTokens & Partial<IAgentRegistration>,
+            data: {} as IInviteTokens & Partial<IAgentRegistration> & {RejectedBy: string | null},
             error: {
                 message: 'Invite token not found',
                 code: 400
@@ -1789,30 +1790,29 @@ export const getInviteRegistrationDetailsService = async (inviteToken: string): 
         }
     }
 
-    const agentUser = await getAgentUsers({ emails: [result.data[0].Email ] })
+    const registration = await getAgentRegistrationWithoutUser({ agentRegistrationId: result.data[0].AgentRegistration || 0})
+    console.log(registration)
 
-    if(!agentUser.success || agentUser.data.length === 0){
+    if(!registration.success || !registration.data){
         return {
             success: false,
-            data: {} as IInviteTokens & Partial<IAgentRegistration>,
-            error: {
-                message: 'Agent user not found',
-                code: 400
-            }
-        }
-    }
-
-    const registration = await getAgentRegistrations({ agentRegistrationId: agentUser.data[0].AgentRegistrationID || 0})
-
-    if(!registration.success || registration.data.result.length === 0){
-        return {
-            success: false,
-            data: {} as IInviteTokens & Partial<IAgentRegistration>,
+            data: {} as IInviteTokens & Partial<IAgentRegistration> & {RejectedBy: string | null},
             error: {
                 message: 'Agent registration not found',
                 code: 400
             }
         }
+    }
+
+    let rejectedBy = null
+    if(registration.data.IsVerified == -1){
+        rejectedBy = 'UNIT MANAGER'
+    }
+    else if(registration.data.IsVerified == -2){
+        rejectedBy = 'SALES ADMIN'
+    }
+    else {
+        rejectedBy = null
     }
 
     return {
@@ -1825,14 +1825,18 @@ export const getInviteRegistrationDetailsService = async (inviteToken: string): 
             LinkedUserID: result.data[0].LinkedUserID,
             DivisionID: result.data[0].DivisionID,
             IsUsed: result.data[0].IsUsed,
+            IsActive: result.data[0].IsActive,
             ExpiryDate: result.data[0].ExpiryDate,
 
-            FirstName: registration.data.result[0].FirstName,
-            LastName: registration.data.result[0].LastName,
-            MiddleName: registration.data.result[0].MiddleName,
-            Address: registration.data.result[0].Address,
-            Birthdate: registration.data.result[0].Birthdate,
-            Gender: registration.data.result[0].Gender,
+            IsVerified: registration.data.IsVerified,
+            RejectedBy: rejectedBy,
+
+            FirstName: registration.data.FirstName,
+            LastName: registration.data.LastName,
+            MiddleName: registration.data.MiddleName,
+            Address: registration.data.Address,
+            Birthdate: registration.data.Birthdate,
+            Gender: registration.data.Sex as "Male" | "Female" | undefined,
 
             CreatedAt: result.data[0].CreatedAt,
             UpdatedAt: result.data[0].UpdatedAt

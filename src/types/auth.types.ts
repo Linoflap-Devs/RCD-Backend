@@ -303,6 +303,7 @@ export interface IInviteTokens {
     InviteToken: string;
     InviteTokenID: number;
     IsUsed: number;
+    IsActive: number; 
     LinkedUserID: number;
     UpdatedAt: Date | null;
     AgentRegistration: number | null
