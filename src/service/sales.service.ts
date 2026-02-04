@@ -905,6 +905,17 @@ export const assignUMToPendingSaleService = async (
         }
     }
 
+    if(!salesDirector.data.AgentID){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'No user found.',
+                code: 400
+            }
+        }
+    }
+
     const unitManager = await findAgentDetailsByAgentId(unitManagerId)
 
     if(!unitManager.success){
@@ -953,7 +964,7 @@ export const assignUMToPendingSaleService = async (
         }
     }
 
-    const result = await editPendingSale({ agentUserId: userId }, "", pendingSaleId, { assignedUM: unitManagerId })
+    const result = await editPendingSale({ agentUserId: salesDirector.data.AgentID }, "", pendingSaleId, { assignedUM: unitManagerId })
 
     if(!result.success){
         return {
