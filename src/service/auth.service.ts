@@ -157,24 +157,6 @@ export const inviteNewUserService = async (userId: number, email: string) => {
         return { success: false, data: {}, error: { code: 400, message: 'Agent division not found.' } }
     }
 
-    const existingInvite = await findInviteToken({email: email})
-
-    if(existingInvite.data){
-
-        console.log('valid invites', existingInvite.data)
-        const invalidateEmailTokens = await invalidateTokens({ email: email })
-        // if(existingInvite.data.some(invite => invite.IsUsed == 1)){
-        //     return {
-        //         success: false,
-        //         data: {},
-        //         error: {
-        //             code: 400,
-        //             message: 'Email is already registered.'
-        //         }
-        //     }
-        // }
-    }
-
     const existingRegistration = await getAgentUsers({emails: [email]})
 
     if(existingRegistration.success && existingRegistration.data.length > 0){
@@ -187,6 +169,28 @@ export const inviteNewUserService = async (userId: number, email: string) => {
             } 
         }
     }
+
+    const existingInvite = await findInviteToken({email: email})
+
+    if(existingInvite.data){
+
+        console.log('valid invites', existingInvite.data)
+        
+        const deleteTokens = await deleteAllInviteTokensByEmail(email)
+        // const invalidateEmailTokens = await invalidateTokens({ email: email })
+        // if(existingInvite.data.some(invite => invite.IsUsed == 1)){
+        //     return {
+        //         success: false,
+        //         data: {},
+        //         error: {
+        //             code: 400,
+        //             message: 'Email is already registered.'
+        //         }
+        //     }
+        // }
+    }
+
+    
 
     const token = generateInviteToken();
 
