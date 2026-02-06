@@ -552,7 +552,7 @@ export const getBrokerUsers = async (filters?: {brokerIds?: number[]}): QueryRes
     }
 }
 
-export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: number}): QueryResult<IBrokerRegistration[]> => {
+export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: number, isVerified?: number}): QueryResult<IBrokerRegistration[]> => {
     try {
         // 1. Get base broker registration data with user info and all three images
         let baseBrokerDataQuery = await db.selectFrom('Tbl_BrokerRegistration')
@@ -612,8 +612,11 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             baseBrokerDataQuery = baseBrokerDataQuery.where('Tbl_BrokerRegistration.BrokerRegistrationID', '=', filters.brokerRegistrationId);
         }
 
+        if(filters && filters.isVerified){
+            baseBrokerDataQuery = baseBrokerDataQuery.where('Tbl_BrokerRegistration.IsVerified', '=', filters.isVerified);
+        }
+
         const baseBrokerData = await baseBrokerDataQuery
-            .where('Tbl_BrokerRegistration.IsVerified', '=', 0)
             .orderBy('Tbl_BrokerRegistration.BrokerRegistrationID', 'asc')
             .execute();
 
