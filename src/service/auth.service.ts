@@ -374,7 +374,7 @@ export const registerInviteService = async (
         experience: []
     }   
 
-    const result = await registerAgentTransaction(obj)
+    const result = await registerAgentTransaction(obj, undefined, undefined, undefined, undefined, true)
 
     if(!result.success) {
         return {

@@ -851,7 +851,8 @@ export const registerAgentTransaction = async(
     profileImageMetadata?: IImage, 
     govIdImageMetadata?: IImage,
     selfieImageMetadata?: IImage,
-    agentId?: number
+    agentId?: number,
+    fromInvite: boolean = false
 ): QueryResult<ITblAgentRegistration> => {
 
     const registerTransaction = await db.startTransaction().execute();
@@ -933,7 +934,7 @@ export const registerAgentTransaction = async(
             ReferredByID: data.referredById ? data.referredById : null,
             ReferredCode: data.referredCode ? data.referredCode : null,
             DivisionID: data.divisionId ? data.divisionId.toString() : null,
-            IsVerified: 1 // Only if agent id is present
+            IsVerified: fromInvite ? 0 : 1
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
