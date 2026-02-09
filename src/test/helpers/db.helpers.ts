@@ -126,7 +126,7 @@ export const truncateTables = async (tableNames: string[]): Promise<QueryResult<
             // Disable foreign key checks temporarily if needed
             await sql`
                 IF OBJECT_ID(${sanitizedTableName}, 'U') IS NOT NULL
-                DELETE FROM ${sql.raw(sanitizedTableName)}
+                TRUNCATE TABLE ${sql.raw(sanitizedTableName)}
             `.execute(db);
             
             console.log(`Truncated table: ${sanitizedTableName}`);

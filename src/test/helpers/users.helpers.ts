@@ -1,7 +1,7 @@
 import { sql } from "kysely";
 import { db } from "../../db/db";
 import { TblAgentUser } from "../../db/db-types";
-import { ITblAgentUser } from "../../types/auth.types";
+import { ITblAgentUser, ITblUsersWeb } from "../../types/auth.types";
 import { QueryResult } from "../../types/global.types";
 import { hashPassword } from "../../utils/scrypt";
 import 'dotenv/config'
@@ -91,6 +91,51 @@ const createUser = async (
     }
 }
 
+const createWebUser = async (
+    data: {
+        empName: string, 
+        username: string,
+        password: string,
+        role: string,
+        usercode: string,
+    }
+): QueryResult<ITblUsersWeb> => {
+    const trx = await db.startTransaction().execute();
+    try {
+        const result = await trx.insertInto('Tbl_UsersWeb')
+            .values({
+                UserCode: data.usercode,
+                EmpName: data.empName,
+                UserName: data.username,
+                Password: await hashPassword(data.password),
+                Role: data.role,
+                BranchID: 1,
+                BranchName: 'HEAD OFFICE'
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: result
+        }
+
+    } catch (err: unknown) {
+        await trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const createSP = async (divisionId?: number): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESPERSON',
@@ -150,6 +195,29 @@ export const createSD = async (divisionId?: number): QueryResult<ITblAgentUser> 
         return {
             success: false,
             data: {} as ITblAgentUser,
+            error: result.error
+        }
+    }
+
+    return {
+        success: result.success,
+        data: result.data,
+    }
+}
+
+export const createAdmin = async (): QueryResult<ITblUsersWeb> => {
+    const result = await createWebUser({ 
+        empName: 'ADMIN USER',
+        username: 'admin',
+        password: process.env.TESTING_PW || 'password',
+        role: 'SALES ADMIN',
+        usercode: 'SA'
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
             error: result.error
         }
     }
