@@ -6,9 +6,11 @@ import 'dotenv/config'
 
 export const truncateAllTables = async (): QueryResult<null> => {
 
+    console.log('Truncating all tables...')
+
     if(process.env.TESTING_SERVER){
         return {
-            success: true,
+            success: false,
             data: null,
             error: {
                 code: 500,
@@ -17,9 +19,20 @@ export const truncateAllTables = async (): QueryResult<null> => {
         }
     }
 
+    if(process.env.TESTING_DATABASE_NAME !== 'RCDTestingDB'){
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: 'No testing database detected'
+            }
+        }
+    }
+
     if(process.env.NODE_ENV !== 'testing'){
         return {
-            success: true,
+            success: false,
             data: null,
             error: {
                 code: 500,
@@ -28,27 +41,99 @@ export const truncateAllTables = async (): QueryResult<null> => {
         }
     }
 
+    console.log('All conditions met.')
+
     try {
         const result = await
-            sql`
-                -- Disable all foreign key constraints
-                EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL';
-
+            sql`;
                 -- Truncate all tables (this automatically resets identity columns)
-                EXEC sp_MSforeachtable 'TRUNCATE TABLE ?';
-
-                -- Re-enable all foreign key constraints
-                EXEC sp_MSforeachtable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL';
-
-                -- Optional: Explicitly reset identity columns to ensure they start at 1
-                EXEC sp_MSforeachtable 'IF OBJECTPROPERTY(OBJECT_ID(''?''), ''TableHasIdentity'') = 1 DBCC CHECKIDENT(''?'', RESEED, 0)';
+                EXEC sp_MSforeachtable 'TRUNCATE TABLE ?';;
             `
             .execute(db);
+
+        console.log("truncate results", result)
 
         return { success: true, data: null };
     }
 
     catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const truncateTables = async (tableNames: string[]): Promise<QueryResult<null>> => {
+    console.log('Truncating specified tables...')
+    
+    // Same safety checks as above...
+    if (!process.env.TESTING_DATABASE_SERVER) {
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: 'No testing server detected'
+            }
+        }
+    }
+    
+    if (process.env.TESTING_DATABASE_NAME !== 'RCDTestingDB') {
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: 'No testing database detected'
+            }
+        }
+    }
+    
+    if (process.env.NODE_ENV !== 'testing') {
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: 'Not in testing environment'
+            }
+        }
+    }
+    
+    if (!tableNames || tableNames.length === 0) {
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 400,
+                message: 'No table names provided'
+            }
+        }
+    }
+    
+    console.log('All conditions met. Truncating tables:', tableNames)
+    
+    try {
+        for (const tableName of tableNames) {
+            const sanitizedTableName = tableName.replace(/[^\w]/g, '');
+            
+            // Disable foreign key checks temporarily if needed
+            await sql`
+                IF OBJECT_ID(${sanitizedTableName}, 'U') IS NOT NULL
+                DELETE FROM ${sql.raw(sanitizedTableName)}
+            `.execute(db);
+            
+            console.log(`Truncated table: ${sanitizedTableName}`);
+        }
+        
+        return { success: true, data: null };
+    } catch (err: unknown) {
         const error = err as Error;
         return {
             success: false,

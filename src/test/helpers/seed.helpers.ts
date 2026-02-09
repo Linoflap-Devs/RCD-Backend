@@ -1,10 +1,12 @@
 
+import { sql, Transaction } from "kysely";
 import { db } from "../../db/db";
-import { TblDivision, TblPosition } from "../../db/db-types";
+import { DB, TblDivision, TblPosition } from "../../db/db-types";
 import { ITblDivision } from "../../types/division.types";
 import { QueryResult } from "../../types/global.types";
 
 export const seedPositions = async (): QueryResult<TblPosition[]> => {
+
     try {
         const result = await db.insertInto('Tbl_Position')
                         .values([
@@ -64,8 +66,11 @@ export const seedPositions = async (): QueryResult<TblPosition[]> => {
 }
 
 export const seedDivisions = async(): QueryResult<ITblDivision[]> => {
+    const trx = await db.startTransaction().execute()
+
     try {
-        const result = await db.insertInto('Tbl_Division')
+
+        const result = await trx.insertInto('Tbl_Division')
                         .values([
                             { 
                                 DivisionID: 1,
@@ -89,6 +94,8 @@ export const seedDivisions = async(): QueryResult<ITblDivision[]> => {
                         .outputAll('inserted')
                         .execute()
 
+        await trx.commit().execute()
+
         return {
             success: true,
             data: result
@@ -96,6 +103,7 @@ export const seedDivisions = async(): QueryResult<ITblDivision[]> => {
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error
         return {
             success: false,

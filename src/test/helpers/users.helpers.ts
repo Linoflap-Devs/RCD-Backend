@@ -1,3 +1,4 @@
+import { sql } from "kysely";
 import { db } from "../../db/db";
 import { TblAgentUser } from "../../db/db-types";
 import { ITblAgentUser } from "../../types/auth.types";
@@ -12,11 +13,14 @@ const createUser = async (
         password: string;
         roleId: number;
         divisionId?: number  
-    }
+    },
 ): QueryResult<ITblAgentUser> => {
     const trx = await db.startTransaction().execute();
 
     try {
+
+        const idInsertAgentsOn = await sql`SET IDENTITY_INSERT Tbl_Agents ON`.execute(trx);
+        const idInsertUsersOn = await sql`SET IDENTITY_INSERT Tbl_AgentUser ON`.execute(trx);
 
         const agent = await trx.insertInto('Tbl_Agents')
                         .values({
@@ -51,7 +55,7 @@ const createUser = async (
                             MiddleName: '',
                             UpdateBy: 1
                         })
-                        .returningAll()
+                        .outputAll('inserted')
                         .executeTakeFirstOrThrow()
 
         const user = await trx.insertInto('Tbl_AgentUser')
@@ -61,13 +65,20 @@ const createUser = async (
                             IsVerified: 1,
                             AgentID: agent.AgentID
                          })
-                        .returningAll()
+                        .outputAll('inserted')
                         .executeTakeFirstOrThrow()
+
+        const idInsertAgentsOff = await sql`SET IDENTITY_INSERT Tbl_Agents OFF`.execute(trx);
+        const idInsertUsersOff = await sql`SET IDENTITY_INSERT Tbl_AgentUser OFF`.execute(trx);
+
+        await trx.commit().execute()
+
         return { 
             success: true, 
             data: user 
         }
     } catch (err: unknown) {
+        await trx.rollback().execute();
         const error = err as Error
         return {
             success: false,
