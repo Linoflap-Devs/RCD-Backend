@@ -332,7 +332,7 @@ export const registerInviteService = async (
             success: false,
             data: {},
             error: {
-                code: 500,
+                code: 400,
                 message: 'Token is invalid, expired, or already used.'
             }
         }
@@ -345,7 +345,7 @@ export const registerInviteService = async (
             success: false,
             data: {},
             error: {
-                code: 500,
+                code: 400,
                 message: 'Email does not match with invited email.'
             }
         }
