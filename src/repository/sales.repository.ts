@@ -1519,8 +1519,8 @@ export const getPendingSalesV2 = async (
                 ${filters?.approvalStatus?.join(',') ?? null},
                 ${filters?.salesBranch ?? null},
                 ${filters?.showRejected ? 1 : 0},
-                ${page},
-                ${pageSize}
+                ${page || null},
+                ${pageSize || null}
             )
         `.execute(db);
 
