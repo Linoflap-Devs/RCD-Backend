@@ -123,7 +123,18 @@ export const getAgentsService = async (
 }
 
 export const getAgentRegistrationsService = async (pagination?: {page?: number, pageSize?: number}): QueryResult<{totalPages: number, result: IAgentRegistrationListItem[]}> => {
-    const result = await getAgentRegistrations({ isVerified: 1 }, pagination)
+
+    const brokerPosition = await getPositions({ positionName: 'BROKER' })
+
+    if(!brokerPosition.success || brokerPosition.data.length === 0){
+        return {
+            success: false,
+            data: {} as {totalPages: number, result: IAgentRegistrationListItem[]},
+            error: brokerPosition.error
+        }
+    }
+
+    const result = await getAgentRegistrations({ isVerified: 1, excPositionID: [brokerPosition.data[0].PositionID] }, pagination)
 
     if(!result.success){
         return {
