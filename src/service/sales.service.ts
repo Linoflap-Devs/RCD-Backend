@@ -1424,6 +1424,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: false,
                     isEditable: false,
                     isRejected: false,
+                    hasAssignedUM: true,
                     //source: 'approved'
                 }
             });
@@ -1459,6 +1460,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
                     isRejected: sale.IsRejected ? true : false,
+                    hasAssignedUM: sale.AssignedUM ? true : false,
                     //source: 'pending'
                 }
             });
@@ -1498,6 +1500,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: false,
                     isRejected: sale.IsRejected ? true : false,
+                    hasAssignedUM: sale.AssignedUM ? true : false,
                     //source: 'sdApproved'
                 }
             });
