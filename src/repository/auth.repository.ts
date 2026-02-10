@@ -1173,7 +1173,7 @@ export const registerBrokerTransaction = async(
             AffiliationDate: new Date(),
             GovImageID: govImageId > 0 ? govImageId : null,
             SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
-            IsVerified: brokerId ? 1 : 0 // Only if agent id is present
+            IsVerified: 1
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
