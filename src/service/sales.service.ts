@@ -645,6 +645,10 @@ export const addPendingSalesService = async (
         if(agentData.data.ReferredByID){
             assignedUM = agentData.data.ReferredByID
         }
+
+        if(agentData.data.Position == 'UNIT MANAGER'){
+            assignedUM = agentData.data.AgentID
+        }
     }
 
     else if(user.webUserId) {
