@@ -1895,7 +1895,7 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
                                                 .executeTakeFirstOrThrow()
 
                 const updateBrokerRegistration = await trx.updateTable('Tbl_BrokerRegistration')
-                                                    .set('IsVerified', 1)
+                                                    .set('IsVerified', 2)
                                                     .where('BrokerRegistrationID', '=', brokerRegistrationId)
                                                     .executeTakeFirstOrThrow();
 
