@@ -362,7 +362,8 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
 export const getAgentRegistrations = async (
     filters?: {
         agentRegistrationId?: number, 
-        positionID?: number, 
+        positionID?: number[], 
+        excPositionID?: number[],
         isVerified?: number
     },
     pagination?: {
@@ -452,8 +453,23 @@ export const getAgentRegistrations = async (
         }
 
         if(filters && filters.positionID){
-            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
-            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.PositionID', '=', filters.positionID);
+            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', 'in', filters.positionID);
+            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.PositionID', 'in', filters.positionID);
+        }
+
+        if(filters && filters.excPositionID && filters.excPositionID.length > 0){
+            baseAgentDataQuery = baseAgentDataQuery.where((eb: any) => 
+                eb.or([
+                    eb('Tbl_AgentRegistration.PositionID', 'not in', filters.excPositionID),
+                    eb('Tbl_AgentRegistration.PositionID', 'is', null)
+                ])
+            )
+            totalCountResult = totalCountResult.where((eb: any) => 
+                eb.or([
+                    eb('Tbl_AgentRegistration.PositionID', 'not in', filters.excPositionID),
+                    eb('Tbl_AgentRegistration.PositionID', 'is', null)
+                ])
+            )
         }
 
         if(filters && filters.isVerified){

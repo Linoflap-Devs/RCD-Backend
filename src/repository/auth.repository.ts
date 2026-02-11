@@ -851,7 +851,8 @@ export const registerAgentTransaction = async(
     profileImageMetadata?: IImage, 
     govIdImageMetadata?: IImage,
     selfieImageMetadata?: IImage,
-    agentId?: number
+    agentId?: number,
+    fromInvite: boolean = false
 ): QueryResult<ITblAgentRegistration> => {
 
     const registerTransaction = await db.startTransaction().execute();
@@ -933,7 +934,7 @@ export const registerAgentTransaction = async(
             ReferredByID: data.referredById ? data.referredById : null,
             ReferredCode: data.referredCode ? data.referredCode : null,
             DivisionID: data.divisionId ? data.divisionId.toString() : null,
-            IsVerified: 1 // Only if agent id is present
+            IsVerified: fromInvite ? 0 : 1
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
@@ -1172,7 +1173,7 @@ export const registerBrokerTransaction = async(
             AffiliationDate: new Date(),
             GovImageID: govImageId > 0 ? govImageId : null,
             SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
-            IsVerified: brokerId ? 1 : 0 // Only if agent id is present
+            IsVerified: 1
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         // insert into work exp
@@ -1736,7 +1737,7 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
         const [registration] = await Promise.all([
             db.selectFrom('Tbl_BrokerRegistration')
                 .where('BrokerRegistrationID', '=', brokerRegistrationId)
-                .where('IsVerified', '=', 0)
+                .where('IsVerified', '=', 1)
                 .selectAll()
                 .executeTakeFirstOrThrow(),
             
@@ -1804,7 +1805,7 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
                                                 .executeTakeFirstOrThrow()
 
                 const updateBrokerRegistration = await trx.updateTable('Tbl_BrokerRegistration')
-                                                    .set('IsVerified', 1)
+                                                    .set('IsVerified', 2)
                                                     .where('BrokerRegistrationID', '=', brokerRegistrationId)
                                                     .executeTakeFirstOrThrow();
 

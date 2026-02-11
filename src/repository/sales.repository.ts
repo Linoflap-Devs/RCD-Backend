@@ -5,7 +5,7 @@ import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
-import { sql } from "kysely";
+import { sql, ExpressionBuilder } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import { CommissionDetailPositions, CommissionRate, CommissionRateDetail } from "../types/commission.types";
@@ -1280,7 +1280,7 @@ export const getPendingSales = async (
             totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
         }
 
-        if(filters && filters.approvalStatus){
+        if(filters && filters.approvalStatus && filters.approvalStatus.length > 0){
             result = result.where('ApprovalStatus', 'in', filters.approvalStatus)
             totalCountResult = totalCountResult.where('ApprovalStatus', 'in', filters.approvalStatus)
         }
@@ -1470,6 +1470,103 @@ export const getPendingSales = async (
                 message: error.message
             }
         }
+    }
+}
+
+export const getPendingSalesV2 = async (
+    divisionId?: number,
+    filters?: {
+        excPendingSaleIds?: number[],
+        month?: number,
+        year?: number,
+        agentId?: number,
+        excAgentId?: number,
+        brokerName?: string,
+        createdBy?: number,
+        createdByWeb?: number,
+        assignedUM?: number | null,
+        developerId?: number,
+        isUnique?: boolean,
+        approvalStatus?: number[],
+        salesBranch?: number,
+        showRejected?: boolean
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+
+   try {
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? null;
+
+        // Call the table-valued function
+        const results = await sql<AgentPendingSale>`
+            SELECT * FROM dbo.fn_GetPendingSales(
+                ${divisionId ?? null},
+                ${filters?.excPendingSaleIds?.join(',') ?? null},
+                ${filters?.month ?? null},
+                ${filters?.year ?? null},
+                ${filters?.agentId ?? null},
+                ${filters?.excAgentId ?? null},
+                ${filters?.brokerName ?? null},
+                ${filters?.createdBy ?? null},
+                ${filters?.createdByWeb ?? null},
+                ${filters?.assignedUM ?? null},
+                ${filters?.developerId ?? null},
+                ${filters?.isUnique ? 1 : 0},
+                ${filters?.approvalStatus?.join(',') ?? null},
+                ${filters?.salesBranch ?? null},
+                ${filters?.showRejected ? 1 : 0},
+                ${page || null},
+                ${pageSize || null}
+            )
+        `.execute(db);
+
+        // Get total count (you'd need a separate count function or query)
+        const countResult = await sql<{ count: number }>`
+            SELECT COUNT(*) as count FROM dbo.fn_GetPendingSales(
+                ${divisionId ?? null},
+                ${filters?.excPendingSaleIds?.join(',') ?? null},
+                ${filters?.month ?? null},
+                ${filters?.year ?? null},
+                ${filters?.agentId ?? null},
+                ${filters?.excAgentId ?? null},
+                ${filters?.brokerName ?? null},
+                ${filters?.createdBy ?? null},
+                ${filters?.createdByWeb ?? null},
+                ${filters?.assignedUM ?? null},
+                ${filters?.developerId ?? null},
+                ${filters?.isUnique ? 1 : 0},
+                ${filters?.approvalStatus?.join(',') ?? null},
+                ${filters?.salesBranch ?? null},
+                ${filters?.showRejected ? 1 : 0},
+                1,
+                NULL
+            )
+        `.execute(db);
+
+        const totalCount = Number(countResult.rows[0]?.count ?? 0);
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+        return {
+            success: true,
+            data: {
+                totalPages: totalPages,
+                results: results.rows
+            }
+        };
+    } catch(err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {totalPages: number, results: AgentPendingSale[]},
+            error: {
+                code: 500,
+                message: error.message
+            }
+        };
     }
 }
 

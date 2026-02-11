@@ -1,8 +1,15 @@
-import { DB } from './db-types' // this is the Database interface we defined earlier
+import { DB } from './db-types'
 import * as tedious from 'tedious'
 import * as tarn from 'tarn'
 import { Kysely, MssqlDialect } from 'kysely'
 import 'dotenv/config'
+
+const isTesting = process.env.NODE_ENV === 'testing'
+
+const getEnvVar = (key: string): string => {
+  const prefix = isTesting ? 'TESTING_' : ''
+  return process.env[`${prefix}${key}`] || (key === 'DATABASE_SERVER' ? 'localhost' : '')
+}
 
 const dialect = new MssqlDialect({
   tarn: {
@@ -18,25 +25,21 @@ const dialect = new MssqlDialect({
     connectionFactory: () => new tedious.Connection({
       authentication: {
         options: {
-          password: process.env.DATABASE_PASSWORD,
-          userName: process.env.DATABASE_USER,
+          password: getEnvVar('DATABASE_PASSWORD'),
+          userName: getEnvVar('DATABASE_USER'),
         },
         type: 'default',
       },
       options: {
-        database: process.env.DATABASE_NAME,
-        port: 1433, 
+        database: getEnvVar('DATABASE_NAME'),
+        port: 1433,
         trustServerCertificate: true,
       },
-      server: process.env.DATABASE_SERVER || 'localhost',
+      server: getEnvVar('DATABASE_SERVER'),
     }),
   },
 })
 
-// Database interface is passed to Kysely's constructor, and from now on, Kysely 
-// knows your database structure.
-// Dialect is passed to Kysely's constructor, and from now on, Kysely knows how 
-// to communicate with your database.
 export const db = new Kysely<DB>({
   dialect,
   log: ['query', 'error'],

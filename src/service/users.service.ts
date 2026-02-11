@@ -1244,8 +1244,8 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
         handsOffRegistrations,
         handsOnRegistrations
     ] = await Promise.all([
-        getBrokerRegistrations(),
-        getAgentRegistrations({ positionID: brokerPosition.data[0].PositionID})
+        getBrokerRegistrations({ isVerified: 1}),
+        getAgentRegistrations({ isVerified: 1, positionID: [brokerPosition.data[0].PositionID] })
     ])
 
     if(!handsOffRegistrations.success || !handsOnRegistrations.success){

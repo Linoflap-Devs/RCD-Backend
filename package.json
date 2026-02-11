@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:unit": "jest src/test/unit",
+    "test:e2e": "jest src/test/e2e",
     "dev": "nodemon src/app.ts",
     "generate": "kysely-codegen --dialect 'mssql' --out-file src/db/db-types.ts",
     "build": "tsc",
@@ -35,13 +37,18 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.3.0",
     "@types/nodemailer": "^7.0.1",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
     "kysely-codegen": "^0.18.5",
     "nodemon": "^3.1.10",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }

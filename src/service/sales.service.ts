@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -644,6 +644,10 @@ export const addPendingSalesService = async (
 
         if(agentData.data.ReferredByID){
             assignedUM = agentData.data.ReferredByID
+        }
+
+        if(agentData.data.Position == 'UNIT MANAGER'){
+            assignedUM = agentData.data.AgentID
         }
     }
 
@@ -1424,6 +1428,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: false,
                     isEditable: false,
                     isRejected: false,
+                    hasAssignedUM: true,
                     //source: 'approved'
                 }
             });
@@ -1459,6 +1464,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: isSubmitter ? role == sale.ApprovalStatus : role == (sale.ApprovalStatus + 1),
                     isRejected: sale.IsRejected ? true : false,
+                    hasAssignedUM: sale.AssignedUM ? true : false,
                     //source: 'pending'
                 }
             });
@@ -1498,6 +1504,7 @@ export const getCombinedPersonalSalesService = async (
                     hasRemarks: sale.Remarks ? true : false,
                     isEditable: false,
                     isRejected: sale.IsRejected ? true : false,
+                    hasAssignedUM: sale.AssignedUM ? true : false,
                     //source: 'sdApproved'
                 }
             });
@@ -2896,17 +2903,17 @@ export const getWebPendingSalesService = async (
 
     const [result, ownedSales] = await Promise.all (
         [
-            getPendingSales(
+            getPendingSalesV2(
                 undefined, 
                 { 
                     ...filters,
-                    approvalStatus: role == 'branch sales staff' ? [3] : [4],
+                    approvalStatus: role == 'branch sales staff' ? [3] : undefined,
                     salesBranch: role == 'branch sales staff' ? userData.data.BranchID : undefined,
                     isUnique: true
                 }, 
                 pagination
             ),
-            getPendingSales(
+            getPendingSalesV2(
                 undefined, 
                 { 
                     ...filters,
