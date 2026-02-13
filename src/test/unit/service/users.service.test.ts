@@ -8,7 +8,6 @@ describe('Service Tests', () => {
 
     describe('editAgentGovIdsService', () => {
         it('rejects missing agent', async () => {
-            // Mock the repository - we already tested it works
             (findAgentDetailsByUserId as jest.Mock).mockResolvedValue({
                 success: false
             });
@@ -24,7 +23,6 @@ describe('Service Tests', () => {
         });
 
         it('edits gov ids', async () => {
-            // Mock the repository - we already tested it works
             (findAgentDetailsByUserId as jest.Mock).mockResolvedValue({
                 success: true,
                 data: { AgentID: 1 }
@@ -38,6 +36,8 @@ describe('Service Tests', () => {
             const result = await editAgentGovIdsService(1, [{IdType: 'SSSNumber', IdNumber: 'SSS123456789'}]);
             
             expect(result.success).toBe(true);
+            expect(findAgentDetailsByUserId).toHaveBeenCalledWith(1);
+            expect(editAgentGovIds).toHaveBeenCalledWith(1, [{IdType: 'SSSNumber', IdNumber: 'SSS123456789'}]);
         });
     })
   
