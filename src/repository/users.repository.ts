@@ -1,7 +1,7 @@
 import { db } from "../db/db";
 import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
-import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerWorkExp } from "../types/brokers.types";
+import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerV2, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture, IAgentWorkExp, IAgentWorkExpEdit, VwAgentPicture } from "../types/users.types";
@@ -319,6 +319,65 @@ export const getBrokerGovIds = async (brokerId: number): QueryResult<{IdType: st
         }
     }
 }
+
+export const editBrokerGovIds = async (BrokerId: number, govIds: {IdType: string, IdNumber: string | null}[]): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
+    try {
+        const columns = [
+            'PRCNumber',
+            'DSHUDNumber',
+            'SSSNumber',
+            'PhilhealthNumber',
+            'PagIbigNumber',
+            'TINNumber',
+            'EmployeeIDNumber'
+        ]
+
+        const result = await db.updateTable('Tbl_Broker')
+            .set({
+                PRCNumber: govIds.find((id) => id.IdType === 'PRCNumber')?.IdNumber,
+                DSHUDNumber: govIds.find((id) => id.IdType === 'DSHUDNumber')?.IdNumber,
+                SSSNumber: govIds.find((id) => id.IdType === 'SSSNumber')?.IdNumber,
+                PhilhealthNumber: govIds.find((id) => id.IdType === 'PhilhealthNumber')?.IdNumber,
+                PagIbigNumber: govIds.find((id) => id.IdType === 'PagIbigNumber')?.IdNumber,
+                TINNumber: govIds.find((id) => id.IdType === 'TINNumber')?.IdNumber,
+                EmployeeIDNumber: govIds.find((id) => id.IdType === 'EmployeeIDNumber')?.IdNumber,
+            })
+            .where('BrokerID', '=', BrokerId)
+            .outputAll('inserted')
+            .executeTakeFirst();
+
+        if(!result){
+            throw new Error('No Broker found.')
+        }
+
+        const ids = columns.map((column: string) => {
+            const value = result[column as keyof ITblBrokerV2]
+
+            return {
+                IdType: column,
+                IdNumber: value?.toString() || null
+            }
+        })
+
+        return {
+            success: true,
+            data: ids
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as {IdType: string, IdNumber: string}[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 
 export const findEmployeeUserById = async (userWebId: number): QueryResult<ITblUsersWeb> => {
     try {

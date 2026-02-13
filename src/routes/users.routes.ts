@@ -1,5 +1,5 @@
 import express from 'express';
-import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentGovIdsController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getInviteRegistrationDetailsController, getMobileAccountsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUserInvitedEmailsController, getUsersController } from '../controller/users.controller';
+import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentGovIdsController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerGovIdsController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getInviteRegistrationDetailsController, getMobileAccountsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUserInvitedEmailsController, getUsersController } from '../controller/users.controller';
 import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
 import { addBrokerSchema, editAgentGovIdsSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
@@ -29,6 +29,7 @@ router.route('/brokers/:brokerId').get([validateAllSessions], getOtherBrokerUser
 router.route('/brokers/:brokerId').patch([validateEmployeeSession, validateRole(['AD', 'SA', 'BH'])], editWebBrokerController);
 router.route('/brokers/:brokerId').delete([validateEmployeeSession, validateRole(['AD', 'SA'])], deleteWebBrokerController);
 router.route('/broker-ids').get([validateBrokerSession], getBrokerGovIdsController);
+router.route('/broker-ids').patch([validateBrokerSession, validate(editAgentGovIdsSchema)], editBrokerGovIdsController);
 router.route('/broker-details').patch([validateBrokerSession], editBrokerDetailsController);
 router.route('/broker-image').patch([validateBrokerSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editBrokerImageController)
 router.route('/broker-education').patch([validateBrokerSession], editBrokerEducationController);
