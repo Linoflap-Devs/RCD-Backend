@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
@@ -534,6 +534,47 @@ export const getAgentGovIdsService = async (agentUserId: number): QueryResult<an
     return {
         success: true,
         data: govIds.data
+    }
+}
+
+export const editAgentGovIdsService = async (userId: number, govIds: {IdType: string, IdNumber: string | null}[]): QueryResult<{ IdType: string, IdNumber: string | null }[]> => {
+    // validations
+
+    const agent = await findAgentDetailsByUserId(userId)
+
+    if(!agent.success) return {
+        success: false,
+        data: [],
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agent.data.AgentID){
+        return {
+            success: false,
+            data: [],
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editAgentGovIds(agent.data.AgentID, govIds)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [],
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

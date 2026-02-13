@@ -211,6 +211,64 @@ export const getAgentGovIds = async (agentId: number): QueryResult<{IdType: stri
     }
 }
 
+export const editAgentGovIds = async (agentId: number, govIds: {IdType: string, IdNumber: string | null}[]): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
+    try {
+        const columns = [
+            'PRCNumber',
+            'DSHUDNumber',
+            'SSSNumber',
+            'PhilhealthNumber',
+            'PagIbigNumber',
+            'TINNumber',
+            'EmployeeIDNumber'
+        ]
+
+        const result = await db.updateTable('Tbl_Agents')
+            .set({
+                PRCNumber: govIds.find((id) => id.IdType === 'PRCNumber')?.IdNumber,
+                DSHUDNumber: govIds.find((id) => id.IdType === 'DSHUDNumber')?.IdNumber,
+                SSSNumber: govIds.find((id) => id.IdType === 'SSSNumber')?.IdNumber,
+                PhilhealthNumber: govIds.find((id) => id.IdType === 'PhilhealthNumber')?.IdNumber,
+                PagIbigNumber: govIds.find((id) => id.IdType === 'PagIbigNumber')?.IdNumber,
+                TINNumber: govIds.find((id) => id.IdType === 'TINNumber')?.IdNumber,
+                EmployeeIDNumber: govIds.find((id) => id.IdType === 'EmployeeIDNumber')?.IdNumber,
+            })
+            .where('AgentID', '=', agentId)
+            .outputAll('inserted')
+            .executeTakeFirst();
+
+        if(!result){
+            throw new Error('No agent found.')
+        }
+
+        const ids = columns.map((column: string) => {
+            const value = result[column as keyof TblAgents]
+
+            return {
+                IdType: column,
+                IdNumber: value?.toString() || null
+            }
+        })
+
+        return {
+            success: true,
+            data: ids
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as {IdType: string, IdNumber: string}[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const getBrokerGovIds = async (brokerId: number): QueryResult<{IdType: string, IdNumber: string | null}[]> => {
     try {
         const result = await db.selectFrom('Tbl_Broker')

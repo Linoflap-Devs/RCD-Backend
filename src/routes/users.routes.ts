@@ -1,7 +1,7 @@
 import express from 'express';
-import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getInviteRegistrationDetailsController, getMobileAccountsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUserInvitedEmailsController, getUsersController } from '../controller/users.controller';
+import { addBrokerController, deleteWebBrokerController, editAgentDetailsController, editAgentEducationController, editAgentGovIdsController, editAgentImageController, editAgentWorkExpController, editBrokerDetailsController, editBrokerEducationController, editBrokerImageController, editBrokerWorkExpController, editWebBrokerController, findAgentByAgentIdController, getAgentGovIdsController, getAgentUserDetailsController, getAgentUsersController, getBrokerGovIdsController, getBrokerRegistrationDetailsController, getBrokerRegistrationsController, getBrokersController, getBrokerUserDetailsController, getInviteRegistrationDetailsController, getMobileAccountsController, getOtherBrokerUserDetailsController, getTop10SPsController, getTop10UMsController, getUserInvitedEmailsController, getUsersController } from '../controller/users.controller';
 import { validateAgentEmployeeSession, validateAllSessions, validateBrokerSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
-import { addBrokerSchema, editAgentSchema } from '../schema/users.schema';
+import { addBrokerSchema, editAgentGovIdsSchema, editAgentSchema } from '../schema/users.schema';
 import { validate } from '../middleware/zod';
 import { multerUpload } from '../middleware/multer';
 import { validateRole } from '../middleware/roles';
@@ -15,6 +15,7 @@ router.route('/user-details').get([validateSession], getAgentUserDetailsControll
 router.route('/broker-details').get([validateBrokerSession], getBrokerUserDetailsController);
 
 router.route('/user-ids').get([validateSession], getAgentGovIdsController);
+router.route('/user-ids').patch([validateSession, validate(editAgentGovIdsSchema)], editAgentGovIdsController)
 router.route('/user-details').patch([validateSession, validate(editAgentSchema)], editAgentDetailsController);
 router.route('/user-image').patch([validateSession, multerUpload.fields([{name: 'profileImage', maxCount: 1}])], editAgentImageController)
 router.route('/user-education').patch([validateSession], editAgentEducationController);
