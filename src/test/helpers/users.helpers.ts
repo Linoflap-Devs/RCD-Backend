@@ -1,10 +1,11 @@
 import { sql } from "kysely";
 import { db } from "../../db/db";
 import { TblAgentUser } from "../../db/db-types";
-import { ITblAgentUser, ITblUsersWeb } from "../../types/auth.types";
+import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../../types/auth.types";
 import { QueryResult } from "../../types/global.types";
 import { hashPassword } from "../../utils/scrypt";
 import 'dotenv/config'
+import { ITblBroker } from "../../types/brokers.types";
 
 const createUser = async (
     data: {
@@ -136,6 +137,87 @@ const createWebUser = async (
     }
 }
 
+const createBrokerUser = async (
+    data: {
+        firstName: string;
+        email: string;
+        password: string;
+        roleId: number;
+        divisionId?: number  
+    }
+): QueryResult<ITblBrokerUser> => {
+    const trx = await db.startTransaction().execute();
+
+    try {
+
+        const idInsertBrokersOn = await sql`SET IDENTITY_INSERT Tbl_Broker ON`.execute(trx);
+        const idInsertUsersOn = await sql`SET IDENTITY_INSERT Tbl_BrokerUser ON`.execute(trx);
+
+        const agent = await trx.insertInto('Tbl_Broker')
+                        .values({
+                            Broker: data.firstName,
+                            RepresentativeName: data.firstName,
+                            PositionID: data.roleId,
+                            Address: '',
+                            AddressEmergency: '',
+                            BrokerCode: '',
+                            BrokerTaxRate: 0,
+                            Birthdate: new Date(),
+                            Birthplace: '',
+                            CivilStatus: '',
+                            ContactEmergency: '',
+                            ContactNumber: '',
+                            DSHUDNumber: null,
+                            EmployeeIDNumber: null,
+                            PagIbigNumber: null,
+                            PersonEmergency: '',
+                            PhilhealthNumber: null,
+                            PRCNumber: null,
+                            ReferredByID: null,
+                            Religion: null,
+                            Sex: 'Male',
+                            SSSNumber: null,
+                            TelephoneNumber: null,
+                            IsActive: 1,
+                            LastUpdate: new Date(),
+                            UpdateBy: 1
+                        })
+                        .outputAll('inserted')
+                        .executeTakeFirstOrThrow()
+
+        const user = await trx.insertInto('Tbl_BrokerUser')
+                        .values({ 
+                            Email: data.email,
+                            Password: await hashPassword(data.password),
+                            IsVerified: 1,
+                            BrokerID: agent.BrokerID
+                         })
+                        .outputAll('inserted')
+                        .executeTakeFirstOrThrow()
+
+        const idInsertBrokersOff = await sql`SET IDENTITY_INSERT Tbl_Broker OFF`.execute(trx);
+        const idInsertUsersOff = await sql`SET IDENTITY_INSERT Tbl_BrokerUser OFF`.execute(trx);
+
+        await trx.commit().execute()
+
+        return { 
+            success: true, 
+            data: user 
+        }
+    } catch (err: unknown) {
+        await trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                code: 400,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const createSP = async (divisionId?: number): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESPERSON',
@@ -218,6 +300,28 @@ export const createAdmin = async (): QueryResult<ITblUsersWeb> => {
         return {
             success: false,
             data: {} as ITblUsersWeb,
+            error: result.error
+        }
+    }
+
+    return {
+        success: result.success,
+        data: result.data,
+    }
+}
+
+export const createHandsOffBroker = async (): QueryResult<ITblBrokerUser> => {
+    const result = await createBrokerUser({ 
+        firstName: 'HANDSOFF BROKER',
+        email: 'broker@gmail.com',
+        password: process.env.TESTING_PW || 'password',
+        roleId: 1
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
             error: result.error
         }
     }
