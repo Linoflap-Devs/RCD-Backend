@@ -93,6 +93,43 @@ describe('Users E2E Test', () => {
             expect(result.statusCode).toBe(401)
         })
 
+        it('should reject unknown ID types', async () => {
+            const result = await agent
+                .patch('/api/users/user-ids')
+                .send([
+                    {
+                        IdType: 'PRCID',
+                        IdNumber: '123'
+                    }
+                ])
+
+            expect(result.statusCode).toBe(400)
+        })
+
+        it('should reject non-arrays', async () => {
+            const result = await agent
+                .patch('/api/users/user-ids')
+                .send({
+                    IdType: 'PRCID',
+                    IdNumber: '123'
+                })
+
+            expect(result.statusCode).toBe(400)
+        })
+
+        it('should reject different data formats', async () => {
+            const result = await agent
+                .patch('/api/users/user-ids')
+                .send([
+                    {
+                        IdName: 'PRCID',
+                        IdValue: '123'
+                    }
+                ])
+
+            expect(result.statusCode).toBe(400)
+        })
+
         afterAll(async() => {
             const cleanupDb = await truncateAllTables()
             await db.destroy()
