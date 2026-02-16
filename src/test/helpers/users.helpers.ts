@@ -10,9 +10,12 @@ import { ITblBroker } from "../../types/brokers.types";
 const createUser = async (
     data: {
         firstName: string;
+        agentCode: string,
         email: string;
         password: string;
         roleId: number;
+        referredById?: number;
+        referredCode?: string;
         divisionId?: number  
     },
 ): QueryResult<ITblAgentUser> => {
@@ -31,7 +34,7 @@ const createUser = async (
                             Address: '',
                             AddressEmergency: '',
                             AffiliationDate: new Date(),
-                            AgentCode: '',
+                            AgentCode: data.agentCode,
                             AgentTaxRate: 0,
                             Birthdate: new Date(),
                             Birthplace: '',
@@ -45,8 +48,8 @@ const createUser = async (
                             PersonEmergency: '',
                             PhilhealthNumber: null,
                             PRCNumber: null,
-                            ReferredByID: null,
-                            ReferredCode: null,
+                            ReferredByID: data.referredById || null,
+                            ReferredCode: data.referredCode || null,
                             Religion: null,
                             Sex: 'Male',
                             SSSNumber: null,
@@ -59,12 +62,49 @@ const createUser = async (
                         .outputAll('inserted')
                         .executeTakeFirstOrThrow()
 
+        const registration = await trx.insertInto('Tbl_AgentRegistration')
+                        .values({
+                            FirstName: data.firstName,
+                            LastName: 'USER',
+                            PositionID: data.roleId,
+                            Address: '',
+                            AddressEmergency: '',
+                            AffiliationDate: new Date(),
+                            AgentCode: data.agentCode,
+                            AgentTaxRate: 0,
+                            Birthdate: new Date(),
+                            Birthplace: '',
+                            CivilStatus: '',
+                            ContactEmergency: '',
+                            ContactNumber: '',
+                            DivisionID: data.divisionId ? data.divisionId.toString() : "1",
+                            DSHUDNumber: null,
+                            EmployeeIDNumber: null,
+                            PagIbigNumber: null,
+                            PersonEmergency: '',
+                            PhilhealthNumber: null,
+                            PRCNumber: null,
+                            ReferredByID: data.referredById || null,
+                            ReferredCode: data.referredCode || null,
+                            Religion: null,
+                            Sex: 'Male',
+                            SSSNumber: null,
+                            TelephoneNumber: null,
+                            IsVerified: 2,
+                            LastUpdate: new Date(),
+                            MiddleName: '',
+                            UpdateBy: 1
+                        })
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow()
+
         const user = await trx.insertInto('Tbl_AgentUser')
                         .values({ 
                             Email: data.email,
                             Password: await hashPassword(data.password),
                             IsVerified: 1,
-                            AgentID: agent.AgentID
+                            AgentID: agent.AgentID,
+                            AgentRegistrationID: registration.AgentRegistrationID
                          })
                         .outputAll('inserted')
                         .executeTakeFirstOrThrow()
@@ -218,13 +258,16 @@ const createBrokerUser = async (
     }
 }
 
-export const createSP = async (divisionId?: number): QueryResult<ITblAgentUser> => {
+export const createSP = async (divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESPERSON',
+        agentCode: 'SP',
         email: 'sp@gmail.com',
         password: process.env.TESTING_PW || 'password',
         roleId: 5,
-        divisionId: divisionId
+        divisionId: divisionId,
+        referredById: referredById,
+        referredCode: referredCode
     })
 
     if(!result.success){
@@ -241,13 +284,16 @@ export const createSP = async (divisionId?: number): QueryResult<ITblAgentUser> 
     }
 }
 
-export const createUM = async (divisionId?: number): QueryResult<ITblAgentUser> => {
+export const createUM = async (divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'UNITMANAGER',
+        agentCode: 'UM',
         email: 'um@gmail.com',
         password: process.env.TESTING_PW || 'password',
         roleId: 86,
-        divisionId: divisionId
+        divisionId: divisionId,
+        referredById: referredById,
+        referredCode: referredCode
     })
 
     if(!result.success){
@@ -264,13 +310,16 @@ export const createUM = async (divisionId?: number): QueryResult<ITblAgentUser> 
     }
 }
 
-export const createSD = async (divisionId?: number): QueryResult<ITblAgentUser> => {
+export const createSD = async (divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESDIRECTOR',
+        agentCode: 'SD',
         email: 'sd@gmail.com',
         password: process.env.TESTING_PW || 'password',
         roleId: 85,
-        divisionId: divisionId
+        divisionId: divisionId,
+        referredById: referredById,
+        referredCode: referredCode
     })
 
     if(!result.success){
