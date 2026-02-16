@@ -375,7 +375,7 @@ describe('Registration Flow Test', () => {
     })
 
     afterAll( async () => {
-         const cleanup = await truncateAllTables()
-            await db.destroy()
+        const cleanup = await truncateAllTables()
+        await db.destroy()
     })
 })

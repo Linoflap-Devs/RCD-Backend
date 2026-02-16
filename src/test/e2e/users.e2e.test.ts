@@ -10,6 +10,7 @@ import authRouter from '../../routes/auth.routes'
 import usersRouter from '../../routes/users.routes'
 import cookieParser from 'cookie-parser'
 import { ITblAgentUser, ITblBrokerUser } from '../../types/auth.types'
+import { after } from 'node:test'
 
 const app = express()
 
@@ -132,11 +133,10 @@ describe('Users E2E Test', () => {
 
         afterAll(async() => {
             const cleanupDb = await truncateAllTables()
-            await db.destroy()
         })
     })
 
-    describe.only('PATCH /broker-ids', () => {
+    describe('PATCH /broker-ids', () => {
 
         const updateData: {IdType: string, IdNumber: string}[] = [
             {
@@ -249,7 +249,10 @@ describe('Users E2E Test', () => {
 
         afterAll(async() => {
             const cleanupDb = await truncateAllTables()
-            await db.destroy()
         })
+    })
+
+    afterAll(async() => {
+        await db.destroy()
     })
 })
