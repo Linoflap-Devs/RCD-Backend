@@ -1079,8 +1079,16 @@ export const getAgentEducation = async (agentId: number): QueryResult<IAgentEduc
     }
 }
 
-export const getAgentImages = async (ids: number[]): QueryResult<TblImageWithId[]> => {
+export const getAgentImages = async (ids?: number[]): QueryResult<TblImageWithId[]> => {
     try {
+
+        if(!ids || ids.length === 0){
+            return {
+                success: true,
+                data: [] as TblImageWithId[]
+            }
+        }
+
         const result = await db.selectFrom('Tbl_Image')
             .selectAll()
             .where('Tbl_Image.ImageID', 'in', ids)
@@ -1174,7 +1182,7 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
             UpdateBy: userId
         }
 
-        const result = await db.updateTable('Tbl_Agents')
+        const result = await trx.updateTable('Tbl_Agents')
             .where('AgentID', '=', agentId)
             .set(updateData)
             .outputAll('inserted')
@@ -1191,6 +1199,8 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
                 .execute();
         }
 
+        await trx.commit().execute();
+
         return {
             success: true,
             data: result
@@ -1198,6 +1208,7 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
     }
 
     catch(err: unknown){
+        await trx.rollback().execute();
         const error = err as Error
         return {
             success: false,

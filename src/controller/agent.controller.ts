@@ -327,7 +327,7 @@ export const promoteAgentController = async (req: Request, res: Response) => {
 
     const { positionID } = req.body
 
-    const result = await editAgentService(session.userID, Number(agentId), { PositionID: positionID });
+    const result = await editAgentService(session.userID, Number(agentId), { PositionID: positionID, ReferredByID: null, ReferredCode: null });
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to promote agent.', data: {}})
