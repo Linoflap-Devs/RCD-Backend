@@ -32,7 +32,7 @@ const dialect = new MssqlDialect({
       },
       options: {
         database: getEnvVar('DATABASE_NAME'),
-        port: 1433,
+        port: getEnvVar('DATABASE_PORT') ? Number(getEnvVar('DATABASE_PORT')) : 1433,
         trustServerCertificate: true,
       },
       server: getEnvVar('DATABASE_SERVER'),
@@ -42,5 +42,5 @@ const dialect = new MssqlDialect({
 
 export const db = new Kysely<DB>({
   dialect,
-  log: ['query', 'error'],
+  log: ['error'],
 })
