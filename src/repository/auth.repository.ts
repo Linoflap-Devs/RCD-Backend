@@ -1340,7 +1340,13 @@ export const findBrokerRegistrationById = async(agentRegistrationId: number): Qu
     }
 }
 
-export const approveAgentRegistrationTransaction = async(agentRegistrationId: number, agentId?: number, referralCode?: string, referralId?: number): QueryResult<IAgentUser> => {
+export const approveAgentRegistrationTransaction = async(
+    agentRegistrationId: number, 
+    agentId?: number, 
+    referralCode?: string, 
+    referralId?: number,
+    divisionId?: number
+): QueryResult<IAgentUser> => {
     try {
 
         // get all relevant data
@@ -1396,6 +1402,8 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
         console.log('Agent data to link: ', agentData)
         console.log('Registration data: ', registration)
 
+        console.log('trx params', {agentRegistrationId: agentRegistrationId, agentId: agentId, referralCode: referralCode, referralId: referralId, divisionId: divisionId})
+
         const trx = await db.startTransaction().execute();
 
         let agentIdInserted = 0;
@@ -1406,6 +1414,13 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     const updateAgent = await trx.updateTable('Tbl_Agents')
                                                 .set('ReferredCode', referralCode || '')
                                                 .set('ReferredByID', referralId || null)
+                                                .where('AgentID', '=', agentData.AgentID)
+                                                .executeTakeFirstOrThrow(); 
+                }
+
+                if(divisionId){
+                    const updateAgent = await trx.updateTable('Tbl_Agents')
+                                                .set('DivisionID', divisionId.toString())
                                                 .where('AgentID', '=', agentData.AgentID)
                                                 .executeTakeFirstOrThrow(); 
                 }
@@ -1523,9 +1538,9 @@ export const approveAgentRegistrationTransaction = async(agentRegistrationId: nu
                     AddressEmergency: '',
                     AffiliationDate: new Date(),
                     PositionID: registration.PositionID || 5,
-                    ReferredCode: registration.ReferredCode || null,
-                    ReferredByID: registration.ReferredByID || null,
-                    DivisionID: registration.DivisionID || null,
+                    ReferredCode: referralCode || registration.ReferredCode || null,
+                    ReferredByID: referralId || registration.ReferredByID || null,
+                    DivisionID: registration.DivisionID || ( divisionId ? divisionId?.toString() : null),
                     IsActive: 1,
                     LastUpdate: new Date(),
                     UpdateBy: 0

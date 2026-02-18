@@ -21,7 +21,8 @@ export const loginEmployeeSchema = z.object({
 
 export const approveRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
-    agentId: z.coerce.number().optional()
+    agentId: z.coerce.number().optional(),
+    unitManagerId: z.coerce.number().optional()
 })
 
 export const approveBrokerRegistrationSchema = z.object({

@@ -585,10 +585,11 @@ export const approveAgentRegistrationController = async (req: Request, res: Resp
 
     const {
         agentRegistrationId,
-        agentId
+        agentId,
+        unitManagerId
     } = req.body
 
-    const result = await approveAgentRegistrationService(agentRegistrationId, agentId);
+    const result = await approveAgentRegistrationService(agentRegistrationId, agentId, unitManagerId);
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({
