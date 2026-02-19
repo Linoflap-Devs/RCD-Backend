@@ -253,7 +253,8 @@ export const editAgentController = async (req: Request, res: Response) =>{
         pagibigNumber,
         tinNumber,
         employeeIdNumber,
-        divisions
+        divisions,
+        salespersonIds
     } = req.body
 
     console.log("divisions", divisions)
@@ -299,7 +300,8 @@ export const editAgentController = async (req: Request, res: Response) =>{
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber
         },
-        divisionsMap
+        divisionsMap,
+        salespersonIds
     )
 
     if(!result.success) {

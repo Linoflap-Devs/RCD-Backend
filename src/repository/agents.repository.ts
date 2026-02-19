@@ -1221,6 +1221,43 @@ export const editAgent = async (userId: number, agentId: number, data: Partial<I
     }
 }
 
+export const assignUMtoSPs = async (userId: number, unitManagerId: number, unitManagerCode: string, salesPersonIds: number[]): QueryResult<ITblAgent[]> => {
+    const trx = await db.startTransaction().execute()
+
+    try {
+        const result = await trx.updateTable('Tbl_Agents')
+            .where('AgentID', 'in', salesPersonIds)
+            .set({
+                ReferredByID: unitManagerId,
+                ReferredCode: unitManagerCode,
+                UpdateBy: userId,
+                LastUpdate: new Date()
+            })
+            .outputAll('inserted')
+            .execute();
+
+        await trx.commit().execute();
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblAgent[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }    
+    }
+}
+
 export const deleteAgent = async (userId: number, agentId: number): QueryResult<ITblAgent> => {
     try {
         const result = await db.updateTable('Tbl_Agents')

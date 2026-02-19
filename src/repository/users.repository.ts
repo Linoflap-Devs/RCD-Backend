@@ -682,6 +682,33 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
     }
 }
 
+export const findAgentsDetailsByAgentId = async (agentIds: number[]): QueryResult<VwAgents[]> => {
+    try {
+
+        const agent: VwAgents[] = await db.selectFrom('Vw_Agents')
+            .where('AgentID', 'in', agentIds)
+            .selectAll()
+            .execute()
+
+        return {
+            success: true,
+            data: agent
+        }
+    }
+
+    catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as VwAgents[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findBrokerDetailsByBrokerId = async (brokerId: number): QueryResult<IBroker> => {
     try {
         const result = await db.selectFrom('Tbl_Broker')
