@@ -1216,7 +1216,7 @@ export const rejectInviteRegistrationService = async (userId: number, inviteToke
     }
 }
 
-export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number) => {
+export const approveAgentRegistrationService = async (agentRegistrationId: number, agentId?: number, unitManagerId?: number) => {
 
     if(agentId){
         const checkAgentUsers = await getTblAgentUsers({agentIds: [agentId]})
@@ -1262,6 +1262,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
 
     let referralCode = undefined
     let referralId = undefined
+    let divisionId = undefined
 
     if(registration.data.IsVerified == 1 && registration.data.ReferredCode && registration.data.ReferredByID){
         // Invited by UM
@@ -1328,7 +1329,32 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
         referralId = agent.data.AgentID
     }
 
-    const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId, referralCode ? referralCode : undefined, referralId ? referralId : undefined)
+    else if(unitManagerId){
+        console.log('no referral code, unit manager id: ', unitManagerId)
+        // assigned Unit Manager
+
+        const unitManager = await findAgentDetailsByUserId(unitManagerId)
+
+        console.log('unit manager: ', unitManager)
+
+        if(!unitManager.success){
+            logger((unitManager.error?.message || 'Failed to find unit manager.'), {agentRegistrationId: agentRegistrationId})
+            return {
+                success: false,
+                data: {} as {token: string, email: string},
+                error: {
+                    message: unitManager.error?.message || 'Failed to find unit manager.',
+                    code: 404
+                }
+            }
+        }
+
+        referralCode = unitManager.data.AgentCode
+        referralId = unitManager.data.AgentID
+        divisionId = unitManager.data.DivisionID
+    }
+
+    const result = await approveAgentRegistrationTransaction(agentRegistrationId, agentId, referralCode ? referralCode : undefined, referralId ? referralId : undefined, divisionId ? Number(divisionId) : undefined)
 
     if(!result.success){
         logger((result.error?.message || 'Failed to approve agent registration.'), {agentRegistrationId: agentRegistrationId, agentId: agentId})

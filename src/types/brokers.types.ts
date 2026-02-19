@@ -56,6 +56,40 @@ export type IBrokerEmailPicture = IBroker & {
     }
 }
 
+export interface ITblBrokerV2 {
+    Address: string | null;
+    AddressEmergency: string | null;
+    Affiliation: Date | null;
+    Birthdate: Date | null;
+    Birthplace: string | null;
+    Broker: string;
+    BrokerCode: string;
+    BrokerID: number;
+    BrokerTaxRate: number,
+    CivilStatus: string | null;
+    ContactEmergency: string | null;
+    ContactNumber: string | null;
+    DSHUDNumber: string | null;
+    EmployeeIDNumber: string | null;
+    GovImageID: number | null;
+    IsActive: number;
+    LastUpdate: Date;
+    PagIbigNumber: string | null;
+    PersonEmergency: string | null;
+    PhilhealthNumber: string | null;
+    PositionID: number | null;
+    PRCNumber: string | null;
+    ReferredByID: number | null;
+    Religion: string | null;
+    RepresentativeName: string;
+    SelfieImageID: number | null;
+    Sex: string | null;
+    SSSNumber: string | null;
+    TelephoneNumber: string | null;
+    TINNumber: string | null;
+    UpdateBy: number;
+}
+
 
 export interface ITblBroker {
     Address: string | null;

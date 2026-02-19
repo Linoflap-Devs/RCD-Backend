@@ -172,3 +172,10 @@ export const addBrokerSchema = z.object({
     dshudNumber: z.string().max(20).optional(),
     employeeIdNumber: z.string().max(20).optional(),
 })
+
+export const editAgentGovIdsSchema = z.array(
+    z.object({
+        IdType: z.enum(['PRCNumber', 'DSHUDNumber', 'SSSNumber', 'PhilhealthNumber', 'PagIbigNumber', 'TINNumber', 'EmployeeIDNumber']),
+        IdNumber: z.string()
+    })
+)

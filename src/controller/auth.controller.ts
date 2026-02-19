@@ -442,7 +442,9 @@ export const loginBrokerController = async (req: Request, res: Response) => {
         return
     }
 
-    res.cookie('_rcd_broker_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+    const isTest = process.env.NODE_ENV === 'testing' ? true : false
+    //res.cookie('_rcd_broker_cookie', result.data.token, {httpOnly: true, sameSite: 'none', secure: true, maxAge: 24 * 60 * 60 * 1000})
+    res.cookie('_rcd_broker_cookie', result.data.token, {httpOnly: true, sameSite: isTest ? 'lax' : 'none', secure: !isTest, maxAge: 24 * 60 * 60 * 1000})
 
     return res.status(200).json({
         success: true, 
@@ -583,10 +585,11 @@ export const approveAgentRegistrationController = async (req: Request, res: Resp
 
     const {
         agentRegistrationId,
-        agentId
+        agentId,
+        unitManagerId
     } = req.body
 
-    const result = await approveAgentRegistrationService(agentRegistrationId, agentId);
+    const result = await approveAgentRegistrationService(agentRegistrationId, agentId, unitManagerId);
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({

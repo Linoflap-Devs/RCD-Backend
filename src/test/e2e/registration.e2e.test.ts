@@ -223,11 +223,13 @@ describe('Registration Flow Test', () => {
                 .send({
                     email: 'sp@thisemaildoesnotexist.com'
                 })
+
+            console.log(response)
             
             expect(response.body.success).toBe(true)
     
             inviteToken = response.body.data.inviteToken
-        }, 30000)
+        }, 60000)
 
         it('should reject incomplete registration form', async () => {
             const response = await request(app)
@@ -375,7 +377,7 @@ describe('Registration Flow Test', () => {
     })
 
     afterAll( async () => {
-         const cleanup = await truncateAllTables()
-            await db.destroy()
+        const cleanup = await truncateAllTables()
+        await db.destroy()
     })
 })

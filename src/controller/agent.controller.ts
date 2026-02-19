@@ -253,7 +253,8 @@ export const editAgentController = async (req: Request, res: Response) =>{
         pagibigNumber,
         tinNumber,
         employeeIdNumber,
-        divisions
+        divisions,
+        salespersonIds
     } = req.body
 
     console.log("divisions", divisions)
@@ -299,7 +300,8 @@ export const editAgentController = async (req: Request, res: Response) =>{
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber
         },
-        divisionsMap
+        divisionsMap,
+        salespersonIds
     )
 
     if(!result.success) {
@@ -327,7 +329,7 @@ export const promoteAgentController = async (req: Request, res: Response) => {
 
     const { positionID } = req.body
 
-    const result = await editAgentService(session.userID, Number(agentId), { PositionID: positionID });
+    const result = await editAgentService(session.userID, Number(agentId), { PositionID: positionID, ReferredByID: null, ReferredCode: null });
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to promote agent.', data: {}})
