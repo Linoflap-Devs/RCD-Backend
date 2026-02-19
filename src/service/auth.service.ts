@@ -392,14 +392,14 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string, division: number | undefined}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string, division: number | undefined, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
         logger((user.error?.message || 'Failed to find user.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -411,7 +411,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('User is not verified.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -427,7 +427,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('Password does not match.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -442,7 +442,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(( session.error?.message || 'Failed to create session.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Failed to create session.',
                 code: 500
@@ -456,13 +456,15 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(( agentDetails.error?.message || 'Failed to find agent details.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Failed to find agent details.',
                 code: 500
             }
         }
     }
+
+    const isSalesPerson = agentDetails.data.Position == 'SALES PERSON' ? true : false
 
     return {
         success: true,
@@ -471,6 +473,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
             email: email,
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
+            ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
 }

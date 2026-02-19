@@ -258,11 +258,11 @@ const createBrokerUser = async (
     }
 }
 
-export const createSP = async (divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser> => {
+export const createSP = async (divisionId?: number, referredById?: number, referredCode?: string, customEmail?: string): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESPERSON',
         agentCode: 'SP',
-        email: 'sp@gmail.com',
+        email: customEmail || 'sp@gmail.com',
         password: process.env.TESTING_PW || 'password',
         roleId: 5,
         divisionId: divisionId,
