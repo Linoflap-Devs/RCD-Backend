@@ -5,6 +5,8 @@ import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
 import { IAddDivision, IDivision, ITblDivision, ITblDivisionRequests } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
 import { agent } from "supertest"
+import { IAgent } from "../types/users.types"
+import { ITblAgentNullableID } from "../types/agent.types"
 
 export const getDivisionsService = async (): QueryResult<IDivision[]> => {
     const result = await getDivisions()
@@ -427,6 +429,95 @@ export const getDivisionRequestsService = async (
             ...result.data,
             results: obj
         }
+    }
+}
+
+export const getDivisionRequestDetailsService = async (
+    userId: number, 
+    divisionRequestId: number
+): QueryResult<any> => {
+
+    const agentData = await findAgentDetailsByUserId(userId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: agentData.error
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: {
+                message: 'No division found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await getDivisionRequests(
+        {
+            divisionRequestIds: [divisionRequestId],
+            divisionId: Number(agentData.data.DivisionID),
+            unitManagerId: agentData.data.Position == 'UNIT MANAGER' ? agentData.data.AgentID : undefined
+        }
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: result.error
+        }
+    }
+    
+    console.log(result.data.results)
+
+    // const obj: any = result.data.results.map((
+    //     item: ITblDivisionRequests & { 
+    //         FirstName: string, 
+    //         LastName: string, 
+    //         MiddleName?: string | null, 
+    //         Sex?: string | null, 
+    //         Address?: string | null, 
+    //         AffiliationDate?: Date | null }
+    // ) => ({
+    //     DivisionRequestID: item.DivisionRequestID,
+    //     AgentID: item.AgentID,
+    //     DivisionID: item.DivisionID,
+    //     UnitManagerID: item.UnitManagerID,
+    //     CreatedAt: item.CreatedAt,
+    //     IsActive: item.IsActive,
+    //     IsUMApproved: item.IsUMApproved,
+    //     Remarks: item.Remarks,
+    //     Agent: {
+    //         AgentID: item.AgentID,
+    //         FirstName: item.FirstName,
+    //         LastName: item.LastName,
+    //         MiddleName: item?.Agent?.MiddleName,
+    //         Sex: item?.Agent?.Sex,
+    //         Address: item?.Agent?.Address,
+    //         AffiliationDate: item?.Agent?.AffiliationDate,
+    //     }
+    // }))
+
+    return {
+        success: true,
+        data: result.data.results[0] ? result.data.results[0] : {}
     }
 }
 
