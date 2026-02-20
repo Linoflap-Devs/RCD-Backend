@@ -155,6 +155,90 @@ describe('Divisions E2E Test', () => {
         })
     })
 
+    describe('POST /requests', () => {
+        let spUser: ITblAgentUser = {} as ITblAgentUser
+        let umUser: ITblAgentUser = {} as ITblAgentUser
+        let spAgent = request.agent(app)
+        let umAgent = request.agent(app)
+
+         it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create a UM user', async () => {
+            const um = await createUM(1)
+            umUser = um.data
+            expect(um.success).toBe(true)
+        })
+
+        it('should create a SP user', async () => {
+
+            const sp = await createSP()
+            spUser = sp.data
+
+            
+            expect(sp.success).toBe(true)
+        })
+
+        it('should login the SP user', async () => {
+            const login = await spAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: spUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        it('should submit a division request', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+                console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
+        })
+
+        it('should reject non-SPs', async () => {
+
+            const login = await umAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: umUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+
+            const result = await umAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+            expect(result.statusCode).toBe(403)
+        })
+
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+
+    })
+
     afterAll(async () => {
         await db.destroy()
     })
