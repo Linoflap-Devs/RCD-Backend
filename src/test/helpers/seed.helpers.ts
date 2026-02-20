@@ -2,7 +2,7 @@
 import { sql, Transaction } from "kysely";
 import { db } from "../../db/db";
 import { DB, TblDivision, TblPosition } from "../../db/db-types";
-import { ITblDivision } from "../../types/division.types";
+import { ITblDivision, ITblDivisionRequests } from "../../types/division.types";
 import { QueryResult } from "../../types/global.types";
 
 export const seedPositions = async (): QueryResult<TblPosition[]> => {
@@ -115,3 +115,51 @@ export const seedDivisions = async(): QueryResult<ITblDivision[]> => {
         }
     }
 }
+
+export const seedDivisionRequests = async(
+    options: {
+        divisionId: number, 
+        unitManagerId: number, 
+        agentId: number, 
+        isApproved?: boolean, 
+        amount: number,
+        idOffset?: number
+    } 
+): QueryResult<ITblDivisionRequests[]> => {
+    try {
+
+        const loops = options.amount ? options.amount : 10;
+
+        const result = await db.insertInto('Tbl_DivisionRequests')
+                        .values(Array.from({ length: loops }, () => ({
+                            DivisionID: options.divisionId,
+                            UnitManagerID: options.unitManagerId,
+                            AgentID: options.agentId,
+                            IsActive: 1,
+                            IsUMApproved: options.isApproved ? 1 : 0,
+                            CreatedAt: new Date(),
+                            UpdatedAt: null,
+                            UpdatedBy: null,
+                            Remarks: null
+                        })))
+                        .outputAll('inserted')
+                        .execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblDivisionRequests[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}   
