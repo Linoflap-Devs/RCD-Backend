@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateAgentEmployeeSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
-import { activateDivisionController, addDivisionController, deleteDivisionController, editDivisionController, getAgentHierarchyController, getDivisionsController, getTop10DivisionsController } from '../controller/division.controller';
+import { activateDivisionController, addDivisionController, deleteDivisionController, editDivisionController, getAgentHierarchyController, getDivisionRequestsController, getDivisionsController, getTop10DivisionsController } from '../controller/division.controller';
 import { validateRole } from '../middleware/roles';
 
 const router = express.Router();
@@ -10,6 +10,10 @@ router.route('/agents').get([validateMobileSession], getAgentHierarchyController
 router.route('/top-10').get([validateEmployeeSession], getTop10DivisionsController);
 
 router.route('/activate/:divisionId').patch([validateEmployeeSession, validateRole(['AD','SA'])], activateDivisionController);
+
+// Division Requests
+
+router.route('/requests').get([validateSession, validateRole(['UM','SD'])], getDivisionRequestsController);
 
 router.route('/:divisionId').delete([validateEmployeeSession, validateRole(['AD','SA'])], deleteDivisionController);
 

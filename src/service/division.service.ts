@@ -1,9 +1,10 @@
-import { QueryResult } from "../types/global.types"
+import { PaginationResult, QueryResult } from "../types/global.types"
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository"
-import { activateDivision, addDivision, deleteDivision, editDivision, getDivisionAgents, getDivisions } from "../repository/division.repository"
+import { activateDivision, addDivision, deleteDivision, editDivision, getDivisionAgents, getDivisionRequests, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
-import { IAddDivision, IDivision, ITblDivision } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision, ITblDivisionRequests } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
+import { agent } from "supertest"
 
 export const getDivisionsService = async (): QueryResult<IDivision[]> => {
     const result = await getDivisions()
@@ -334,6 +335,76 @@ export const getTop10DivisionService = async (date?: Date): QueryResult<any> => 
         return {
             success: false,
             data: [],
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const getDivisionRequestsService = async (
+    userId: number, 
+    filters?: {
+        divisionId?: number,
+        unitManagerId?: number,
+        agentId?: number,
+        showInactive?: boolean,
+        showApproved?: boolean
+    },
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    }
+): QueryResult<PaginationResult<ITblDivisionRequests[]>> => {
+
+    const agentData = await findAgentDetailsByUserId(userId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: agentData.error
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(!agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: {
+                message: 'No division found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await getDivisionRequests(
+        {
+            ...filters,
+            divisionId: Number(agentData.data.DivisionID),
+            unitManagerId: agentData.data.Position == 'UNIT MANAGER' ? agentData.data.AgentID : undefined
+        },
+        pagination
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
             error: result.error
         }
     }

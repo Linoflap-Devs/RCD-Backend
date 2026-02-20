@@ -1,7 +1,7 @@
-import { QueryResult } from "../types/global.types"
+import { PaginationResult, QueryResult } from "../types/global.types"
 import { db } from "../db/db"
-import { TblDivision, VwAgents } from "../db/db-types"
-import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision } from "../types/division.types"
+import { TblDivision, TblDivisionRequests, VwAgents } from "../db/db-types"
+import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision, ITblDivisionRequests } from "../types/division.types"
 
 // Divisions
 export const getDivisions = async (filters?: {divisionIds?: number[]}): QueryResult<ITblDivision[]> => {
@@ -341,4 +341,96 @@ export const editDivisionBroker = async (userId: number,  divisionIds: number[],
             },
         }
     }   
+}
+
+// Division Requests
+
+export const getDivisionRequests = async (
+    filters?: {
+        divisionId?: number,
+        unitManagerId?: number,
+        agentId?: number,
+        showInactive?: boolean,
+        showApproved?: boolean
+    },
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    }
+): QueryResult<PaginationResult<ITblDivisionRequests[]>> => {
+    try {
+
+        console.log(filters, pagination)
+
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined; // Fallback to amount for backward compatibility
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        let baseQuery = await db.selectFrom('Tbl_DivisionRequests')
+            .selectAll()
+
+        let countQuery = await db.selectFrom('Tbl_DivisionRequests')
+            .select(({fn}) => fn.countAll<number>().as('count'))
+
+        if(filters && filters.divisionId){
+            baseQuery = baseQuery.where('DivisionID', '=', filters.divisionId)
+            countQuery = countQuery.where('DivisionID', '=', filters.divisionId)
+        }
+
+        if(filters && filters.unitManagerId){
+            baseQuery = baseQuery.where('UnitManagerID', '=', filters.unitManagerId)
+            countQuery = countQuery.where('UnitManagerID', '=', filters.unitManagerId)
+        }
+
+        if(filters && filters.agentId){
+            baseQuery = baseQuery.where('AgentID', '=', filters.agentId)
+            countQuery = countQuery.where('AgentID', '=', filters.agentId)
+        }
+
+        if(!filters || !filters.showInactive){
+            baseQuery = baseQuery.where('IsActive', '=', 1)
+            countQuery = countQuery.where('IsActive', '=', 1)
+        }
+
+        if(!filters || !filters.showApproved){
+            baseQuery = baseQuery.where('IsUMApproved', '=', 0)
+            countQuery = countQuery.where('IsUMApproved', '=', 0)
+        }
+
+        if(pagination && pagination.page && pagination.pageSize){
+            baseQuery = baseQuery.offset(offset).fetch(pagination.pageSize)
+        }
+
+        baseQuery = baseQuery.orderBy('CreatedAt', 'desc')
+
+        const result = await baseQuery.execute();
+        const count = await countQuery.execute();
+
+        const totalCountResult = count ? Number(count[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCountResult / pageSize) : 1;
+        
+
+        return {
+            success: true,
+            data: {
+                totalResults: totalCountResult,
+                totalPages: totalPages,
+                page: page,
+                results: result,
+            }
+        }
+
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as PaginationResult<ITblDivisionRequests[]>,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
 }
