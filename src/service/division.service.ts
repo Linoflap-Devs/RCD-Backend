@@ -1,6 +1,6 @@
 import { PaginationResult, QueryResult } from "../types/global.types"
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findEmployeeUserById } from "../repository/users.repository"
-import { activateDivision, addDivision, addDivisionRequest, deleteDivision, editDivision, getDivisionAgents, getDivisionRequests, getDivisions } from "../repository/division.repository"
+import { activateDivision, addDivision, addDivisionRequest, approveDivisionRequestTransaction, deleteDivision, editDivision, getDivisionAgents, getDivisionRequests, getDivisions } from "../repository/division.repository"
 import { getDivisionSalesTotalsFn } from "../repository/sales.repository"
 import { IAddDivision, IDivision, ITblDivision, ITblDivisionRequests } from "../types/division.types"
 import { TblDivision } from "../db/db-types"
@@ -635,4 +635,121 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         success: true,
         data: result.data
     }
+}
+
+export const approveDivisionRequestService = async (userId: number, divisionRequestId: number): QueryResult<ITblDivisionRequests> => {
+
+    const umData = await findAgentDetailsByUserId(userId)
+
+    if(!umData.success){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: umData.error
+        }
+    }
+
+    if(!umData.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(!umData.data.AgentCode){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(!umData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'User does not belong to a division',
+                code: 400
+            }
+        }
+    }
+
+    const request = await getDivisionRequests({divisionRequestIds: [divisionRequestId]})
+
+    if(!request.success){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: request.error
+        }
+    }
+
+    if(request.data.results.length == 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'No division request found',
+                code: 400
+            }
+        }
+    }
+
+    const divisionRequest = request.data.results[0]
+
+    const agentData = await findAgentDetailsByAgentId(divisionRequest.AgentID)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: agentData.error
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    if(agentData.data.ReferredByID || agentData.data.DivisionID){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'Agent already belongs to a division or UM.',
+                code: 400
+            }
+        }
+    }
+
+    const result = await approveDivisionRequestTransaction(umData.data.AgentID, umData.data.AgentCode, divisionRequestId)
+    
+    if(!result.success) return {
+        success: false,
+        data: {} as ITblDivisionRequests,
+        error: result.error
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+
+
+
 }

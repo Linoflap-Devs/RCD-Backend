@@ -481,3 +481,75 @@ export const addDivisionRequest = async ( data: IAddDivisionRequest ): QueryResu
         }
     }
 }
+
+export const editDivisionRequest = async (agentId: number, divisionRequestId: number, data: Partial<IAddDivisionRequest> ): QueryResult<ITblDivisionRequests> => {
+    try {
+
+        const updateData = {...data, UpdatedAt: new Date(), UpdatedBy: agentId}
+
+        const result = await db.updateTable('Tbl_DivisionRequests')
+            .set(updateData)
+            .where('DivisionRequestID', '=', divisionRequestId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(error: unknown){
+        const err = error as Error
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                code: 400,
+                message: err.message
+            }
+        }
+    }
+}
+
+export const approveDivisionRequestTransaction = async (unitManagerId: number, referredCode: string, divisionRequestId: number): QueryResult<ITblDivisionRequests> => {
+    
+    const trx = await db.startTransaction().execute();
+    try {
+        const approvedDivisionRequest = await trx.updateTable('Tbl_DivisionRequests')
+            .set({IsUMApproved: 1, IsActive: 1, UpdatedAt: new Date(), UpdatedBy: unitManagerId})
+            .where('DivisionRequestID', '=', divisionRequestId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        const editAgent = await trx.updateTable('Tbl_Agents')
+            .set({
+                ReferredByID: approvedDivisionRequest.UnitManagerID,
+                ReferredCode: referredCode, 
+                DivisionID: approvedDivisionRequest.DivisionID.toString(),
+            })
+            .outputAll('inserted')
+            .where('AgentID', '=', approvedDivisionRequest.AgentID)
+            .executeTakeFirstOrThrow()
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: approvedDivisionRequest
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute()
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }   
+}
