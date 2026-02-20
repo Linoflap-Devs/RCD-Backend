@@ -1,7 +1,7 @@
 import { PaginationResult, QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { TblDivision, TblDivisionRequests, VwAgents } from "../db/db-types"
-import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision, ITblDivisionRequests } from "../types/division.types"
+import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision, ITblDivisionRequests, IAddDivisionRequest } from "../types/division.types"
 
 // Divisions
 export const getDivisions = async (filters?: {divisionIds?: number[]}): QueryResult<ITblDivision[]> => {
@@ -431,6 +431,36 @@ export const getDivisionRequests = async (
                 code: 400,
                 message: error.message
             },
+        }
+    }
+}
+
+export const addDivisionRequest = async ( data: IAddDivisionRequest ): QueryResult<ITblDivisionRequests> => {
+    try {
+        const result = await db.insertInto('Tbl_DivisionRequests')
+            .values({
+                DivisionID: data.DivisionID,
+                UnitManagerID: data.UnitManagerID,
+                AgentID: data.AgentID,
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(error: unknown){
+        const err = error as Error
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                code: 400,
+                message: err.message
+            }
         }
     }
 }

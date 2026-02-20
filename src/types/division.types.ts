@@ -49,3 +49,9 @@ export interface ITblDivisionRequests {
   UpdatedAt: Date | null;
   UpdatedBy: number | null;
 }
+
+export interface IAddDivisionRequest {
+  AgentID: number;
+  DivisionID: number;
+  UnitManagerID: number
+}
