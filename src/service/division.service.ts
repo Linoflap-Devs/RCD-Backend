@@ -348,6 +348,7 @@ export const getTop10DivisionService = async (date?: Date): QueryResult<any> => 
 export const getDivisionRequestsService = async (
     userId: number, 
     filters?: {
+        divisionRequestIds?: number[],
         divisionId?: number,
         unitManagerId?: number,
         agentId?: number,
@@ -358,7 +359,7 @@ export const getDivisionRequestsService = async (
         page?: number,
         pageSize?: number
     }
-): QueryResult<PaginationResult<ITblDivisionRequests[]>> => {
+): QueryResult<PaginationResult<any>> => {
 
     const agentData = await findAgentDetailsByUserId(userId)
 
@@ -409,9 +410,23 @@ export const getDivisionRequestsService = async (
         }
     }
 
+    const obj: Partial<ITblDivisionRequests>[] = result.data.results.map((item: ITblDivisionRequests) => ({
+        DivisionRequestID: item.DivisionRequestID,
+        AgentID: item.AgentID,
+        DivisionID: item.DivisionID,
+        UnitManagerID: item.UnitManagerID,
+        CreatedAt: item.CreatedAt,
+        IsActive: item.IsActive,
+        IsUMApproved: item.IsUMApproved,
+        Remarks: item.Remarks
+    }))
+
     return {
         success: true,
-        data: result.data
+        data: {
+            ...result.data,
+            results: obj
+        }
     }
 }
 

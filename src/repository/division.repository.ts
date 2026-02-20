@@ -2,6 +2,7 @@ import { PaginationResult, QueryResult } from "../types/global.types"
 import { db } from "../db/db"
 import { TblDivision, TblDivisionRequests, VwAgents } from "../db/db-types"
 import { IAddDivision, IDivision, ITblDivision, IBrokerDivision, ITblBrokerDivision, ITblDivisionRequests, IAddDivisionRequest } from "../types/division.types"
+import { ITblAgent, ITblAgentNullableID } from "../types/agent.types"
 
 // Divisions
 export const getDivisions = async (filters?: {divisionIds?: number[]}): QueryResult<ITblDivision[]> => {
@@ -347,6 +348,7 @@ export const editDivisionBroker = async (userId: number,  divisionIds: number[],
 
 export const getDivisionRequests = async (
     filters?: {
+        divisionRequestIds?: number[],
         divisionId?: number,
         unitManagerId?: number,
         agentId?: number,
@@ -357,7 +359,7 @@ export const getDivisionRequests = async (
         page?: number,
         pageSize?: number
     }
-): QueryResult<PaginationResult<ITblDivisionRequests[]>> => {
+): QueryResult<PaginationResult<(ITblDivisionRequests & { Agent?: Partial<ITblAgentNullableID> })[]>> => {
     try {
 
         console.log(filters, pagination)
@@ -367,14 +369,29 @@ export const getDivisionRequests = async (
         const offset = pageSize ? (page - 1) * pageSize : 0;
 
         let baseQuery = await db.selectFrom('Tbl_DivisionRequests')
-            .selectAll()
+            .leftJoin('Tbl_Agents', 'Tbl_DivisionRequests.AgentID', 'Tbl_Agents.AgentID')
+            .selectAll('Tbl_DivisionRequests')
+            .select([
+                'Tbl_Agents.FirstName', 
+                'Tbl_Agents.MiddleName', 
+                'Tbl_Agents.LastName', 
+                'Tbl_Agents.AgentCode', 
+                'Tbl_Agents.Address', 
+                'Tbl_Agents.Sex', 
+                'Tbl_Agents.AffiliationDate'
+            ])
 
         let countQuery = await db.selectFrom('Tbl_DivisionRequests')
             .select(({fn}) => fn.countAll<number>().as('count'))
 
         if(filters && filters.divisionId){
-            baseQuery = baseQuery.where('DivisionID', '=', filters.divisionId)
-            countQuery = countQuery.where('DivisionID', '=', filters.divisionId)
+            baseQuery = baseQuery.where('Tbl_DivisionRequests.DivisionID', '=', filters.divisionId)
+            countQuery = countQuery.where('Tbl_DivisionRequests.DivisionID', '=', filters.divisionId)
+        }
+
+        if(filters && filters.divisionRequestIds){
+            baseQuery = baseQuery.where('Tbl_DivisionRequests.DivisionRequestID', 'in', filters.divisionRequestIds)
+            countQuery = countQuery.where('Tbl_DivisionRequests.DivisionRequestID', 'in', filters.divisionRequestIds)
         }
 
         if(filters && filters.unitManagerId){
@@ -383,13 +400,13 @@ export const getDivisionRequests = async (
         }
 
         if(filters && filters.agentId){
-            baseQuery = baseQuery.where('AgentID', '=', filters.agentId)
-            countQuery = countQuery.where('AgentID', '=', filters.agentId)
+            baseQuery = baseQuery.where('Tbl_DivisionRequests.AgentID', '=', filters.agentId)
+            countQuery = countQuery.where('Tbl_DivisionRequests.AgentID', '=', filters.agentId)
         }
 
         if(!filters || !filters.showInactive){
-            baseQuery = baseQuery.where('IsActive', '=', 1)
-            countQuery = countQuery.where('IsActive', '=', 1)
+            baseQuery = baseQuery.where('Tbl_DivisionRequests.IsActive', '=', 1)
+            countQuery = countQuery.where('Tbl_DivisionRequests.IsActive', '=', 1)
         }
 
         if(!filters || !filters.showApproved){
