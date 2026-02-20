@@ -559,6 +559,21 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         }
     }
 
+    const existingRequest = await getDivisionRequests({
+        agentId: agentData.data.AgentID
+    })
+
+    if(existingRequest.success && existingRequest.data.results.length > 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'User already has a pending division request',
+                code: 400
+            }
+        }
+    }
+
     const umData = await findAgentDetailsByAgentId(unitManagerId)
 
     if(!umData.success){
