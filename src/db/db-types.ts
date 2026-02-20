@@ -9,15 +9,6 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
-export interface DatabaseFirewallRules {
-  create_date: Date;
-  end_ip_address: string;
-  id: Generated<number>;
-  modify_date: Date;
-  name: unknown;
-  start_ip_address: string;
-}
-
 export interface InviteTokens {
   AgentRegistration: number | null;
   CreatedAt: Generated<Date>;
@@ -678,6 +669,19 @@ export interface TblDivision {
   IsActive: number;
   LastUpdate: Date;
   UpdateBy: number;
+}
+
+export interface TblDivisionRequests {
+  AgentID: number;
+  CreatedAt: Generated<Date>;
+  DivisionID: number;
+  DivisionRequestID: Generated<number>;
+  IsActive: Generated<number>;
+  IsUMApproved: Generated<number>;
+  Remarks: string | null;
+  UnitManagerID: number | null;
+  UpdatedAt: Date | null;
+  UpdatedBy: number | null;
 }
 
 export interface TblImage {
@@ -1723,7 +1727,6 @@ export interface XTblClients {
 }
 
 export interface DB {
-  database_firewall_rules: DatabaseFirewallRules;
   InviteTokens: InviteTokens;
   SalesTransTemp: SalesTransTemp;
   Tbl_AgentEducation: TblAgentEducation;
@@ -1763,6 +1766,7 @@ export interface DB {
   Tbl_Developers: TblDevelopers;
   Tbl_Distribution: TblDistribution;
   Tbl_Division: TblDivision;
+  Tbl_DivisionRequests: TblDivisionRequests;
   Tbl_Image: TblImage;
   Tbl_logs: TblLogs;
   tbl_Messages: TblMessages;
