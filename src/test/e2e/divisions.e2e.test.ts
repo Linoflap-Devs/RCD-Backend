@@ -233,6 +233,19 @@ describe('Divisions E2E Test', () => {
             expect(result.statusCode).toBe(403)
         })
 
+        it('should reject new requests if SP already has a pending request', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+                console.log(result.body)
+
+            expect(result.statusCode).toBe(400)
+        })
+
         afterAll(async () => {
             await truncateAllTables()
         })
