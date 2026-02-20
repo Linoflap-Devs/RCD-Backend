@@ -412,7 +412,8 @@ export const getDivisionRequestsService = async (
         }
     }
 
-    const obj: Partial<ITblDivisionRequests>[] = result.data.results.map((item: ITblDivisionRequests) => ({
+    const obj: Partial<ITblDivisionRequests & { FirstName: string, LastName: string, MiddleName?: string | null }>[] = result.data.results.map(
+        (item: ITblDivisionRequests & Partial<{ FirstName: string, LastName: string, MiddleName?: string | null }>) => ({
         DivisionRequestID: item.DivisionRequestID,
         AgentID: item.AgentID,
         DivisionID: item.DivisionID,
@@ -420,7 +421,10 @@ export const getDivisionRequestsService = async (
         CreatedAt: item.CreatedAt,
         IsActive: item.IsActive,
         IsUMApproved: item.IsUMApproved,
-        Remarks: item.Remarks
+        Remarks: item.Remarks,
+        FirstName: item.FirstName,
+        LastName: item.LastName,
+        MiddleName: item.MiddleName
     }))
 
     return {
