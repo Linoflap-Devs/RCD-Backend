@@ -533,6 +533,7 @@ export const editAgentService = async (userId: number, agentId: number, data: Pa
         }
     }
 
+    console.log('salespersonIds', salespersonIds)
     if(salespersonIds && salespersonIds.length > 0){
         const spAgents = await findAgentsDetailsByAgentId(salespersonIds)
 
