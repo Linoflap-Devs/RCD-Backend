@@ -353,117 +353,313 @@ describe('Divisions E2E Test', () => {
             expect(login.body.data.hasUMDivision).toBe(true)
         })
 
-        describe.only('PATCH /requests/reject/:divisionRequestId', () => {
-            let spUser: ITblAgentUser = {} as ITblAgentUser
-            let umUser: ITblAgentUser = {} as ITblAgentUser
-            let spAgent = request.agent(app)
-            let umAgent = request.agent(app)
+        it('should check the last request', async () => {
+            const result = await spAgent
+                .get('/api/divisions/requests/status')
 
-            let divisionRequestId = 0
-        
-            it('should seed divisions', async () => {
-                const divisions = await seedDivisions()
-                expect(divisions.success).toBe(true)
-            })
+            console.log(result.body)
 
-            it('should seed positions', async () => {
-                const positions = await seedPositions()
-                expect(positions.success).toBe(true)
-            })
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.IsUMApproved).toBe(1)
+            expect(result.body.data.IsActive).toBe(1)
+        })
 
-            it('should create a UM user', async () => {
-                const um = await createUM(1)
-                umUser = um.data
-                expect(um.success).toBe(true)
-            })
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+    })
 
-            it('should create a SP user', async () => {
+    describe('PATCH /requests/reject/:divisionRequestId', () => {
+        let spUser: ITblAgentUser = {} as ITblAgentUser
+        let umUser: ITblAgentUser = {} as ITblAgentUser
+        let spAgent = request.agent(app)
+        let umAgent = request.agent(app)
 
-                const sp = await createSP()
-                spUser = sp.data
+        let divisionRequestId = 0
+    
+        it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
 
-                
-                expect(sp.success).toBe(true)
-            })
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
 
-            it('should login the SP user', async () => {
-                const login = await spAgent
-                    .post('/api/auth/login-agent')
-                    .send({
-                        email: spUser.Email,
-                        password: process.env.TESTING_PW || 'password'
-                    })
+        it('should create a UM user', async () => {
+            const um = await createUM(1)
+            umUser = um.data
+            expect(um.success).toBe(true)
+        })
 
-                expect(login.statusCode).toBe(200)
-                expect(login.body.data.hasUMDivision).toBe(false)
-            })
+        it('should create a SP user', async () => {
 
-            it('should submit a division request', async () => {
-                const result = await spAgent
-                    .post('/api/divisions/requests')
-                    .send({
-                        divisionId: 1,
-                        unitManagerId: umUser.AgentID
-                    })
+            const sp = await createSP()
+            spUser = sp.data
 
-                    console.log(result.body)
+            
+            expect(sp.success).toBe(true)
+        })
 
-                expect(result.statusCode).toBe(200)
-                expect(result.body.data.DivisionID).toBe(1)
-                expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
-            })
+        it('should login the SP user', async () => {
+            const login = await spAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: spUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
 
-            it('should login the UM user', async () => {
-                const login = await umAgent
-                    .post('/api/auth/login-agent')
-                    .send({
-                        email: umUser.Email,
-                        password: process.env.TESTING_PW || 'password'
-                    })
+            expect(login.statusCode).toBe(200)
+            expect(login.body.data.hasUMDivision).toBe(false)
+        })
 
-                expect(login.statusCode).toBe(200)
-            })
+        it('should submit a division request', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
 
-            it('should see the request from the list', async () => {
-                const result = await umAgent
-                    .get('/api/divisions/requests')
+                console.log(result.body)
 
-                divisionRequestId = result.body.data.results[0].DivisionRequestID
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
+        })
 
-                expect(result.statusCode).toBe(200)
-                expect(result.body.data.results.length).toBe(1)
-            })
+        it('should login the UM user', async () => {
+            const login = await umAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: umUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
 
-            it('should reject the request', async () => {
-                const result = await umAgent
-                    .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
+            expect(login.statusCode).toBe(200)
+        })
 
-                expect(result.statusCode).toBe(200)
-            })
+        it('should see the request from the list', async () => {
+            const result = await umAgent
+                .get('/api/divisions/requests')
 
-            it('should not see the previous request', async () => {
-                const result = await umAgent
-                    .get('/api/divisions/requests')
+            divisionRequestId = result.body.data.results[0].DivisionRequestID
 
-                expect(result.statusCode).toBe(200)
-                expect(result.body.data.results.length).toBe(0)
-            })
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.results.length).toBe(1)
+        })
 
-            it('should login the SP user', async () => {
-                const login = await spAgent
-                    .post('/api/auth/login-agent')
-                    .send({
-                        email: spUser.Email,
-                        password: process.env.TESTING_PW || 'password'
-                    })
+        it('should reject the request', async () => {
+            const result = await umAgent
+                .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
 
-                expect(login.statusCode).toBe(200)
-                expect(login.body.data.hasUMDivision).toBe(false)
-            })
+            expect(result.statusCode).toBe(200)
+        })
 
-            afterAll(async () => {
-                await truncateAllTables()
-            })
+        it('should not see the previous request', async () => {
+            const result = await umAgent
+                .get('/api/divisions/requests')
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.results.length).toBe(0)
+        })
+
+        it('should login the SP user', async () => {
+            const login = await spAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: spUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+            expect(login.body.data.hasUMDivision).toBe(false)
+        })
+
+        it('should check the last request', async () => {
+            const result = await spAgent
+                .get('/api/divisions/requests/status')
+
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.IsUMApproved).toBe(true)
+            expect(result.body.data.IsActive).toBe(true)
+        })
+
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+    })
+
+    describe('Reject -> Approve Flow', () => {
+        let spUser: ITblAgentUser = {} as ITblAgentUser
+        let umUser: ITblAgentUser = {} as ITblAgentUser
+        let spAgent = request.agent(app)
+        let umAgent = request.agent(app)
+
+        let divisionRequestId = 0
+    
+        it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create a UM user', async () => {
+            const um = await createUM(1)
+            umUser = um.data
+            expect(um.success).toBe(true)
+        })
+
+        it('should create a SP user', async () => {
+
+            const sp = await createSP()
+            spUser = sp.data
+
+            
+            expect(sp.success).toBe(true)
+        })
+
+        it('should login the SP user', async () => {
+            const login = await spAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: spUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+            expect(login.body.data.hasUMDivision).toBe(false)
+        })
+
+        it('should submit a division request', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+                console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
+        })
+
+        it('should login the UM user', async () => {
+            const login = await umAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: umUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        it('should see the request from the list', async () => {
+            const result = await umAgent
+                .get('/api/divisions/requests')
+
+            divisionRequestId = result.body.data.results[0].DivisionRequestID
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.results.length).toBe(1)
+        })
+
+        it('should reject the request', async () => {
+            const result = await umAgent
+                .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
+
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should not see the previous request', async () => {
+            const result = await umAgent
+                .get('/api/divisions/requests')
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.results.length).toBe(0)
+        })
+
+        it('should login the SP user', async () => {
+            const login = await spAgent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: spUser.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+            expect(login.body.data.hasUMDivision).toBe(false)
+        })
+
+        it('should check the last request', async () => {
+            const result = await spAgent
+                .get('/api/divisions/requests/status')
+
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.IsUMApproved).toBe(-1)
+            expect(result.body.data.IsActive).toBe(0)
+        })
+
+         it('should submit a new division request', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+                console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
+        })
+
+        it('should see the request from the list', async () => {
+            const result = await umAgent
+                .get('/api/divisions/requests')
+
+            divisionRequestId = result.body.data.results[0].DivisionRequestID
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.results.length).toBe(1)
+        })
+
+        it('should approve the request', async () => {
+            const result = await umAgent
+                .patch(`/api/divisions/requests/approve/${divisionRequestId}`)
+
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should check the last request', async () => {
+            const result = await spAgent
+                .get('/api/divisions/requests/status')
+
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.DivisionID).toBe(1)
+            expect(result.body.data.IsUMApproved).toBe(1)
+            expect(result.body.data.IsActive).toBe(1)
+        })
+
+        afterAll(async () => {
+            await truncateAllTables()
         })
     })
 
