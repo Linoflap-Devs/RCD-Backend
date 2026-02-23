@@ -1336,7 +1336,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
         console.log('no referral code, unit manager id: ', unitManagerId)
         // assigned Unit Manager
 
-        const unitManager = await findAgentDetailsByUserId(unitManagerId)
+        const unitManager = await findAgentDetailsByAgentId(unitManagerId)
 
         console.log('unit manager: ', unitManager)
 
