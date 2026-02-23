@@ -482,7 +482,7 @@ export const addDivisionRequest = async ( data: IAddDivisionRequest ): QueryResu
     }
 }
 
-export const editDivisionRequest = async (agentId: number, divisionRequestId: number, data: Partial<IAddDivisionRequest> ): QueryResult<ITblDivisionRequests> => {
+export const editDivisionRequest = async (agentId: number, divisionRequestId: number, data: Partial<ITblDivisionRequests> ): QueryResult<ITblDivisionRequests> => {
     try {
 
         const updateData = {...data, UpdatedAt: new Date(), UpdatedBy: agentId}

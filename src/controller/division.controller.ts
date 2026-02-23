@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { activateDivisionService, addDivisionRequestService, addDivisionService, approveDivisionRequestService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionRequestDetailsService, getDivisionRequestsService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
+import { activateDivisionService, addDivisionRequestService, addDivisionService, approveDivisionRequestService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionRequestDetailsService, getDivisionRequestsService, getDivisionsService, getTop10DivisionService, rejectDivisionRequestService } from "../service/division.service";
 
 export const getDivisionsController = async (req: Request, res: Response) => {
 
@@ -364,6 +364,40 @@ export const approveDivisionRequestController = async (req: Request, res: Respon
     return res.status(200).json({
         success: true,
         message: "Division request approved.",
+        data: result.data
+    })
+}
+
+export const rejectDivisionRequestController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { divisionRequestId } = req.params
+
+    const result = await rejectDivisionRequestService(session.userID, Number(divisionRequestId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to reject division request.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request rejected.",
         data: result.data
     })
 }
