@@ -252,7 +252,7 @@ describe('Divisions E2E Test', () => {
 
     })
 
-    describe.only('PATCH /requests/approve/:divisionRequestId', () => {
+    describe('PATCH /requests/approve/:divisionRequestId', () => {
         let spUser: ITblAgentUser = {} as ITblAgentUser
         let umUser: ITblAgentUser = {} as ITblAgentUser
         let spAgent = request.agent(app)

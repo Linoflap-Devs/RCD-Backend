@@ -1532,14 +1532,14 @@ export const rejectBrokerRegistrationService = async (brokerRegistrationId: numb
     }
 }
 
-export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, email: string, isVerified: boolean}> => {
-    const result = await findAgentUserById(Number(userId));
+export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, position: string, hasUMDivision?: boolean, }> => {
+    const result = await findAgentDetailsByUserId(Number(userId));
 
     if(!result.success){
         logger('Failed to find user.', {userId: userId})
         return {
             success: false,
-            data: {} as {agentId: number, email: string, isVerified: boolean},
+            data: {} as {agentId: number, position: string, hasUMDivision?: boolean},
             error: {
                 message: 'Failed to find user.',
                 code: 500
@@ -1547,12 +1547,24 @@ export const getCurrentAgentService = async (userId: number): QueryResult<{agent
         }
     }
 
+    if(!result.data.AgentID){
+        logger('AgentID not found for user.', {userId: userId})
+        return {
+            success: false,
+            data: {} as {agentId: number, position: string, hasUMDivision?: boolean},
+            error: {
+                message: 'AgentID not found for user.',
+                code: 404
+            }
+        }
+    }
+
     return {
         success: true,
         data: {
-            agentId: result.data.agentUserId,
-            email: result.data.email,
-            isVerified: result.data.isVerified
+            agentId: result.data.AgentID,
+            position: result.data.Position || '',
+            ...( result.data.Position == 'SALES PERSON' && {hasUMDivision: (result.data.ReferredByID && result.data.DivisionID) ? true : false})
         }
     }
 }
