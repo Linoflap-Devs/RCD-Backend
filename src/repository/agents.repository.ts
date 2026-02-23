@@ -19,7 +19,9 @@ export const getAgents = async (
         isVerified?: boolean,
         division?: number, 
         searchTerm?: string,
-        positionId?: number[] 
+        positionId?: number[],
+        referredById?: number,
+        referredCode?: string 
     },
     pagination?: {
         page?: number,
@@ -58,6 +60,16 @@ export const getAgents = async (
         if(!filters || !filters.showNoDivision){
             result = result.where('DivisionID', 'is not', null)
             totalCount = totalCount.where('DivisionID', 'is not', null)
+        }
+
+        if(filters && filters.referredById){
+            result = result.where('ReferredByID', '=', filters.referredById)
+            totalCount = totalCount.where('ReferredByID', '=', filters.referredById)
+        }
+
+        if(filters && filters.referredCode){
+            result = result.where('ReferredCode', '=', filters.referredCode)
+            totalCount = totalCount.where('ReferredCode', '=', filters.referredCode)
         }
 
         if(filters && filters.isRegistered !== undefined){
