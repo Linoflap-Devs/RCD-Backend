@@ -222,11 +222,17 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     const brokerDivisions = await getDivisionBrokers({ agentIds: [agentId]})
 
     const brokerPosition = await getPositions({ positionName: 'BROKER' })
+    const unitManagerPosition = await getPositions({ positionName: 'UNIT MANAGER' })
 
     let isBroker = false
+    let isUM = false
     let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
+    let salespersons: { AgentID: number, FirstName: string, LastName: string, MiddleName: string | undefined }[] = []
 
     const brokerPositionId = brokerPosition.data[0].PositionID
+    const unitManagerPositionId = unitManagerPosition.data[0].PositionID
+
+    // additional fields based on position
 
     if(agentWithUserResult.success || backupAgentData){
         const posId = agentWithUserResult.data.agent.PositionID || backupAgentData?.PositionID  || 0
@@ -240,9 +246,23 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
                 })
             })        
         }
+
+        if(posId === unitManagerPositionId){
+            isUM = true
+            const salespersonsResult = await getAgents({ referredById: agentId })
+
+            if(salespersonsResult.success){
+                salespersonsResult.data.results.map((sp: IAgent) => (
+                    salespersons.push({
+                        AgentID: sp.AgentID,
+                        FirstName: sp.FirstName,
+                        LastName: sp.LastName,
+                        MiddleName: sp.MiddleName || undefined
+                    })
+                ))
+            }
+        }
     }
-
-
 
     // tax rate
     let agentTaxRate: Partial<ITblAgentTaxRates> = {}
@@ -271,6 +291,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
         },
         taxRate: agentTaxRate,
         ...isBroker && { divisions: allowedDivisions },
+        ...isUM && { salespersons: salespersons },
         images: formattedImages
     }
 
