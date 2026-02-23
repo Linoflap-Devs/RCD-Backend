@@ -746,6 +746,28 @@ export const approveDivisionRequestService = async (userId: number, divisionRequ
 
     const divisionRequest = request.data.results[0]
 
+    if(divisionRequest.IsActive == 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'Division request is no longer active',
+                code: 400
+            }
+        }
+    }
+
+    if(divisionRequest.IsUMApproved != 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'Division request has already been processed',
+                code: 400
+            }
+        }
+    }
+
     const agentData = await findAgentDetailsByAgentId(divisionRequest.AgentID)
 
     if(!agentData.success){
@@ -858,6 +880,28 @@ export const rejectDivisionRequestService = async (userId: number, divisionReque
     }
 
     const divisionRequest = request.data.results[0]
+
+    if(divisionRequest.IsActive == 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'Division request is no longer active',
+                code: 400
+            }
+        }
+    }
+
+    if(divisionRequest.IsUMApproved != 0){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'Division request has already been processed',
+                code: 400
+            }
+        }
+    }
 
     const result = await editDivisionRequest(umData.data.AgentID, divisionRequest.DivisionRequestID, { IsUMApproved: -1, Remarks: remarks || undefined, IsActive: 0 })
 

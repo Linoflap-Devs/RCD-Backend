@@ -555,6 +555,17 @@ describe('Divisions E2E Test', () => {
             expect(result.body.data.UnitManagerID).toBe(umUser.AgentID)
         })
 
+        it('should reject a division request while another one is pending', async () => {
+            const result = await spAgent
+                .post('/api/divisions/requests')
+                .send({
+                    divisionId: 1,
+                    unitManagerId: umUser.AgentID
+                })
+
+            expect(result.statusCode).toBe(400)
+        })
+
         it('should login the UM user', async () => {
             const login = await umAgent
                 .post('/api/auth/login-agent')
@@ -581,6 +592,22 @@ describe('Divisions E2E Test', () => {
                 .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
 
             expect(result.statusCode).toBe(200)
+        })
+
+        it('should not approve an inactive request', async () => {
+            const result = await umAgent
+                .patch(`/api/divisions/requests/approve/${divisionRequestId}`)
+
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(400)
+        })
+
+        it('should not reject an inactive request', async () => {
+            const result = await umAgent                
+                .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
+
+            expect(result.statusCode).toBe(400)
         })
 
         it('should not see the previous request', async () => {
@@ -644,6 +671,20 @@ describe('Divisions E2E Test', () => {
                 .patch(`/api/divisions/requests/approve/${divisionRequestId}`)
 
             expect(result.statusCode).toBe(200)
+        })
+
+        it('should not reject an approved request', async () => {
+            const result = await umAgent                
+                .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
+
+            expect(result.statusCode).toBe(400)
+        })
+
+        it('should not approve an approved request', async () => {
+            const result = await umAgent                
+                .patch(`/api/divisions/requests/approve/${divisionRequestId}`)
+
+            expect(result.statusCode).toBe(400)
         })
 
         it('should check the last request', async () => {
