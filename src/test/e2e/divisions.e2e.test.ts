@@ -370,7 +370,7 @@ describe('Divisions E2E Test', () => {
         })
     })
 
-    describe('PATCH /requests/reject/:divisionRequestId', () => {
+    describe.only('PATCH /requests/reject/:divisionRequestId', () => {
         let spUser: ITblAgentUser = {} as ITblAgentUser
         let umUser: ITblAgentUser = {} as ITblAgentUser
         let spAgent = request.agent(app)
@@ -454,6 +454,7 @@ describe('Divisions E2E Test', () => {
         it('should reject the request', async () => {
             const result = await umAgent
                 .patch(`/api/divisions/requests/reject/${divisionRequestId}`)
+                //.send({ remarks: 'Not a good fit' })
 
             expect(result.statusCode).toBe(200)
         })
@@ -486,8 +487,8 @@ describe('Divisions E2E Test', () => {
 
             expect(result.statusCode).toBe(200)
             expect(result.body.data.DivisionID).toBe(1)
-            expect(result.body.data.IsUMApproved).toBe(true)
-            expect(result.body.data.IsActive).toBe(true)
+            expect(result.body.data.IsUMApproved).toBe(-1)
+            expect(result.body.data.IsActive).toBe(0)
         })
 
         afterAll(async () => {

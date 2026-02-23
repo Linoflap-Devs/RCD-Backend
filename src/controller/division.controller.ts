@@ -415,9 +415,10 @@ export const rejectDivisionRequestController = async (req: Request, res: Respons
 
     const { divisionRequestId } = req.params
 
-    const { remarks } = req.body
+    const body = req.body
+    console.log(body)
 
-    const result = await rejectDivisionRequestService(session.userID, Number(divisionRequestId), remarks)
+    const result = await rejectDivisionRequestService(session.userID, Number(divisionRequestId), (body && body.remarks) ? String(body.remarks) : undefined)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({
