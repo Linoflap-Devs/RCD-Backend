@@ -525,6 +525,47 @@ export const getDivisionRequestDetailsService = async (
     }
 }
 
+export const getDivisionAgentLastRequestService = async (
+    userId: number
+): QueryResult<ITblDivisionRequests> => {
+
+    const agentData = await findAgentDetailsByUserId(userId)
+
+    if(!agentData.success){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: agentData.error
+        }
+    }
+
+    if(!agentData.data.AgentID){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await getDivisionRequests({ agentId: agentData.data.AgentID, showInactive: true, showApproved: true }, { page: 1, pageSize: 1 })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblDivisionRequests,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data.results[0] ? result.data.results[0] : {} as ITblDivisionRequests
+    }
+}
+
 export const addDivisionRequestService = async ( userId: number, divisionId: number, unitManagerId: number ): QueryResult<ITblDivisionRequests> => {
 
     const agentData = await findAgentDetailsByUserId(userId)

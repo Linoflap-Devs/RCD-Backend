@@ -353,12 +353,15 @@ export const getDivisionRequests = async (
         unitManagerId?: number,
         agentId?: number,
         showInactive?: boolean,
-        showApproved?: boolean
+        showApproved?: boolean,
     },
     pagination?: {
         page?: number,
         pageSize?: number
-    }
+    },
+    options?: {
+        take?: number,
+    },
 ): QueryResult<PaginationResult<(ITblDivisionRequests & { Agent?: Partial<ITblAgentNullableID> })[]>> => {
     try {
 
@@ -412,6 +415,10 @@ export const getDivisionRequests = async (
         if(!filters || !filters.showApproved){
             baseQuery = baseQuery.where('IsUMApproved', '=', 0)
             countQuery = countQuery.where('IsUMApproved', '=', 0)
+        }
+
+        if(options && options.take){
+            baseQuery = baseQuery.top(options.take)
         }
 
         if(pagination && pagination.page && pagination.pageSize){
