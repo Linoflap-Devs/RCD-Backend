@@ -1,6 +1,7 @@
+import { string } from "zod";
 import { VwAgents } from "../db/db-types";
 import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
-import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
+import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
 import { getAgentTaxRate } from "../repository/tax.repository";
@@ -230,6 +231,25 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     const brokerPositionId = brokerPosition.data[0].PositionID
     const unitManagerPositionId = unitManagerPosition.data[0].PositionID
 
+    // division head 
+
+    let divisionHead: {FirstName: string  | null, LastName: string | null, MiddleName: string | undefined} = {} as any
+
+    if(agentWithUserResult.data.agent.DivisionID){
+        const division = await getDivisions({ divisionIds: [Number(agentWithUserResult.data.agent.DivisionID)] })
+        
+        if(division.success && division.data.length > 0){
+            const divHeadAgent = await findAgentDetailsByAgentId(division.data[0].DirectorID || 0)
+            if(divHeadAgent.success){
+                divisionHead = {
+                    FirstName: divHeadAgent.data.FirstName,
+                    LastName: divHeadAgent.data.LastName,
+                    MiddleName: divHeadAgent.data.MiddleName || undefined
+                }
+            }
+        }
+    }
+
     // additional fields based on position
 
     if(agentWithUserResult.success || backupAgentData){
@@ -287,6 +307,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
             experience: agentWork.data,
             education: agentEducation.data,
         },
+        divisionHead,
         taxRate: agentTaxRate,
         ...isBroker && { divisions: allowedDivisions },
         ...isUM && { salespersons: salespersons },
