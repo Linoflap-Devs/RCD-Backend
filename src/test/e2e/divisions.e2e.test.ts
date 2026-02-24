@@ -370,7 +370,7 @@ describe('Divisions E2E Test', () => {
         })
     })
 
-    describe.only('PATCH /requests/reject/:divisionRequestId', () => {
+    describe('PATCH /requests/reject/:divisionRequestId', () => {
         let spUser: ITblAgentUser = {} as ITblAgentUser
         let umUser: ITblAgentUser = {} as ITblAgentUser
         let spAgent = request.agent(app)

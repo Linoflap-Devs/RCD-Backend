@@ -198,6 +198,33 @@ describe('Agents E2E Test', () => {
             expect(sp3.body.data.agent.ReferredCode).toBe(um.AgentCode)
         })
 
+        it('should check the salespersons array from the UM', async () => {
+            const result = await agent
+                .get('/api/agents/' + umUser.AgentID)
+
+            expect(result.body.data.salespersons).toBeDefined()
+            expect(result.body.data.salespersons.length).toBe(3)
+        })
+
+        it('should assign a new array of SPs to the UM', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID)
+                .send({ salespersonIds: [spUsers[0].AgentID, spUsers[1].AgentID] })
+            
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should check the salespersons array from the UM after update', async () => {
+            const result = await agent
+                .get('/api/agents/' + umUser.AgentID)
+
+            expect(result.body.data.salespersons).toBeDefined()
+            expect(result.body.data.salespersons.length).toBe(2)
+            expect(result.body.data.salespersons).toContainEqual(expect.objectContaining({ AgentID: spUsers[0].AgentID }))
+            expect(result.body.data.salespersons).toContainEqual(expect.objectContaining({ AgentID: spUsers[1].AgentID }))
+        })
+            
+
         afterAll(async () => {
             await truncateAllTables()
         })
@@ -271,6 +298,8 @@ describe('Agents E2E Test', () => {
             const result = await agent
                 .patch('/api/agents/new/' + spUser.AgentID)
                 .send({ referredByID: umData.AgentID, referredCode: umData.AgentCode })
+
+            console.log(result.body)
             
             expect(result.statusCode).toBe(200)
         })
