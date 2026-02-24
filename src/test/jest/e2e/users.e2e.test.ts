@@ -1,15 +1,15 @@
 import express from 'express'
-import { createAdmin, createHandsOffBroker, createSD, createUM } from '../helpers/users.helpers'
-import { seedDivisions, seedPositions } from '../helpers/seed.helpers'
+import { createAdmin, createHandsOffBroker, createSD, createUM } from '../../helpers/users.helpers'
+import { seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
-import { db } from '../../db/db'
-import { truncateAllTables } from '../helpers/db.helpers'
+import { db } from '../../../db/db'
+import { truncateAllTables } from '../../helpers/db.helpers'
 
 // Import your actual routes
-import authRouter from '../../routes/auth.routes'
-import usersRouter from '../../routes/users.routes'
+import authRouter from '../../../routes/auth.routes'
+import usersRouter from '../../../routes/users.routes'
 import cookieParser from 'cookie-parser'
-import { ITblAgentUser, ITblBrokerUser } from '../../types/auth.types'
+import { ITblAgentUser, ITblBrokerUser } from '../../../types/auth.types'
 import { after } from 'node:test'
 
 const app = express()

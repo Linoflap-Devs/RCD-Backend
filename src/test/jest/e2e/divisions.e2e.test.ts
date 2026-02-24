@@ -1,17 +1,17 @@
 import express from 'express'
-import { createAdmin, createSD, createSP, createSPs, createUM } from '../helpers/users.helpers'
-import { seedDivisionRequests, seedDivisions, seedPositions } from '../helpers/seed.helpers'
+import { createAdmin, createSD, createSP, createSPs, createUM } from '../../helpers/users.helpers'
+import { seedDivisionRequests, seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
-import { db } from '../../db/db'
-import { truncateAllTables, truncateTables } from '../helpers/db.helpers'
+import { db } from '../../../db/db'
+import { truncateAllTables, truncateTables } from '../../helpers/db.helpers'
 
 // Import your actual routes
-import authRouter from '../../routes/auth.routes'
-import agentRouter from '../../routes/agents.routes'
-import divisionsRouter from '../../routes/division.routes'
-import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../types/auth.types'
+import authRouter from '../../../routes/auth.routes'
+import agentRouter from '../../../routes/agents.routes'
+import divisionsRouter from '../../../routes/division.routes'
+import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../../types/auth.types'
 import cookieParser from 'cookie-parser'
-import { ITblAgent } from '../../types/agent.types'
+import { ITblAgent } from '../../../types/agent.types'
 import { get } from 'https'
 
 const app = express()

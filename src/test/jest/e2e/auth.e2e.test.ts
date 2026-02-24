@@ -1,19 +1,19 @@
 import express from 'express'
-import { createAdmin, createSD, createSP, createUM } from '../helpers/users.helpers'
-import { seedDivisions, seedPositions } from '../helpers/seed.helpers'
+import { createAdmin, createSD, createSP, createUM } from '../../helpers/users.helpers'
+import { seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
-import { db } from '../../db/db'
-import { truncateAllTables, truncateTables } from '../helpers/db.helpers'
+import { db } from '../../../db/db'
+import { truncateAllTables, truncateTables } from '../../helpers/db.helpers'
 
 // Import your actual routes
-import authRouter from '../../routes/auth.routes'
-import agentRouter from '../../routes/agents.routes'
-import usersRouter from '../../routes/users.routes'
+import authRouter from '../../../routes/auth.routes'
+import agentRouter from '../../../routes/agents.routes'
+import usersRouter from '../../../routes/users.routes'
 import path from 'path'
 import fs from 'fs'
-import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../types/auth.types'
+import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../../types/auth.types'
 import cookieParser from 'cookie-parser'
-import { ITblDivision } from '../../types/division.types'
+import { ITblDivision } from '../../../types/division.types'
 
 const app = express()
 
