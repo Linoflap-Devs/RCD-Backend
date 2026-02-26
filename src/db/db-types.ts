@@ -1302,6 +1302,17 @@ export interface VwDivisionSalesTarget {
   TargetYear: number;
 }
 
+export interface VwDivisionSalesTargetV2 {
+  CurrentMonth: number | null;
+  CurrentYear: number | null;
+  DivisionName: string | null;
+  PercentMonth: number | null;
+  PercentYear: number | null;
+  SalesYear: number | null;
+  TargetMonth: number | null;
+  TargetYear: number;
+}
+
 export interface VwDivisionSalesYearly {
   CurrentMonth: number | null;
   CurrentMonthLastYear: number | null;
@@ -1806,6 +1817,7 @@ export interface DB {
   vw_DivisionDirector: VwDivisionDirector;
   vw_DivisionSalesDash: VwDivisionSalesDash;
   vw_DivisionSalesTarget: VwDivisionSalesTarget;
+  vw_DivisionSalesTargetV2: VwDivisionSalesTargetV2;
   vw_DivisionSalesYearly: VwDivisionSalesYearly;
   "vw_DivisionSalesYearly-11_10_2025": VwDivisionSalesYearly11102025;
   vw_DivisionSalesYearMonth: VwDivisionSalesYearMonth;
