@@ -970,7 +970,7 @@ type SalesTargetSortOption = {
 
 export const getSalesTarget = async (sorts?: SalesTargetSortOption[], take?: number, date?: Date): QueryResult<VwDivisionSalesTarget[]> => {
     try {
-        let base = await db.selectFrom('vw_DivisionSalesTarget')
+        let base = await db.selectFrom('vw_DivisionSalesTargetV2')
             .selectAll()
             .where('DivisionName', 'is not', null)
 
@@ -1005,7 +1005,7 @@ export const getSalesTarget = async (sorts?: SalesTargetSortOption[], take?: num
 
 export const getSalesTargetTotals = async (sorts?: SalesTargetSortOption[], take?: number, date?: Date): QueryResult<SalesTargetTotals> => {
     try {
-        let base = await db.selectFrom('vw_DivisionSalesTarget')
+        let base = await db.selectFrom('vw_DivisionSalesTargetV2')
             .select([
                 ((eb) => eb.fn.sum(eb.ref('TargetMonth')).as('TotalTargetMonth')),
                 ((eb) => eb.fn.sum(eb.ref('CurrentMonth')).as('TotalCurrentMonth')),
