@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getAgentDashboard, getBrokerDashboardService, getWebDashboardService } from "../service/dashboard.service";
+import { getAgentDashboard, getBrokerDashboardService, getWebDashboardService, getWebDashboardServiceV2 } from "../service/dashboard.service";
 
 export const getAgentDashboardController = async (req: Request, res: Response) => {
     const session = req.session
@@ -68,7 +68,7 @@ export const getBrokerDashboardController = async (req: Request, res: Response) 
 }
 
 export const getWebDashboardController = async (req: Request, res: Response) => {
-    const result = await getWebDashboardService()
+    const result = await getWebDashboardServiceV2()
 
     if(!result.success) {
         return res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get web dashboard', data: {}}) 
