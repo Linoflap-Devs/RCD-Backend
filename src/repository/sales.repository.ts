@@ -2257,6 +2257,8 @@ export const editPendingSale = async (
         dpStartDate?: Date | null,
         sellerName?: string,
         assignedUM?: number,
+        approvalStatus?: number,
+        salesStatus?: string,
         images?: {
             receipt?: IImage,
             agreement?: IImage,
@@ -2326,6 +2328,8 @@ export const editPendingSale = async (
         if(data.dpStartDate !== undefined) updateData.DPStartSchedule = data.dpStartDate ? data.dpStartDate : null;
         if(data.sellerName !== undefined) updateData.SellerName = data.sellerName;
         if(data.assignedUM !== undefined) updateData.AssignedUM = data.assignedUM;
+        if(data.approvalStatus !== undefined) updateData.ApprovalStatus = data.approvalStatus;
+        if(data.salesStatus !== undefined) updateData.SalesStatus = data.salesStatus;
 
         // Update the pending sale
         console.log(data)
@@ -3043,6 +3047,7 @@ export const archivePendingSale = async (userId: number, pendingSalesTranId: num
         const result = await db.updateTable('Tbl_AgentPendingSales')
             .set({
                 SalesStatus: SalesStatusText.ARCHIVED,
+                ApprovalStatus: -1,
                 LastUpdateByWeb: userId,
                 LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
             })
