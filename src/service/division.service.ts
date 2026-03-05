@@ -314,7 +314,8 @@ export const getDivisionHierarchyService = async (agentUserId: number): QueryRes
         firstName: item.FirstName?.trim() || '',
         lastName: item.LastName?.trim() || '',
         middleName: item.MiddleName?.trim() || '',
-        position: item.Position?.trim() || ''
+        position: item.Position?.trim() || '',
+        referredById: item.ReferredByID || null,
     }))
 
     return {
