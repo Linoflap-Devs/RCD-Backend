@@ -1,14 +1,14 @@
-import { VwSalesTransactions } from "../db/db-types";
+import { VwSalesTransactions, VwWebKPIs } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
 import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
-import { FnDivisionSales } from "../types/sales.types";
+import { FnDivisionSales, SalesTargetTotals } from "../types/sales.types";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
-import { FnCommissionForecastByMonth, FnCommissionForecastYear } from "../types/commission.types";
+import { FnCommissionForecastByMonth, FnCommissionForecastPercentage, FnCommissionForecastYear } from "../types/commission.types";
 
 export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
@@ -338,6 +338,77 @@ export const getWebDashboardService = async (): QueryResult<any> => {
         success: true,
         data: {
             KPI: kpiInfo,
+            SalesTarget: {
+                ...salesTargetTotals.data,
+                Divisions: salesTarget.data
+            },
+            DivisionSales: divSales.data,
+            Top10Divisions: top10DivsFormat,
+            Top10UnitManagers: top10UmsFormat,
+            Top10SalesPersons: top10SpsFormat,
+            DeveloperSales: developerSales.data,
+            DownpaymentPercent: downPaymentPercent.data,
+            Top10ForecastBuyers: top10ForecastBuyers.data,
+            CommissionForecastByYearMonth: commForecastByMonthFormat,
+            CommissionForecast: commForecast.data
+        }
+    }
+}
+
+export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
+
+      const [
+        kpiResult,
+        salesTargetResult,
+        salesTargetTotalsResult,
+        divSalesResult,
+        top10DivsResult,
+        top10UmsResult,
+        top10SpsResult,
+        developerSalesResult,
+        downPaymentPercentResult,
+        top10ForecastBuyersResult,
+        commForecastByMonthResult,
+        commForecastResult
+    ] = await Promise.allSettled([
+        getWebKPIs(),
+        getSalesTarget([{ field: "DivisionName", direction: "asc" }]),
+        getSalesTargetTotals(),
+        getDivisionSalesTotalsFn([{ field: 'Division', direction: 'asc' }]),
+        getDivisionSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'Division', direction: 'asc' }], 10),
+        getUnitManagerSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
+        getSalesPersonSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
+        getSalesByDeveloperTotals([{ field: 'NetTotalTCP', direction: 'desc' }], undefined, new Date()),
+        getCommissionForecastPercentageFn(),
+        getCommissionForecastTopBuyersFn([{ field: 'NetTotalTCP', direction: 'desc' }], 10),
+        getCommissionForecastByMonthFn([{ field: 'Year', direction: 'desc' }, { field: 'Month', direction: 'desc' }]),
+        getCommissionForecastFn()
+    ])
+
+    // Helper to safely extract data or return a fallback
+    const unwrap = <T>(result: PromiseSettledResult<T>, fallback: T): T => {
+        if (result.status === 'fulfilled') return result.value
+        console.error('Dashboard call failed:', result.reason)
+        return fallback
+    }
+
+    const kpiInfo = unwrap(kpiResult, { success: true, data: {} as VwWebKPIs })
+    const salesTarget = unwrap(salesTargetResult, { success: true, data: [] })
+    const salesTargetTotals = unwrap(salesTargetTotalsResult, { success: true, data: {} as SalesTargetTotals })
+    const divSales = unwrap(divSalesResult, { success: true, data: [] })
+    const top10DivsFormat = unwrap(top10DivsResult, { success: true, data: [] })
+    const top10UmsFormat = unwrap(top10UmsResult, { success: true, data: [] })
+    const top10SpsFormat = unwrap(top10SpsResult, { success: true, data: [] })
+    const developerSales = unwrap(developerSalesResult, { success: true, data: [] })
+    const downPaymentPercent = unwrap(downPaymentPercentResult, { success: true, data: {} as FnCommissionForecastPercentage })
+    const top10ForecastBuyers = unwrap(top10ForecastBuyersResult, { success: true, data: [] })
+    const commForecastByMonthFormat = unwrap(commForecastByMonthResult, { success: true, data: [] })
+    const commForecast = unwrap(commForecastResult, { success: true, data: [] })
+    
+    return {
+        success: true,
+        data: {
+            KPI: kpiInfo.data,
             SalesTarget: {
                 ...salesTargetTotals.data,
                 Divisions: salesTarget.data

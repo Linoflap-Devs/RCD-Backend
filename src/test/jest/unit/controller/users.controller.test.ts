@@ -1,5 +1,5 @@
-import { editAgentGovIdsController, editBrokerGovIdsController } from "../../../controller/users.controller";
-import { editAgentGovIdsService, editBrokerGovIdsService } from "../../../service/users.service";
+import { editAgentGovIdsController, editBrokerGovIdsController } from "../../../../controller/users.controller";
+import { editAgentGovIdsService, editBrokerGovIdsService } from "../../../../service/users.service";
 import { Request, Response } from "express";
 
 jest.mock('../../../service/users.service');

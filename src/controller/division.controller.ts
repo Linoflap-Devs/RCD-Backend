@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { activateDivisionService, addDivisionService, deleteDivisionService, editDivisionService, getDivisionHierarchyService, getDivisionsService, getTop10DivisionService } from "../service/division.service";
+import { activateDivisionService, addDivisionRequestService, addDivisionService, approveDivisionRequestService, deleteDivisionService, editDivisionService, getDivisionAgentLastRequestService, getDivisionHierarchyService, getDivisionRequestDetailsService, getDivisionRequestsService, getDivisionsService, getTop10DivisionService, rejectDivisionRequestService } from "../service/division.service";
 
 export const getDivisionsController = async (req: Request, res: Response) => {
 
@@ -43,6 +43,8 @@ export const addDivisionController = async  (req: Request, res: Response) => {
             message: result.error?.message || "Failed to add division.",
             data: {}
         })
+
+        return
     }
 
     return res.status(200).json({
@@ -202,4 +204,235 @@ export const getTop10DivisionsController = async (req: Request, res: Response) =
 
     return res.status(200).json({success: true, message: 'Top 10 divisions', data: result.data})
 
+}
+
+export const getDivisionRequestsController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    const {
+        showInactive,
+        showApproved,
+        agentId,
+        page,
+        pageSize
+    } = req.query
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await getDivisionRequestsService(
+        session.userID,
+        {
+            agentId: agentId ? Number(agentId) : undefined,
+            showInactive: showInactive ? showInactive === 'true' : undefined,
+            showApproved: showApproved ? showApproved === 'true' : undefined
+        },
+        {
+            page: page ? Number(page) : undefined,
+            pageSize: pageSize ? Number(pageSize) : undefined
+        }
+    )
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to get division requests.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division requests.",
+        data: result.data
+    })
+}
+
+export const getDivisionRequestDetailsController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { divisionRequestId } = req.params
+
+    const result = await getDivisionRequestDetailsService(
+        session.userID,
+        Number(divisionRequestId)
+    )
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to get division requests.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request details.",
+        data: result.data
+    })
+}
+
+export const getDivisionAgentLastRequestController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await getDivisionAgentLastRequestService(session.userID)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to get division requests.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request details.",
+        data: result.data
+    })
+}
+
+export const addDivisionRequestController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        divisionId,
+        unitManagerId
+    } = req.body
+
+
+    const result = await addDivisionRequestService(session.userID, Number(divisionId), Number(unitManagerId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to add division request.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request added.",
+        data: result.data
+    })
+}
+
+export const approveDivisionRequestController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { divisionRequestId } = req.params
+
+    const result = await approveDivisionRequestService(session.userID, Number(divisionRequestId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to approve division request.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request approved.",
+        data: result.data
+    })
+}
+
+export const rejectDivisionRequestController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const { divisionRequestId } = req.params
+
+    const body = req.body
+    console.log(body)
+
+    const result = await rejectDivisionRequestService(session.userID, Number(divisionRequestId), (body && body.remarks) ? String(body.remarks) : undefined)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false,
+            message: result.error?.message || "Failed to reject division request.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Division request rejected.",
+        data: result.data
+    })
 }

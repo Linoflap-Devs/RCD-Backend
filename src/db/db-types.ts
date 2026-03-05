@@ -9,15 +9,6 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
-export interface DatabaseFirewallRules {
-  create_date: Date;
-  end_ip_address: string;
-  id: Generated<number>;
-  modify_date: Date;
-  name: unknown;
-  start_ip_address: string;
-}
-
 export interface InviteTokens {
   AgentRegistration: number | null;
   CreatedAt: Generated<Date>;
@@ -680,6 +671,19 @@ export interface TblDivision {
   UpdateBy: number;
 }
 
+export interface TblDivisionRequests {
+  AgentID: number;
+  CreatedAt: Generated<Date>;
+  DivisionID: number;
+  DivisionRequestID: Generated<number>;
+  IsActive: Generated<number>;
+  IsUMApproved: Generated<number>;
+  Remarks: string | null;
+  UnitManagerID: number | null;
+  UpdatedAt: Date | null;
+  UpdatedBy: number | null;
+}
+
 export interface TblImage {
   ContentType: string;
   CreatedAt: Date;
@@ -1298,6 +1302,17 @@ export interface VwDivisionSalesTarget {
   TargetYear: number;
 }
 
+export interface VwDivisionSalesTargetV2 {
+  CurrentMonth: number | null;
+  CurrentYear: number | null;
+  DivisionName: string | null;
+  PercentMonth: number | null;
+  PercentYear: number | null;
+  SalesYear: number | null;
+  TargetMonth: number | null;
+  TargetYear: number;
+}
+
 export interface VwDivisionSalesYearly {
   CurrentMonth: number | null;
   CurrentMonthLastYear: number | null;
@@ -1723,7 +1738,6 @@ export interface XTblClients {
 }
 
 export interface DB {
-  database_firewall_rules: DatabaseFirewallRules;
   InviteTokens: InviteTokens;
   SalesTransTemp: SalesTransTemp;
   Tbl_AgentEducation: TblAgentEducation;
@@ -1763,6 +1777,7 @@ export interface DB {
   Tbl_Developers: TblDevelopers;
   Tbl_Distribution: TblDistribution;
   Tbl_Division: TblDivision;
+  Tbl_DivisionRequests: TblDivisionRequests;
   Tbl_Image: TblImage;
   Tbl_logs: TblLogs;
   tbl_Messages: TblMessages;
@@ -1802,6 +1817,7 @@ export interface DB {
   vw_DivisionDirector: VwDivisionDirector;
   vw_DivisionSalesDash: VwDivisionSalesDash;
   vw_DivisionSalesTarget: VwDivisionSalesTarget;
+  vw_DivisionSalesTargetV2: VwDivisionSalesTargetV2;
   vw_DivisionSalesYearly: VwDivisionSalesYearly;
   "vw_DivisionSalesYearly-11_10_2025": VwDivisionSalesYearly11102025;
   vw_DivisionSalesYearMonth: VwDivisionSalesYearMonth;

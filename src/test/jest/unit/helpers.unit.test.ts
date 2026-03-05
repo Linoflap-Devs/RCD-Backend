@@ -1,9 +1,9 @@
 import { after } from "node:test"
-import { seedDivisions, seedPositions } from "../helpers/seed.helpers"
-import { DB } from "../../db/db-types"
-import { createSD, createSP, createUM } from "../helpers/users.helpers"
-import { db } from "../../db/db"
-import { truncateAllTables, truncateTables } from "../helpers/db.helpers"
+import { seedDivisions, seedPositions } from "../../helpers/seed.helpers"
+import { DB } from "../../../db/db-types"
+import { createSD, createSP, createUM } from "../../helpers/users.helpers"
+import { db } from "../../../db/db"
+import { truncateAllTables, truncateTables } from "../../helpers/db.helpers"
 import 'dotenv/config'
 import { sql } from "kysely"
 

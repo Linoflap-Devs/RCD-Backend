@@ -2759,6 +2759,39 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
     }
 }
 
+export const archivePendingSaleService = async (webUserId: number, pendingSalesId: number) => {
+    const data = await findEmployeeUserById(webUserId)
+
+    if(!data.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 400
+            }
+        }
+    }
+
+    const result = await editPendingSale({ webUserId: data.data.UserWebID}, 'SALES ADMIN', pendingSalesId, { approvalStatus: -1, salesStatus: SalesStatusText.ARCHIVED })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Archiving sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
 export const approvePendingSaleService = async (agentUserId: number, pendingSalesId: number): QueryResult<any> => {
 
     // validations
@@ -2937,7 +2970,7 @@ export const getWebPendingSalesService = async (
             success: false,
             data: [],
             error: {
-                message: 'Getting pending sales failed.',
+                message: 'Getting pending sales failed.' + result.error?.message,
                 code: 400
             }
         }
@@ -2949,7 +2982,7 @@ export const getWebPendingSalesService = async (
             success: false,
             data: [],
             error: {
-                message: 'Getting pending sales failed.',
+                message: 'Getting pending sales failed.'    + ownedSales.error?.message,
                 code: 400
             }
         }

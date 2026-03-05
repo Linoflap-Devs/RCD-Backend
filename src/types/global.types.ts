@@ -6,3 +6,10 @@ export type QueryResult<T> = Promise<{
         message: string
     }
 }>
+
+export type PaginationResult<T> = {
+    totalPages: number,
+    totalResults: number,
+    page: number,
+    results: T
+}

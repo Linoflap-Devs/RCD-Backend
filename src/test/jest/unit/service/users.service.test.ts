@@ -1,5 +1,5 @@
-import { editAgentGovIds, editBrokerGovIds, findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../../../repository/users.repository";
-import { editAgentGovIdsService, editBrokerGovIdsService } from "../../../service/users.service";
+import { editAgentGovIds, editBrokerGovIds, findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../../../../repository/users.repository";
+import { editAgentGovIdsService, editBrokerGovIdsService } from "../../../../service/users.service";
 
 jest.mock('../../../repository/users.repository');
 jest.mock('../../../repository/agents.repository');

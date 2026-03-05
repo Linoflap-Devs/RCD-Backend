@@ -36,3 +36,22 @@ export interface IBrokerDivision {
   DivisionID: number,
   DivisionName: string
 }
+
+export interface ITblDivisionRequests {
+  AgentID: number;
+  CreatedAt: Date;
+  DivisionID: number;
+  DivisionRequestID: number;
+  IsActive: number;
+  IsUMApproved: number;
+  Remarks: string | null;
+  UnitManagerID: number | null;
+  UpdatedAt: Date | null;
+  UpdatedBy: number | null;
+}
+
+export interface IAddDivisionRequest {
+  AgentID: number;
+  DivisionID: number;
+  UnitManagerID: number
+}

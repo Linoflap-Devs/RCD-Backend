@@ -319,3 +319,46 @@ export interface ITblSalesTarget {
     TargetNameID: number;
     TargetYear: number;
 }
+
+export interface ITblAgentPendingSales {
+  AgentPendingSalesID: number;
+  ApprovalStatus: number;
+  ApprovedSalesTranID: number | null;
+  AssignedUM: number | null;
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommStatus: string | null;
+  CreatedBy: number | null;
+  CreatedByWeb: number | null;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  FinancingScheme: string;
+  FloorArea: number;
+  IsRejected: number;
+  LastUpdate: Date;
+  LastUpdateby: number | null;
+  LastUpdateByWeb: number | null;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  PendingSalesTranCode: string;
+  Phase: string;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  Remarks: string | null;
+  ReservationDate: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SellerName: string;
+}

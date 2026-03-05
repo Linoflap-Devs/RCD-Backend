@@ -1,17 +1,17 @@
 import express from 'express'
-import { createAdmin, createSD, createUM } from '../helpers/users.helpers'
-import { seedDivisions, seedPositions } from '../helpers/seed.helpers'
+import { createAdmin, createSD, createUM } from '../../helpers/users.helpers'
+import { seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
-import { db } from '../../db/db'
-import { truncateAllTables, truncateTables } from '../helpers/db.helpers'
+import { db } from '../../../db/db'
+import { truncateAllTables, truncateTables } from '../../helpers/db.helpers'
 
 // Import your actual routes
-import authRouter from '../../routes/auth.routes'
-import agentRouter from '../../routes/agents.routes'
-import usersRouter from '../../routes/users.routes'
+import authRouter from '../../../routes/auth.routes'
+import agentRouter from '../../../routes/agents.routes'
+import usersRouter from '../../../routes/users.routes'
 import path from 'path'
 import fs from 'fs'
-import { IAgentRegistrationListItem } from '../../types/auth.types'
+import { IAgentRegistrationListItem } from '../../../types/auth.types'
 import cookieParser from 'cookie-parser'
 
 const app = express()

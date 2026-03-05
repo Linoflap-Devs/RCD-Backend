@@ -392,14 +392,14 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string, division: number | undefined}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
         logger((user.error?.message || 'Failed to find user.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, agentId: number | null, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -411,7 +411,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('User is not verified.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, agentId: number | null, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -427,7 +427,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(('Password does not match.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, agentId: number | null, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Invalid credentials.',
                 code: 400
@@ -442,7 +442,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(( session.error?.message || 'Failed to create session.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, agentId: number | null, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Failed to create session.',
                 code: 500
@@ -456,7 +456,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
         logger(( agentDetails.error?.message || 'Failed to find agent details.'), {email: email})
         return {
             success: false,
-            data: {} as {token: string, email: string, position: string, division: number},
+            data: {} as {token: string, agentId: number | null, email: string, position: string, division: number, hasUMDivision: boolean},
             error: {
                 message: 'Failed to find agent details.',
                 code: 500
@@ -464,13 +464,17 @@ export const loginAgentService = async (email: string, password: string): QueryR
         }
     }
 
+    const isSalesPerson = agentDetails.data.Position == 'SALES PERSON' ? true : false
+
     return {
         success: true,
         data: {
+            agentId: agentDetails.data.AgentID,
             token: token,
             email: email,
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
+            ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
 }
@@ -1333,7 +1337,7 @@ export const approveAgentRegistrationService = async (agentRegistrationId: numbe
         console.log('no referral code, unit manager id: ', unitManagerId)
         // assigned Unit Manager
 
-        const unitManager = await findAgentDetailsByUserId(unitManagerId)
+        const unitManager = await findAgentDetailsByAgentId(unitManagerId)
 
         console.log('unit manager: ', unitManager)
 
@@ -1529,14 +1533,14 @@ export const rejectBrokerRegistrationService = async (brokerRegistrationId: numb
     }
 }
 
-export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, email: string, isVerified: boolean}> => {
-    const result = await findAgentUserById(Number(userId));
+export const getCurrentAgentService = async (userId: number): QueryResult<{agentId: number, position: string, hasUMDivision?: boolean, }> => {
+    const result = await findAgentDetailsByUserId(Number(userId));
 
     if(!result.success){
         logger('Failed to find user.', {userId: userId})
         return {
             success: false,
-            data: {} as {agentId: number, email: string, isVerified: boolean},
+            data: {} as {agentId: number, position: string, hasUMDivision?: boolean},
             error: {
                 message: 'Failed to find user.',
                 code: 500
@@ -1544,12 +1548,24 @@ export const getCurrentAgentService = async (userId: number): QueryResult<{agent
         }
     }
 
+    if(!result.data.AgentID){
+        logger('AgentID not found for user.', {userId: userId})
+        return {
+            success: false,
+            data: {} as {agentId: number, position: string, hasUMDivision?: boolean},
+            error: {
+                message: 'AgentID not found for user.',
+                code: 404
+            }
+        }
+    }
+
     return {
         success: true,
         data: {
-            agentId: result.data.agentUserId,
-            email: result.data.email,
-            isVerified: result.data.isVerified
+            agentId: result.data.AgentID,
+            position: result.data.Position || '',
+            ...( result.data.Position == 'SALES PERSON' && {hasUMDivision: (result.data.ReferredByID && result.data.DivisionID) ? true : false})
         }
     }
 }

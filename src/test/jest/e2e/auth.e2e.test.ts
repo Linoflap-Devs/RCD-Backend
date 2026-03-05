@@ -1,19 +1,19 @@
 import express from 'express'
-import { createAdmin, createSD, createUM } from '../helpers/users.helpers'
-import { seedDivisions, seedPositions } from '../helpers/seed.helpers'
+import { createAdmin, createSD, createSP, createUM } from '../../helpers/users.helpers'
+import { seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
-import { db } from '../../db/db'
-import { truncateAllTables, truncateTables } from '../helpers/db.helpers'
+import { db } from '../../../db/db'
+import { truncateAllTables, truncateTables } from '../../helpers/db.helpers'
 
 // Import your actual routes
-import authRouter from '../../routes/auth.routes'
-import agentRouter from '../../routes/agents.routes'
-import usersRouter from '../../routes/users.routes'
+import authRouter from '../../../routes/auth.routes'
+import agentRouter from '../../../routes/agents.routes'
+import usersRouter from '../../../routes/users.routes'
 import path from 'path'
 import fs from 'fs'
-import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../types/auth.types'
+import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../../types/auth.types'
 import cookieParser from 'cookie-parser'
-import { ITblDivision } from '../../types/division.types'
+import { ITblDivision } from '../../../types/division.types'
 
 const app = express()
 
@@ -100,6 +100,7 @@ describe('Auth E2E Tests', () => {
                 .field('employeeIdNumber', 'EI123446785')
                 .field('password', process.env.TESTING_PW || 'password')
                 .field('email', 'sp@gmail.com')
+                .field('positionId', '86')
                 // Nested arrays - education
                 .field('education[0][school]', 'KSU')
                 .field('education[0][degree]', 'BSIT')
@@ -119,6 +120,7 @@ describe('Auth E2E Tests', () => {
                         
             agentRegistrationId = response.body.data.AgentRegistrationID
             expect(response.body.success).toBe(true)
+            expect(response.body.data.PositionID).toBeTruthy()
         })
 
         it('should login the SA', async () => {
@@ -175,6 +177,94 @@ describe('Auth E2E Tests', () => {
             expect(result.body.data.agent.Division == division.Division).toBe(true)
             expect(result.body.data.agent.ReferredByID == umUser.AgentID).toBe(true)
         })
+
+        afterAll(async () => {
+            const cleanup = await truncateAllTables()
+        }) 
+    })
+
+    describe('POST /auth/login-agent', () => {
+
+        let sp1: ITblAgentUser = {} as ITblAgentUser
+        let sp2: ITblAgentUser = {} as ITblAgentUser
+        let um: ITblAgentUser = {} as ITblAgentUser
+
+        it('should create divisions', async () => {
+            const result = await seedDivisions()
+            
+            expect(result.success).toBe(true)
+        })
+    
+        it('should create positions', async () => {
+            const result = await seedPositions()
+    
+            expect(result.success).toBe(true)
+        })
+
+        it('should create a UM user', async () => {
+            const result = await createUM(1)
+            um = result.data
+            expect(result.success).toBe(true)
+        })
+
+        it('should create a SP user without division and UM', async () => {
+            const result = await createSP(1, undefined, undefined, 'sp1@gmail.com')
+            sp1 = result.data
+            expect(result.success).toBe(true)
+        })
+
+        it('should create SP user with divsion and UM', async () => {
+            const um = await db.selectFrom('Tbl_Agents')
+                .where('AgentCode', '=', 'UM')
+                .selectAll()
+                .executeTakeFirstOrThrow()
+
+
+            const result = await createSP(1, um.AgentID, um.AgentCode)
+            sp2 = result.data
+            expect(result.success).toBe(true)
+        })
+
+        it('should login SP without division and UM', async () => {
+            const result = await request(app)
+                .post('/api/auth/login-agent')
+                .send({
+                    email: sp1.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.hasUMDivision).toBe(false)
+        })
+
+        it('should login SP with division and UM', async () => {
+            const result = await request(app)
+                .post('/api/auth/login-agent')
+                .send({
+                    email: sp2.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.hasUMDivision).toBe(true)
+        })
+
+        it('should login UM', async () => {
+            const result = await request(app)
+                .post('/api/auth/login-agent')
+                .send({
+                    email: um.Email,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data).not.toHaveProperty('hasUMDivision')
+        })
+
+        afterAll(async () => {
+            const cleanup = await truncateAllTables()
+        })
+
     })
 
     afterAll( async () => {

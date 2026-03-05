@@ -1,7 +1,7 @@
-import { db } from "../../../db/db"
-import { editAgentGovIds, editBrokerGovIds, getAgentGovIds, getBrokerGovIds } from "../../../repository/users.repository"
-import { truncateAllTables } from "../../helpers/db.helpers"
-import { createHandsOffBroker, createUM } from "../../helpers/users.helpers"
+import { db } from "../../../../db/db"
+import { editAgentGovIds, editBrokerGovIds, getAgentGovIds, getBrokerGovIds } from "../../../../repository/users.repository"
+import { truncateAllTables } from "../../../helpers/db.helpers"
+import { createHandsOffBroker, createUM } from "../../../helpers/users.helpers"
 describe('Users Repository Test', () => {
     describe('editAgentGovId', () => {
         it('should create a unit manager', async () => {

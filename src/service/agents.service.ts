@@ -1,6 +1,7 @@
+import { string } from "zod";
 import { VwAgents } from "../db/db-types";
-import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp } from "../repository/agents.repository";
-import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
+import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
+import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
 import { getAgentTaxRate } from "../repository/tax.repository";
@@ -178,8 +179,6 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
         getAgentWorkExp(agentId)
     ])
 
-    console.log(agentWithUserResult, registrationResult, agentEducation, agentWork)
-
     let backupAgentData: VwAgents | undefined = undefined
 
     if(!agentWithUserResult.success){
@@ -222,11 +221,36 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     const brokerDivisions = await getDivisionBrokers({ agentIds: [agentId]})
 
     const brokerPosition = await getPositions({ positionName: 'BROKER' })
+    const unitManagerPosition = await getPositions({ positionName: 'UNIT MANAGER' })
 
     let isBroker = false
+    let isUM = false
     let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
+    let salespersons: { AgentID: number, FirstName: string, LastName: string, MiddleName: string | undefined }[] = []
 
     const brokerPositionId = brokerPosition.data[0].PositionID
+    const unitManagerPositionId = unitManagerPosition.data[0].PositionID
+
+    // division head 
+
+    let divisionHead: {FirstName: string  | null, LastName: string | null, MiddleName: string | undefined} = {} as any
+
+    if(agentWithUserResult.data.agent.DivisionID){
+        const division = await getDivisions({ divisionIds: [Number(agentWithUserResult.data.agent.DivisionID)] })
+        
+        if(division.success && division.data.length > 0){
+            const divHeadAgent = await findAgentDetailsByAgentId(division.data[0].DirectorID || 0)
+            if(divHeadAgent.success){
+                divisionHead = {
+                    FirstName: divHeadAgent.data.FirstName,
+                    LastName: divHeadAgent.data.LastName,
+                    MiddleName: divHeadAgent.data.MiddleName || undefined
+                }
+            }
+        }
+    }
+
+    // additional fields based on position
 
     if(agentWithUserResult.success || backupAgentData){
         const posId = agentWithUserResult.data.agent.PositionID || backupAgentData?.PositionID  || 0
@@ -240,9 +264,23 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
                 })
             })        
         }
+
+        if(posId === unitManagerPositionId){
+            isUM = true
+            const salespersonsResult = await getAgents({ referredById: agentId })
+
+            if(salespersonsResult.success){
+                salespersonsResult.data.results.map((sp: IAgent) => (
+                    salespersons.push({
+                        AgentID: sp.AgentID,
+                        FirstName: sp.FirstName,
+                        LastName: sp.LastName,
+                        MiddleName: sp.MiddleName || undefined
+                    })
+                ))
+            }
+        }
     }
-
-
 
     // tax rate
     let agentTaxRate: Partial<ITblAgentTaxRates> = {}
@@ -269,8 +307,10 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
             experience: agentWork.data,
             education: agentEducation.data,
         },
+        divisionHead,
         taxRate: agentTaxRate,
         ...isBroker && { divisions: allowedDivisions },
+        ...isUM && { salespersons: salespersons },
         images: formattedImages
     }
 
@@ -380,251 +420,397 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
     }
 }
 
-export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>, divisions?: number[], salespersonIds?: number[]) => {
+// export const editAgentService = async (userId: number, agentId: number, data: Partial<IAddAgent>, divisions?: number[], salespersonIds?: number[]) => {
 
-    if(data.AgentCode){
-        data.AgentCode = undefined
-    }
+//     if(data.AgentCode){
+//         data.AgentCode = undefined
+//     }
 
-    console.log('edit data', data)
+//     console.log('edit data', data)
 
-    // verify position ID
-    const agentData = await findAgentDetailsByAgentId(agentId)
-    const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
-    console.log('psoition name: ', positionName)
+//     // verify position ID
+//     const agentData = await findAgentDetailsByAgentId(agentId)
+//     const positionName = agentData.data.Position?.split(' ').join('').toLowerCase()
+//     console.log('psoition name: ', positionName)
 
-    if(data.PositionID){
+//     if(data.PositionID){
         
-        if(!agentData.success){
-            return {
-                success: false,
-                data: {},
-                error: agentData.error
-            }
-        }
+//         if(!agentData.success){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: agentData.error
+//             }
+//         }
     
-        if(!agentData.data.PositionID && !data.PositionID){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Position is required.'
-                }
-            }
-        }
+//         if(!agentData.data.PositionID && !data.PositionID){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: 'Position is required.'
+//                 }
+//             }
+//         }
 
        
 
-        if(positionName?.includes('broker')) {
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Broker agents cannot be promoted.'
-                }
-            }
-        }
+//         if(positionName?.includes('broker')) {
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: 'Broker agents cannot be promoted.'
+//                 }
+//             }
+//         }
 
-        if(positionName == 'salesperson'){
-            const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
+//         if(positionName == 'salesperson'){
+//             const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
 
-            console.log(umPosition)
+//             console.log(umPosition)
 
-            if(umPosition.success){
-                // check if position id is for unit manager
-                if(data.PositionID != umPosition.data[0].PositionID){
-                    return {
-                        success: false,
-                        data: {},
-                        error: {
-                            code: 400,
-                            message: 'Position ID does not match for Unit Manager.'
-                        }
-                    }
-                }
-            } else {
-                data.PositionID = undefined
-            }
+//             if(umPosition.success){
+//                 // check if position id is for unit manager
+//                 if(data.PositionID != umPosition.data[0].PositionID){
+//                     return {
+//                         success: false,
+//                         data: {},
+//                         error: {
+//                             code: 400,
+//                             message: 'Position ID does not match for Unit Manager.'
+//                         }
+//                     }
+//                 }
+//             } else {
+//                 data.PositionID = undefined
+//             }
 
             
-        }
+//         }
 
-        else if(positionName == 'unitmanager'){
-            // check if position id is for sales director
-            const sdPosition = await getPositions({positionName: 'SALES DIRECTOR'})
+//         else if(positionName == 'unitmanager'){
+//             // check if position id is for sales director
+//             const sdPosition = await getPositions({positionName: 'SALES DIRECTOR'})
 
-            console.log(sdPosition)
+//             console.log(sdPosition)
 
-            if(sdPosition.success){
-                if(data.PositionID != sdPosition.data[0].PositionID){
-                    return {
-                        success: false,
-                        data: {},
-                        error: {
-                            code: 400,
-                            message: 'Position ID does not match for Sales Director.'
-                        }
-                    }
-                }
-            }
+//             if(sdPosition.success){
+//                 if(data.PositionID != sdPosition.data[0].PositionID){
+//                     return {
+//                         success: false,
+//                         data: {},
+//                         error: {
+//                             code: 400,
+//                             message: 'Position ID does not match for Sales Director.'
+//                         }
+//                     }
+//                 }
+//             }
 
-            else {
-                data.PositionID = undefined
-            }
+//             else {
+//                 data.PositionID = undefined
+//             }
             
             
-        }
+//         }
 
-        else {
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: "Agent's position cannot be edited."
-                }
-            }
-        }
-    }
+//         else {
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: "Agent's position cannot be edited."
+//                 }
+//             }
+//         }
+//     }
 
-    if(((salespersonIds && salespersonIds.length > 0) || (data.ReferredByID || data.ReferredCode)) && positionName?.includes('salesdirector')){
-        return {
-            success: false,
-            data: {},
-            error: {
-                code: 400,
-                message: 'SPs or UMs cannot be assigned to Sales Directors.'
+//     if(((salespersonIds && salespersonIds.length > 0) || (data.ReferredByID || data.ReferredCode)) && positionName?.includes('salesdirector')){
+//         return {
+//             success: false,
+//             data: {},
+//             error: {
+//                 code: 400,
+//                 message: 'SPs or UMs cannot be assigned to Sales Directors.'
                 
-            }
+//             }
+//         }
+//     }
+
+//     if((data.ReferredByID || data.ReferredCode) && positionName?.includes('unitmanager')){
+//         return {
+//             success: false,
+//             data: {},
+//             error: {
+//                 code: 400,
+//                 message: 'UMs cannot be assigned to Unit Managers.'
+//             }
+//         }
+//     }
+
+//     console.log('salespersonIds', salespersonIds)
+//     if(salespersonIds && salespersonIds.length > 0){
+//         const spAgents = await findAgentsDetailsByAgentId(salespersonIds)
+
+//         if(!spAgents.success){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: spAgents.error
+//             }
+//         }
+
+//         const spPosition = await getPositions({positionName: 'SALES PERSON'})
+//         const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
+
+//         if(!spPosition.success){
+//             // check if position id is for unit manager
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: spPosition.error
+//             }
+//         }
+
+//         if(!umPosition.success){
+//             // check if position id is for unit manager
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: umPosition.error
+//             }
+//         }
+
+//         if(agentData.data.PositionID != umPosition.data[0].PositionID){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: 'Target agent is not a Unit Manager.'
+//                 }
+//             }
+//         }
+
+//         const hasNonSp = spAgents.data.some((item: VwAgents) => item.PositionID != spPosition.data[0].PositionID)
+
+//         if(hasNonSp){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: 'Some selected agents are not salespersons.'
+//                 }
+//             }
+//         }
+
+//         if(!agentData.data.AgentCode) {
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: {
+//                     code: 400,
+//                     message: 'Target agent has no agent code.'
+//                 }
+//             }
+//         }
+
+//         const result = await assignUMtoSPs(userId, agentId, agentData.data.AgentCode, salespersonIds)
+
+//         if(!result.success){
+//             return {
+//                 success: false,
+//                 data: {},
+//                 error: result.error
+//             }
+//         }
+//     }
+
+//     const result = await editAgent(userId, agentId, data, agentData.data)
+
+//     if(!result.success){
+//         return {
+//             success: false,
+//             data: {},
+//             error: result.error
+//         }
+//     }
+
+//     // edit divisions
+
+//     console.log(positionName)
+//     console.log(divisions)
+
+//     if(positionName && positionName.includes('broker')){
+//         if(divisions){
+//             const editDivisions = await editDivisionBroker(userId, divisions, {agentId: agentId})
+
+//             if(!editDivisions.success){
+//                 return {
+//                     success: false,
+//                     data: {},
+//                     error: editDivisions.error
+//                 }
+//             }
+//         }
+//     }
+
+//     return {
+//         success: true,
+//         data: result.data
+//     }
+
+// }
+
+export const editAgentService = async (
+    userId: number,
+    agentId: number,
+    data: Partial<IAddAgent>,
+    divisions?: number[],
+    salespersonIds?: number[] // now represents the FULL desired state
+) => {
+    if (data.AgentCode) data.AgentCode = undefined;
+
+    const agentData = await findAgentDetailsByAgentId(agentId);
+    if (!agentData.success) {
+        return { success: false, data: {}, error: agentData.error };
+    }
+
+    const positionName = agentData.data.Position?.split(' ').join('').toLowerCase();
+
+    // --- Position promotion validation ---
+    if (data.PositionID) {
+        if (!agentData.data.PositionID && !data.PositionID) {
+            return { success: false, data: {}, error: { code: 400, message: 'Position is required.' } };
+        }
+
+        if (positionName?.includes('broker')) {
+            return { success: false, data: {}, error: { code: 400, message: 'Broker agents cannot be promoted.' } };
+        }
+
+        const targetPositionName = positionName === 'salesperson' ? 'UNIT MANAGER'
+            : positionName === 'unitmanager' ? 'SALES DIRECTOR'
+            : null;
+
+        if (!targetPositionName) {
+            return { success: false, data: {}, error: { code: 400, message: "Agent's position cannot be edited." } };
+        }
+
+        const targetPosition = await getPositions({ positionName: targetPositionName });
+        if (targetPosition.success && data.PositionID !== targetPosition.data[0].PositionID) {
+            return {
+                success: false, data: {},
+                error: { code: 400, message: `Position ID does not match for ${targetPositionName}.` }
+            };
+        }
+
+        if (!targetPosition.success) data.PositionID = undefined;
+    }
+
+    // --- Salesperson assignment validation ---
+    const isSalesDirector = positionName?.includes('salesdirector');
+    const isUnitManager = positionName?.includes('unitmanager');
+    const isSalesPerson = positionName?.includes('salesperson');
+
+    console.log('positionName', positionName)
+    console.log('isSalesDirector', isSalesDirector)
+    console.log('isUnitManager', isUnitManager)
+    console.log('isSalesPerson', isSalesPerson)
+    console.log('condition', ((salespersonIds && salespersonIds.length > 0) || data.ReferredByID || data.ReferredCode) && isSalesPerson)
+
+    if (((salespersonIds && salespersonIds.length > 0) || data.ReferredByID || data.ReferredCode) && isSalesDirector) {
+        return { success: false, data: {}, error: { code: 400, message: 'SPs or UMs cannot be assigned to Sales Directors.' } };
+    }
+
+    if ((data.ReferredByID || data.ReferredCode) && isUnitManager) {
+        return { success: false, data: {}, error: { code: 400, message: 'UMs cannot be assigned to Unit Managers.' } };
+    }
+
+    if ((salespersonIds && salespersonIds.length > 0) && isSalesPerson) {
+        return { success: false, data: {}, error: { code: 400, message: 'SPs cannot be assigned to Sales Persons.' } };
+    }
+
+    // --- Parallel SP sync + agent edit ---
+    const tasks: Promise<any>[] = [editAgent(userId, agentId, data, agentData.data)];
+
+    if (salespersonIds !== undefined && isUnitManager) {
+        tasks.push(syncUMSalespersons(userId, agentId, agentData.data, salespersonIds));
+    }
+
+    const [editResult, spResult] = await Promise.all(tasks);
+
+    if (!editResult.success) return { success: false, data: {}, error: editResult.error };
+    if (spResult && !spResult.success) return { success: false, data: {}, error: spResult.error };
+
+    // --- Broker divisions ---
+    if (positionName?.includes('broker') && divisions) {
+        const editDivisions = await editDivisionBroker(userId, divisions, { agentId });
+        if (!editDivisions.success) return { success: false, data: {}, error: editDivisions.error };
+    }
+
+    return { success: true, data: editResult.data };
+};
+
+export const syncUMSalespersons = async (
+    userId: number,
+    unitManagerId: number,
+    agentData: VwAgents,
+    desiredSpIds: number[]
+): QueryResult<any> => {
+    if (!agentData.AgentCode) {
+        return { success: false, data: {}, error: { code: 400, message: 'Target agent has no agent code.' } };
+    }
+
+    // Fetch in parallel: desired SP validation + current SPs under this UM
+    const [spAgents, spPosition, umPosition, currentSPs] = await Promise.all([
+        desiredSpIds.length > 0 ? findAgentsDetailsByAgentId(desiredSpIds) : Promise.resolve({ success: true, data: [], error: null }), // skip if no desired SPs
+        getPositions({ positionName: 'SALES PERSON' }),
+        getPositions({ positionName: 'UNIT MANAGER' }),
+        getAgents({ referredById: unitManagerId }) // fetch SPs currently assigned to this UM
+    ]);
+
+    if (!spPosition.success) return { success: false, data: {}, error: spPosition.error };
+    if (!umPosition.success) return { success: false, data: {}, error: umPosition.error };
+
+    if (agentData.PositionID !== umPosition.data[0].PositionID) {
+        return { success: false, data: {}, error: { code: 400, message: 'Target agent is not a Unit Manager.' } };
+    }
+
+    if (desiredSpIds.length > 0) {
+        if (!spAgents.success) return { success: false, data: {}, error: { code: 400, message: 'Some selected agents do not exist.' } };
+
+        const hasNonSp = spAgents.data.some((item: VwAgents) => item.PositionID !== spPosition.data[0].PositionID);
+        if (hasNonSp) {
+            return { success: false, data: {}, error: { code: 400, message: 'Some selected agents are not salespersons.' } };
         }
     }
 
-    if((data.ReferredByID || data.ReferredCode) && positionName?.includes('unitmanager')){
-        return {
-            success: false,
-            data: {},
-            error: {
-                code: 400,
-                message: 'UMs cannot be assigned to Unit Managers.'
-            }
-        }
+    // Diff: what to add vs what to unassign
+    const currentIds: (number)[] = currentSPs.data.results.filter((sp: IAgent) => sp.AgentID).map((salesperson: IAgent) => salesperson.AgentID);
+    const toAdd = desiredSpIds.filter(id => !currentIds.includes(id));
+    const toRemove = currentIds.filter(id => !desiredSpIds.includes(id));
+
+    const dbTasks: Promise<any>[] = [];
+
+    if (toAdd.length > 0) {
+        dbTasks.push(assignUMtoSPs(userId, unitManagerId, agentData.AgentCode, toAdd));
     }
 
-    if(salespersonIds && salespersonIds.length > 0){
-        const spAgents = await findAgentsDetailsByAgentId(salespersonIds)
-
-        if(!spAgents.success){
-            return {
-                success: false,
-                data: {},
-                error: spAgents.error
-            }
-        }
-
-        const spPosition = await getPositions({positionName: 'SALES PERSON'})
-        const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
-
-        if(!spPosition.success){
-            // check if position id is for unit manager
-            return {
-                success: false,
-                data: {},
-                error: spPosition.error
-            }
-        }
-
-        if(!umPosition.success){
-            // check if position id is for unit manager
-            return {
-                success: false,
-                data: {},
-                error: umPosition.error
-            }
-        }
-
-        if(agentData.data.PositionID != umPosition.data[0].PositionID){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Target agent is not a Unit Manager.'
-                }
-            }
-        }
-
-        const hasNonSp = spAgents.data.some((item: VwAgents) => item.PositionID != spPosition.data[0].PositionID)
-
-        if(hasNonSp){
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Some selected agents are not salespersons.'
-                }
-            }
-        }
-
-        if(!agentData.data.AgentCode) {
-            return {
-                success: false,
-                data: {},
-                error: {
-                    code: 400,
-                    message: 'Target agent has no agent code.'
-                }
-            }
-        }
-
-        const result = await assignUMtoSPs(userId, agentId, agentData.data.AgentCode, salespersonIds)
-
-        if(!result.success){
-            return {
-                success: false,
-                data: {},
-                error: result.error
-            }
-        }
+    if (toRemove.length > 0) {
+        dbTasks.push(unassignSPs(userId, toRemove)); // nulls out ReferredByID/ReferredCode
     }
 
-    const result = await editAgent(userId, agentId, data, agentData.data)
+    const results = await Promise.all(dbTasks);
+    const failed = results.find(r => !r.success);
+    if (failed) return { success: false, data: {}, error: failed.error };
 
-    if(!result.success){
-        return {
-            success: false,
-            data: {},
-            error: result.error
-        }
-    }
-
-    // edit divisions
-
-    console.log(positionName)
-    console.log(divisions)
-
-    if(positionName && positionName.includes('broker')){
-        if(divisions){
-            const editDivisions = await editDivisionBroker(userId, divisions, {agentId: agentId})
-
-            if(!editDivisions.success){
-                return {
-                    success: false,
-                    data: {},
-                    error: editDivisions.error
-                }
-            }
-        }
-    }
-
-    return {
-        success: true,
-        data: result.data
-    }
-
-}
+    return { success: true, data: {} };
+};
 
 export const deleteAgentService = async (userId: number, agentId: number): QueryResult<ITblAgent> => {
     const result = await deleteAgent(userId, agentId)
