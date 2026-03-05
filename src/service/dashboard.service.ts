@@ -408,7 +408,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
     return {
         success: true,
         data: {
-            KPI: kpiInfo,
+            KPI: kpiInfo.data,
             SalesTarget: {
                 ...salesTargetTotals.data,
                 Divisions: salesTarget.data
