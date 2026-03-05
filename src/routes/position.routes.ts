@@ -4,6 +4,6 @@ import { getPositionsController } from '../controller/position.controller';
 
 const router = express.Router();
 
-router.route('/').get([validateAgentEmployeeSession], getPositionsController);
+router.route('/').get([], getPositionsController);
 
 export default router;
