@@ -1808,9 +1808,11 @@ export const findEmailSendOTP = async (email: string): QueryResult<null> => {
     }
 
     // send email
-    const send = sendMail(findEmail.data.Email, 'Password OTP', emailOTPTemplate(code, minuteExpiry))
-    const spare = sendMail('wendell.ravago@linoflaptech.com', 'Password OTP', emailOTPTemplate(code, minuteExpiry))
+    //const send = sendMail(findEmail.data.Email, 'Password OTP', emailOTPTemplate(code, minuteExpiry))
+    //const spare = sendMail('wendell.ravago@linoflaptech.com', 'Password OTP', emailOTPTemplate(code, minuteExpiry))
 
+    const send = sendTemplateEmail(findEmail.data.Email, 'Password OTP', emailOTPTemplate(code, minuteExpiry), emailOTPTemplate(code, minuteExpiry))
+    const spare = sendTemplateEmail('wendell.ravago@linoflaptech.com', 'Password OTP', emailOTPTemplate(code, minuteExpiry), emailOTPTemplate(code, minuteExpiry))
     return {
         success: true,
         data: null
@@ -1973,8 +1975,8 @@ export const changePasswordService = async (email: string, resetToken: string, o
     const date = format(now, 'MMM dd, yyyy')
     const time = format(now, 'hh:mmaa')
 
-    const send = sendMail(user.data.email, 'Password Changed', emailChangePasswordTemplate(date, time))
-    const spare = sendMail('wendell.ravago@linoflaptech.com', 'Password Changed', emailChangePasswordTemplate(date, time))
+    const send = sendTemplateEmail(user.data.email, 'Password Changed', emailChangePasswordTemplate(date, time), emailChangePasswordTemplate(date, time))
+    const spare = sendTemplateEmail('wendell.ravago@linoflaptech.com', 'Password Changed', emailChangePasswordTemplate(date, time), emailChangePasswordTemplate(date, time))
 
     return {    
         success: true,
