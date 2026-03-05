@@ -100,6 +100,7 @@ describe('Auth E2E Tests', () => {
                 .field('employeeIdNumber', 'EI123446785')
                 .field('password', process.env.TESTING_PW || 'password')
                 .field('email', 'sp@gmail.com')
+                .field('positionId', '86')
                 // Nested arrays - education
                 .field('education[0][school]', 'KSU')
                 .field('education[0][degree]', 'BSIT')
@@ -119,6 +120,7 @@ describe('Auth E2E Tests', () => {
                         
             agentRegistrationId = response.body.data.AgentRegistrationID
             expect(response.body.success).toBe(true)
+            expect(response.body.data.PositionID).toBeTruthy()
         })
 
         it('should login the SA', async () => {

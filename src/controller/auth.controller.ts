@@ -32,6 +32,7 @@ export const registerAgentController = async (req: Request, res: Response) => {
         password,
         education,
         experience,
+        positionId
     } = req.body
 
     console.log("req body", req.body)
@@ -60,7 +61,8 @@ export const registerAgentController = async (req: Request, res: Response) => {
         email,
         password,
         education,
-        experience
+        experience,
+        positionId
     }
 
     const result = await registerAgentService(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
