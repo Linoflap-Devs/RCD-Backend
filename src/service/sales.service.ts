@@ -243,6 +243,7 @@ export const getWebSalesTransService = async (
             SalesTranID: sale.SalesTranID,
             DeveloperName: sale.DeveloperName?.trim() || '',
             Division: sale.Division?.trim() || '',
+            DivisionID: sale.DivisionID || 0,
             ProjectName: sale.ProjectName?.trim() || '',
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
