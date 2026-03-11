@@ -660,6 +660,165 @@ export const getAgentRegistrations = async (
     }
 };
 
+export const getAgentRegistrationsNoImages = async (
+    filters?: {
+        agentRegistrationId?: number, 
+        positionID?: number[], 
+        excPositionID?: number[],
+        isVerified?: number
+    },
+    pagination?: {
+        page?: number,
+        pageSize?: number
+    }
+): QueryResult<{totalPages: number, result: IAgentRegistration[]}> => {
+    try {
+
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined;
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        // 1. Get base agent registration data with user info and all three images
+        let baseAgentDataQuery = await db.selectFrom('Tbl_AgentRegistration')
+            .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            // Join for division info
+            .leftJoin('Tbl_Agents', 'Tbl_AgentRegistration.ReferredByID', 'Tbl_Agents.AgentID')
+            .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
+            .select([
+                'Tbl_AgentRegistration.AgentRegistrationID',
+                'Tbl_AgentRegistration.IsVerified',
+                'Tbl_AgentRegistration.FirstName',
+                'Tbl_AgentRegistration.MiddleName', 
+                'Tbl_AgentRegistration.LastName',
+                'Tbl_AgentRegistration.Address',
+                'Tbl_AgentRegistration.Birthdate',
+                'Tbl_AgentRegistration.Birthplace',
+                'Tbl_AgentRegistration.CivilStatus',
+                'Tbl_AgentRegistration.ContactNumber',
+                'Tbl_AgentRegistration.Sex',
+                'Tbl_AgentRegistration.Religion',
+                'Tbl_AgentRegistration.TelephoneNumber',
+                'Tbl_AgentRegistration.SSSNumber',
+                'Tbl_AgentRegistration.PhilhealthNumber',
+                'Tbl_AgentRegistration.PagIbigNumber',
+                'Tbl_AgentRegistration.TINNumber',
+                'Tbl_AgentRegistration.PRCNumber',
+                'Tbl_AgentRegistration.DSHUDNumber',
+                'Tbl_AgentRegistration.EmployeeIDNumber',
+                'Tbl_AgentUser.Email',
+                'Tbl_AgentUser.Password',
+                'Tbl_AgentUser.AgentID',
+                // Division
+                'Tbl_Division.Division'
+            ])
+
+        let totalCountResult = await db.selectFrom('Tbl_AgentRegistration')
+            .innerJoin('Tbl_AgentUser', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+
+        console.log(filters)
+
+        if(filters && filters.agentRegistrationId){
+             baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+             totalCountResult = totalCountResult.where('Tbl_AgentRegistration.AgentRegistrationID', '=', filters.agentRegistrationId);
+        }
+
+        if(filters && filters.positionID){
+            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.PositionID', 'in', filters.positionID);
+            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.PositionID', 'in', filters.positionID);
+        }
+
+        if(filters && filters.excPositionID && filters.excPositionID.length > 0){
+            baseAgentDataQuery = baseAgentDataQuery.where((eb: any) => 
+                eb.or([
+                    eb('Tbl_AgentRegistration.PositionID', 'not in', filters.excPositionID),
+                    eb('Tbl_AgentRegistration.PositionID', 'is', null)
+                ])
+            )
+            totalCountResult = totalCountResult.where((eb: any) => 
+                eb.or([
+                    eb('Tbl_AgentRegistration.PositionID', 'not in', filters.excPositionID),
+                    eb('Tbl_AgentRegistration.PositionID', 'is', null)
+                ])
+            )
+        }
+
+        if(filters && filters.isVerified){
+            baseAgentDataQuery = baseAgentDataQuery.where('Tbl_AgentRegistration.IsVerified', '=', filters.isVerified)
+            totalCountResult = totalCountResult.where('Tbl_AgentRegistration.IsVerified', '=', filters.isVerified)
+        }
+
+        if(pagination && pagination.page && pagination.pageSize){
+            baseAgentDataQuery = baseAgentDataQuery.offset(offset).fetch(pagination.pageSize)
+        }
+
+        const baseAgentData = await baseAgentDataQuery
+            .orderBy('Tbl_AgentRegistration.AgentRegistrationID', 'asc')
+            .execute();
+        
+        const countResult = await totalCountResult.execute();
+
+        if (baseAgentData.length === 0) {
+            return {
+                success: true,
+                data: {totalPages: 0, result: []},
+            };
+        }
+
+        // 5. Build the final result array
+        const result: IAgentRegistration[] = baseAgentData.map(agent => {
+            return {
+                AgentRegistrationID: agent.AgentRegistrationID,
+                IsVerified: agent.IsVerified,
+                FirstName: agent.FirstName,
+                MiddleName: agent.MiddleName,
+                LastName: agent.LastName,
+                Email: agent.Email,
+                Division: agent.Division,
+                Gender: agent.Sex as ('Male' | 'Female'),
+                CivilStatus: agent.CivilStatus as ('Single' | 'Married'),
+                Religion: agent.Religion || '',
+                Birthdate: agent.Birthdate,
+                Birthplace: agent.Birthplace || '',
+                Address: agent.Address,
+                TelephoneNumber: agent.TelephoneNumber || '',
+                ContactNumber: agent.ContactNumber,
+                SssNumber: agent.SSSNumber || '',
+                PhilhealthNumber: agent.PhilhealthNumber,
+                PagibigNumber: agent.PagIbigNumber,
+                TinNumber: agent.TINNumber,
+                PrcNumber: agent.PRCNumber,
+                DshudNumber: agent.DSHUDNumber,
+                EmployeeIdNumber: agent.EmployeeIDNumber,
+                Education: [],
+                Experience: [],
+            };
+        });
+
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+    
+        return {
+            success: true,
+            data: {
+                totalPages: totalPages,
+                result: result
+            }
+        };
+    } catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {totalPages: 0, result: []} as { totalPages: number; result: IAgentRegistration[] },
+            error: {
+                code: 500,
+                message: error.message
+            }
+        };
+    }
+};
+
+
 type SortOption = {
     field: 'AgentName' | 'CurrentMonth'
     direction: 'asc' | 'desc'

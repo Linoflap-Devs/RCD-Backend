@@ -1,6 +1,6 @@
 import { string } from "zod";
 import { VwAgents } from "../db/db-types";
-import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
+import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
@@ -135,7 +135,7 @@ export const getAgentRegistrationsService = async (pagination?: {page?: number, 
         }
     }
 
-    const result = await getAgentRegistrations({ isVerified: 1, excPositionID: [brokerPosition.data[0].PositionID] }, pagination)
+    const result = await getAgentRegistrationsNoImages({ isVerified: 1, excPositionID: [brokerPosition.data[0].PositionID] }, pagination)
 
     if(!result.success){
         return {
