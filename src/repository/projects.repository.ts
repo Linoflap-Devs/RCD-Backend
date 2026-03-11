@@ -4,7 +4,7 @@ import { VwProjects } from "../db/db-types"
 import { IAddProject, ITblProjects, ITblProjectTypes, VwProjectDeveloper } from "../types/projects.types";
 import { sql } from "kysely";
 
-export const getProjectList = async (filters?: {projectCode?: string}): QueryResult<VwProjects[]> => {
+export const getProjectList = async (filters?: {projectCode?: string, showInactive?: boolean }): QueryResult<VwProjects[]> => {
 
     try {
 
@@ -13,6 +13,10 @@ export const getProjectList = async (filters?: {projectCode?: string}): QueryRes
         
         if(filters && filters.projectCode){
             baseQuery = baseQuery.where('ProjectCode', '=', filters.projectCode)
+        }
+
+        if(!filters || !filters.showInactive){
+            baseQuery = baseQuery.where('IsActive', '=', 1)
         }
 
         const result = await baseQuery.execute()
