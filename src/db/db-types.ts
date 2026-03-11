@@ -725,6 +725,7 @@ export interface TblProjects {
   Address: string;
   ContactNumber: string;
   DeveloperID: number;
+  IsActive: Generated<number>;
   IsLeadProject: number;
   LastUpdate: Date;
   ProjectCode: string;
@@ -1455,6 +1456,7 @@ export interface VwProjects {
   ContactNumber: string;
   DeveloperID: number;
   DeveloperName: string | null;
+  IsActive: number;
   IsLeadProject: number;
   LastUpdate: Date;
   ProjectCode: string;
