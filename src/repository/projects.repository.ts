@@ -214,3 +214,30 @@ export const editProject = async (userId: number, projectId: number, data: Parti
         }
     }
 }
+
+export const archiveProject = async (userId: number, projectId: number): QueryResult<ITblProjects> => {
+    try {
+        const result = await db.updateTable('Tbl_Projects')
+            .set({ IsActive: 0, UpdateBy: userId, LastUpdate: new Date() })
+            .where('ProjectID', '=', projectId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
