@@ -9,6 +9,7 @@ import { IAgentUser } from "../types/auth.types";
 import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
 import { TZDate } from "@date-fns/tz";
+import { ITblBroker } from "../types/brokers.types";
 
 export const getAgents = async (
     filters?: { 
@@ -42,9 +43,35 @@ export const getAgents = async (
         let totalCount = await db.selectFrom('Vw_UniqueAgents')
             .select(({ fn }) => [fn.countAll<number>().as("count")])
 
-        if(filters && filters.division){
-            result = result.where('DivisionID' , '=', filters.division.toString())
-            totalCount = totalCount.where('DivisionID' , '=', filters.division.toString())
+        // if(filters && filters.division){
+        //     result = result.where('DivisionID' , '=', filters.division.toString())
+        //     totalCount = totalCount.where('DivisionID' , '=', filters.division.toString())
+        // }
+
+        if (filters && filters.division) {
+            
+            result = result.where(({ or, eb }) => or([
+                // Regular agents matched by DivisionID
+                eb('DivisionID', '=', filters.division!.toString()),
+                // Hands-On brokers matched via BrokerDivision table
+                eb('AgentID', 'in', (subEb) =>
+                    subEb
+                        .selectFrom('Tbl_BrokerDivision')
+                        .select('AgentID')
+                        .where('DivisionID', '=', filters.division!)
+                )
+            ]))
+
+            totalCount = totalCount.where(({ or, eb }) => or([
+                eb('DivisionID', '=', filters.division!.toString()),
+                eb('AgentID', 'in', (subEb) =>
+                    subEb
+                        .selectFrom('Tbl_BrokerDivision')
+                        .select('AgentID')
+                        .where('AgentID', 'is not', null)
+                        .where('DivisionID', '=', filters.division!)
+                )
+            ]))
         }
 
         if(filters && filters.name){
@@ -173,6 +200,52 @@ export const getAgents = async (
         return {
             success: false,
             data: {} as { totalPages: number, results: (IAgent & {IsVerified: number | null})[] },
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getDivisionBrokers = async (divisionId: number): QueryResult<{ HandsOn: VwAgents[], HandsOff: ITblBroker[] }> => {
+    try {
+        const handsOn = await db
+            .selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentID', 'in', (eb) =>
+                eb
+                .selectFrom('Tbl_BrokerDivision')
+                .select('AgentID')
+                .where('DivisionID', '=', divisionId)
+            )
+            .execute();
+
+        const handsOff = await db
+            .selectFrom('Tbl_Broker')
+            .selectAll()
+            .where('BrokerID', 'in', (eb) => 
+                eb
+                .selectFrom('Tbl_BrokerDivision')
+                .select('BrokerID')
+                .where('DivisionID', '=', divisionId)
+            )
+            .execute()
+
+        return {
+            success: true,
+            data: {
+                HandsOn: handsOn,
+                HandsOff: handsOff
+            }
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as { HandsOn: VwAgents[], HandsOff: ITblBroker[] },
             error: {
                 code: 500,
                 message: error.message

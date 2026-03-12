@@ -351,8 +351,6 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
 
 export const addAgentService = async (userId: number, data: IAddAgent) => {
 
-    console.log()
-
     const existingAgent = await getAgentByCode(data.AgentCode)
 
     console.log(existingAgent)
