@@ -353,8 +353,6 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
 
     const existingAgent = await getAgentByCode(data.AgentCode)
 
-    console.log(existingAgent)
-
     if(existingAgent.success){
         return {
             success: false,
@@ -403,6 +401,7 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
     }
 
     const result = await addAgent(userId, data)
+    console.log(result)
 
     if(!result.success){
         return {
@@ -413,8 +412,11 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
     }
 
     const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
-    if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID === data.PositionID)){
+    console.log('um condition', umPosition.data[0].PositionID, data.PositionID, salespersonIds)
+    if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID == data.PositionID)){
         const salespersons = await getAgents({ agentIds: salespersonIds })
+
+        console.log('valid conditions', salespersons.data.results, result.data.DivisionID)
 
         const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
 
