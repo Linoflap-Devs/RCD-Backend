@@ -24,6 +24,94 @@ app.use('/api/auth', authRouter)
 app.use('/api/agents', agentRouter)
 
 describe('Agents E2E Test', () => {
+
+    describe.only('POST /new/agent (add agent with UM)', () => {
+
+        const agent = request.agent(app)
+        let spUsers: ITblAgentUser[] = [] as ITblAgentUser[]
+        let umUser: ITblAgentUser = {} as ITblAgentUser
+        let adminUser: ITblUsersWeb = {} as ITblUsersWeb
+
+         it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create a UM user', async () => {
+            const um = await createUM(1)
+            umUser = um.data
+            expect(um.success).toBe(true)
+        })
+
+        it('should create an admin user', async () => {
+            const admin = await createAdmin()
+            adminUser = admin.data
+            expect(admin.success).toBe(true)
+        })
+
+        it('should login the admin', async () => {
+            const login = await agent
+                .post('/api/auth/login-employee')
+                .send({
+                    username: adminUser.UserName,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        it('should add a new agent with referredby', async () => {
+            const result = await agent
+                .post('/api/agents/new')
+                .send({
+                    agentCode: 'AGENT-TEST',
+                    lastName: 'De La Cruz',
+                    middleName: '',
+                    firstName: 'Juan',
+                    contactNumber: '09123456789',
+                    divisionId: '1',
+                    agentTaxRate: '5',
+                    civilStatus: 'Single',
+                    sex: 'Male',
+                    address: '#81 New Street',
+                    birthdate: '2001-01-01',
+                    referredByID: umUser.AgentID!.toString()
+                })
+                // .field({  })
+                // .field({ })
+                // .field({ firstName: 'Juan'})
+                // .field({ contactNumber: '09123456789'})
+                // .field({ divisionId: '1'})
+                // .field({ agentTaxRate: '5'})
+                // .field({ civilStatus: 'Single'})
+                // .field({ sex: 'Male'})
+                // .field({ address: '#81 New Street'})
+                // .field({ birthdate: '2001-01-01'})
+                // .field({ referredByID: umUser.AgentID!.toString()})
+
+            console.log(result.body)
+
+            const umUserDetails = await db.selectFrom('Tbl_Agents')
+                .where('Tbl_Agents.AgentID', '=', umUser.AgentID)
+                .selectAll()
+                .executeTakeFirstOrThrow()
+
+            expect(result.statusCode).toBe(200)
+            expect(result.body.data.ReferredByID).toEqual(umUser.AgentID)
+            expect(result.body.data.ReferredCode).toEqual(umUserDetails.AgentCode)
+
+        })
+
+
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+    })
     
     describe('PATCH /new/agent/:agentId/promote', () => {
         const agent = request.agent(app)
@@ -111,7 +199,7 @@ describe('Agents E2E Test', () => {
         })
     })
 
-    describe.only('PATCH /api/agents/new/:agentId (assign to UM)', () => {
+    describe('PATCH /api/agents/new/:agentId (assign to UM)', () => {
         const agent = request.agent(app)
         let spUsers: ITblAgentUser[] = [] as ITblAgentUser[]
         let umUser: ITblAgentUser = {} as ITblAgentUser
