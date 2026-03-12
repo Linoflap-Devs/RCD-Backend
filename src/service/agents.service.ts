@@ -349,7 +349,7 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
     }
 }
 
-export const addAgentService = async (userId: number, data: IAddAgent) => {
+export const addAgentService = async (userId: number, data: IAddAgent, salespersonIds?: number[]) => {
 
     const existingAgent = await getAgentByCode(data.AgentCode)
 
@@ -409,6 +409,23 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
             success: false,
             data: {},
             error: result.error
+        }
+    }
+
+    const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
+    if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID === data.PositionID)){
+        const salespersons = await getAgents({ agentIds: salespersonIds })
+
+        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
+
+        const assign = await assignUMtoSPs(userId, result.data.AgentID, result.data.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
+
+        if(!assign.success){
+            return {
+                success: false,
+                data: {},
+                error: assign.error
+            }
         }
     }
 

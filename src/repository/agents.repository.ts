@@ -14,6 +14,7 @@ import { ITblBroker } from "../types/brokers.types";
 export const getAgents = async (
     filters?: { 
         name?: string, 
+        agentIds?: number[],
         showInactive?: boolean, 
         showNoDivision?: boolean, 
         isRegistered?: boolean,
@@ -77,6 +78,11 @@ export const getAgents = async (
         if(filters && filters.name){
             result = result.where('AgentName', '=', `${filters.name}`)
             totalCount = totalCount.where('AgentName', '=', `${filters.name}`)
+        }
+
+        if(filters && filters.agentIds){
+            result = result.where('AgentID', 'in', filters.agentIds)
+            totalCount = totalCount.where('AgentID', 'in', filters.agentIds)
         }
 
         if(!filters || !filters.showInactive){

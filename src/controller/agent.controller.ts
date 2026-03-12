@@ -162,7 +162,8 @@ export const addNewAgentController = async (req: Request, res: Response) => {
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        salespersonIds
     } = req.body
 
     const result = await addAgentService(session.userID,
@@ -195,7 +196,8 @@ export const addNewAgentController = async (req: Request, res: Response) => {
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber
-        }
+        },
+        salespersonIds
     )
 
     if(!result.success) {
