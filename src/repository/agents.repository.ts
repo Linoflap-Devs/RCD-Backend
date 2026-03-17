@@ -22,6 +22,7 @@ export const getAgents = async (
         division?: number, 
         searchTerm?: string,
         positionId?: number[],
+        excludePositionId?: number[],
         referredById?: number,
         referredCode?: string 
     },
@@ -134,6 +135,11 @@ export const getAgents = async (
         else {
             result = result.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
             totalCount = totalCount.where('Position', 'in', ['SALES PERSON', 'UNIT MANAGER', 'SALES DIRECTOR', 'BROKERS', '-BROKER-', 'BROKER'])
+        }
+
+        if(filters && filters.excludePositionId){
+            result = result.where('PositionID', 'not in', filters.excludePositionId)
+            totalCount = totalCount.where('PositionID', 'not in', filters.excludePositionId)
         }
 
         if(filters && filters.searchTerm){

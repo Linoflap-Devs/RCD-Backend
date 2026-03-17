@@ -20,6 +20,7 @@ export const getAgentsService = async (
         showNoDivision?: boolean,
         division?: number, 
         position?: 'SP' | 'UM' | 'SD' | 'BR',
+        excludePosition?: 'SP' | 'UM' | 'SD' | 'BR',
         isRegistered?: boolean,
         isVerified?: boolean,
         month?: number,
@@ -54,6 +55,7 @@ export const getAgentsService = async (
         {
             ...filters,
             positionId: filters && filters.position ? positionMap.get(filters.position) : undefined,
+            excludePositionId: filters && filters.excludePosition ? positionMap.get(filters.excludePosition) : undefined
         },
         pagination
     )
