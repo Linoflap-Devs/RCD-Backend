@@ -412,11 +412,8 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
     }
 
     const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
-    console.log('um condition', umPosition.data[0].PositionID, data.PositionID, salespersonIds)
     if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID == data.PositionID)){
         const salespersons = await getAgents({ agentIds: salespersonIds })
-
-        console.log('valid conditions', salespersons.data.results, result.data.DivisionID)
 
         const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
 
