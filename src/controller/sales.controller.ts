@@ -1435,7 +1435,7 @@ export const getWebPersonalSalesController = async (req: Request, res: Response)
         return;
     }
 
-    const { month, year, page, pageSize } = req.query
+    const { month, year, search, page, pageSize } = req.query
 
     const { agentId, brokerId } = req.params
 
@@ -1454,6 +1454,7 @@ export const getWebPersonalSalesController = async (req: Request, res: Response)
             brokerId: brokerId ? Number(brokerId) : undefined,
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined,
+            search: search ? search.toString() : undefined
         }, 
         {
             page: page ? Number(page) : undefined,

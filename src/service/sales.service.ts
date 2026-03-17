@@ -3827,7 +3827,8 @@ export const getWebPersonalSalesService = async (
         month?: number, 
         year?: number, 
         agentId?: number, 
-        brokerId?: number
+        brokerId?: number,
+        search?: string
     },
     pagination?: {
         page?: number, 

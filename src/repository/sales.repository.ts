@@ -487,7 +487,7 @@ export const getPersonalSales = async (
         agentId?: number, 
         brokerName?: string
     },
-    filters?: { month?: number, year?: number }, 
+    filters?: { month?: number, year?: number, search?: string }, 
     pagination?: {
         page?: number, 
         pageSize?: number
@@ -557,6 +557,51 @@ export const getPersonalSales = async (
             totalCountResult = totalCountResult.where('ReservationDate', '>=', firstDay)
             totalCountResult = totalCountResult.where('ReservationDate', '<=', lastDay)
         }
+
+        if(filters && filters.search){
+            const searchTerm = `%${filters.search}%`;
+            console.log(    )
+            const searchAsNumber = Number(filters.search);
+            const isValidNumber = !isNaN(searchAsNumber) && filters.search?.trim() !== '';
+
+            // Parse the search term as a date (e.g. '2026-03-17')
+            const searchAsDate = new Date(filters.search);
+            const isValidDate = !isNaN(searchAsDate.getTime()) && /^\d{4}-\d{2}-\d{2}$/.test(filters.search.trim());
+
+            // Build the start and end of the day if it's a valid date
+            const startOfDay = isValidDate ? new Date(`${filters.search}T00:00:00.000`) : null;
+            const endOfDay   = isValidDate ? new Date(`${filters.search}T23:59:59.999`) : null;
+
+            
+            result = result.where(({ or, eb }) => 
+                or([
+                    // String columns - always search these
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('SellerName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('Division', 'like', searchTerm),
+                    eb('PositionName', 'like', searchTerm),
+                    ...(isValidDate ? [
+                        eb.and([
+                            eb('ReservationDate', '>=', startOfDay),
+                            eb('ReservationDate', '<=', endOfDay),
+                        ])
+                    ] : [])
+                ])
+            );
+            
+            totalCountResult = totalCountResult.where(({ or, eb }) => 
+                or([
+                   // String columns - always search these
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('SellerName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('Division', 'like', searchTerm),
+                    eb('PositionName', 'like', searchTerm),
+                ])
+            );
+        }
+
 
         result = result.orderBy('DateFiled', 'desc')
 
