@@ -1371,9 +1371,33 @@ export const getAgentImages = async (ids?: number[]): QueryResult<TblImageWithId
 
 export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<ITblAgent> => {
     try {
+
+        const generateAgentCode = (): string => {
+            const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
+            return `0.${randomNumber}`;
+        };
+
+        const checkDuplicateAgentCode = async (agentCode: string): Promise<boolean> => {
+            const agent = await db.selectFrom('Tbl_Agents')
+                .where('AgentCode', '=', agentCode)
+                .selectAll()
+                .executeTakeFirst();
+            return !!agent; // Returns true if agent exists, false otherwise
+        };
+
+        const getUniqueAgentCode = async (): Promise<string> => {
+            let agentCode: string;
+            do {
+                agentCode = generateAgentCode();
+            } while (await checkDuplicateAgentCode(agentCode));
+            return agentCode;
+        };
+
+        const uniqueCode = await getUniqueAgentCode();
+
         const result = await db.insertInto('Tbl_Agents')
             .values({
-                AgentCode: agent.AgentCode,
+                AgentCode: agent.AgentCode ? agent.AgentCode : uniqueCode,
                 FirstName: agent.FirstName,
                 MiddleName: agent.MiddleName,
                 LastName: agent.LastName,
