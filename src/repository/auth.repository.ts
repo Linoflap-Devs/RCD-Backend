@@ -17,7 +17,7 @@ export const insertSession =  async (sessionString: string, agentUserId: number)
         const result = await db.insertInto('Tbl_AgentSession').values({
             SessionString: sessionString,
             AgentUserID: agentUserId,
-            ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24)
+            ExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60) // 60 days
         }).outputAll('inserted').executeTakeFirstOrThrow();
 
         if(!result) return {
