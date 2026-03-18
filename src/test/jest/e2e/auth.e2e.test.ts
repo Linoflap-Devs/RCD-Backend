@@ -267,8 +267,103 @@ describe('Auth E2E Tests', () => {
 
     })
 
+    describe.only('POST /auth/create-agent-account', () => {
+
+        let agentId = 0
+
+        beforeAll(async () => {
+            const agentData = await db.insertInto('Tbl_Agents')
+                .values({
+                    Address: '123 Ocean Drive',
+                    AddressEmergency: '123 Ocean Drive',
+                    AffiliationDate: new Date(),
+                    AgentCode: 'UM',
+                    AgentTaxRate: 1,
+                    Birthdate: new Date(),
+                    Birthplace: null,
+                    CivilStatus: 'Single',
+                    DivisionID: "1",
+                    PositionID: 5,
+                    ContactEmergency: '',
+                    ContactNumber: '',
+                    FirstName: 'John',
+                    LastName: 'Doe',
+                    MiddleName: '',
+                    IsActive: 1,
+                    LastUpdate: new Date(),
+                    PersonEmergency: '',
+                    Sex: 'Male',
+                    UpdateBy: 1
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            console.log(agentData)
+            agentId = agentData.AgentID
+        })
+
+        const agent = request.agent(app)
+        let adminUser: ITblUsersWeb = {} as ITblUsersWeb
+
+            it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create an admin user', async () => {
+            const admin = await createAdmin()
+            adminUser = admin.data
+            expect(admin.success).toBe(true)
+        })
+
+        it('should login the admin', async () => {
+            const login = await agent
+                .post('/api/auth/login-employee')
+                .send({
+                    username: adminUser.UserName,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        it('should create a new account for the agent data', async () => {
+            const result = await agent
+                .post('/api/auth/create-agent-account')
+                .send({
+                    agentId: agentId,
+                    email: 'sample@gmail.com',
+                    password: 'password'
+                })
+
+                console.log(result)
+
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should login the new account', async () => {
+            const result = await request(app)
+                .post('/api/auth/login-agent')
+                .send({
+                    email: 'sample@gmail.com',
+                    password: 'password'
+                })
+
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+        })
+        
+        afterAll( async () => {
+            await truncateAllTables()
+        })
+    })
+
     afterAll( async () => {
-        const cleanup = await truncateAllTables()
         await db.destroy()
     })
 })
