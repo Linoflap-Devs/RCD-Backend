@@ -243,6 +243,7 @@ export const getWebSalesTransService = async (
             SalesTranID: sale.SalesTranID,
             DeveloperName: sale.DeveloperName?.trim() || '',
             Division: sale.Division?.trim() || '',
+            DivisionID: sale.DivisionID || 0,
             ProjectName: sale.ProjectName?.trim() || '',
             SalesStatus: sale.SalesStatus?.trim() || '',
             SalesTranCode: sale.SalesTranCode?.trim() || '',
@@ -3826,7 +3827,8 @@ export const getWebPersonalSalesService = async (
         month?: number, 
         year?: number, 
         agentId?: number, 
-        brokerId?: number
+        brokerId?: number,
+        search?: string
     },
     pagination?: {
         page?: number, 

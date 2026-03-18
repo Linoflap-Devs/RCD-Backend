@@ -1,6 +1,6 @@
 import { string } from "zod";
 import { VwAgents } from "../db/db-types";
-import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
+import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
@@ -20,6 +20,7 @@ export const getAgentsService = async (
         showNoDivision?: boolean,
         division?: number, 
         position?: 'SP' | 'UM' | 'SD' | 'BR',
+        excludePosition?: 'SP' | 'UM' | 'SD' | 'BR',
         isRegistered?: boolean,
         isVerified?: boolean,
         month?: number,
@@ -54,6 +55,7 @@ export const getAgentsService = async (
         {
             ...filters,
             positionId: filters && filters.position ? positionMap.get(filters.position) : undefined,
+            excludePositionId: filters && filters.excludePosition ? positionMap.get(filters.excludePosition) : undefined
         },
         pagination
     )
@@ -135,7 +137,7 @@ export const getAgentRegistrationsService = async (pagination?: {page?: number, 
         }
     }
 
-    const result = await getAgentRegistrations({ isVerified: 1, excPositionID: [brokerPosition.data[0].PositionID] }, pagination)
+    const result = await getAgentRegistrationsNoImages({ isVerified: 1, excPositionID: [brokerPosition.data[0].PositionID] }, pagination)
 
     if(!result.success){
         return {
@@ -349,13 +351,9 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
     }
 }
 
-export const addAgentService = async (userId: number, data: IAddAgent) => {
-
-    console.log()
+export const addAgentService = async (userId: number, data: IAddAgent, salespersonIds?: number[]) => {
 
     const existingAgent = await getAgentByCode(data.AgentCode)
-
-    console.log(existingAgent)
 
     if(existingAgent.success){
         return {
@@ -405,12 +403,30 @@ export const addAgentService = async (userId: number, data: IAddAgent) => {
     }
 
     const result = await addAgent(userId, data)
+    console.log(result)
 
     if(!result.success){
         return {
             success: false,
             data: {},
             error: result.error
+        }
+    }
+
+    const umPosition = await getPositions({positionName: 'UNIT MANAGER'})
+    if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID == data.PositionID)){
+        const salespersons = await getAgents({ agentIds: salespersonIds })
+
+        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
+
+        const assign = await assignUMtoSPs(userId, result.data.AgentID, result.data.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
+
+        if(!assign.success){
+            return {
+                success: false,
+                data: {},
+                error: assign.error
+            }
         }
     }
 

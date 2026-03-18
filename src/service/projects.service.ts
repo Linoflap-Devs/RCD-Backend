@@ -1,6 +1,6 @@
 import { TblProjects, VwProjects } from "../db/db-types";
 import { getDevelopers } from "../repository/developers.repository";
-import { addProject, editProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
+import { addProject, archiveProject, editProject, getProjectById, getProjectList, getProjectTypes } from "../repository/projects.repository";
 import { getSectors } from "../repository/sectors.repository";
 import { QueryResult } from "../types/global.types";
 import { IAddProject, ITblProjects, ITblProjectTypes } from "../types/projects.types";
@@ -195,5 +195,22 @@ export const getProjectTypesService = async (): QueryResult<Partial<ITblProjectT
     return {
         success: true,
         data: obj
+    }
+}
+
+export const deleteProjectService = async (userId: number, projectId: number): QueryResult<ITblProjects> => {
+    const result = await archiveProject(userId, projectId)
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblProjects,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }

@@ -99,7 +99,7 @@ export const registerBrokerSchema = z.object({
 })
 
 export const addAgentSchema = z.object({
-    agentCode: z.string().max(50),
+    agentCode: z.string().max(50).optional(),
     firstName: z.string().max(150),
     middleName: z.string().max(50).optional(),
     lastName: z.string().max(50),

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addProjectService, editProjectService, getProjectDetailsService, getProjectListService, getProjectTypesService } from "../service/projects.service";
+import { addProjectService, deleteProjectService, editProjectService, getProjectDetailsService, getProjectListService, getProjectTypesService } from "../service/projects.service";
 
 export const getProjectListController = async (req: Request, res: Response) => {
 
@@ -123,6 +123,33 @@ export const editProjectController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Project edited.', data: result.data})
+}
+
+export const archiveProjectController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        projectId
+    } = req.params
+
+    const result = await deleteProjectService(Number(session.userID), Number(projectId))
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to archive project.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Project archived.', data: result.data})
 }
 
 export const getProjectTypesController = async (req: Request, res: Response) => {

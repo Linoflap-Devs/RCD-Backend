@@ -6,7 +6,7 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducati
 import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -1327,7 +1327,7 @@ export const getBrokerRegistrationsService = async (brokerId?: number): QueryRes
         handsOnRegistrations
     ] = await Promise.all([
         getBrokerRegistrations({ isVerified: 1}),
-        getAgentRegistrations({ isVerified: 1, positionID: [brokerPosition.data[0].PositionID] })
+        getAgentRegistrationsNoImages({ isVerified: 1, positionID: [brokerPosition.data[0].PositionID] })
     ])
 
     if(!handsOffRegistrations.success || !handsOnRegistrations.success){

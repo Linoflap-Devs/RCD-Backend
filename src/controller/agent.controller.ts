@@ -10,6 +10,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
         showBrokerDivisions,
         division,
         position,
+        excludePosition,
         showSales,
         showRegistration, 
         isVerified,
@@ -42,6 +43,7 @@ export const getAgentsController = async (req: Request, res: Response) => {
             showNoDivision: showNoDivision ? true : false,
             division: Number(division), 
             position: position ? position.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
+            excludePosition: excludePosition ? excludePosition.toString().toUpperCase() as ('SP' | 'UM' | 'SD' | 'BR') : undefined,
             month: month ? Number(month) : undefined,
             year: year ? Number(year) : undefined,
             searchTerm: search ? search.toString() : undefined,
@@ -162,7 +164,8 @@ export const addNewAgentController = async (req: Request, res: Response) => {
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        salespersonIds
     } = req.body
 
     const result = await addAgentService(session.userID,
@@ -195,7 +198,8 @@ export const addNewAgentController = async (req: Request, res: Response) => {
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber
-        }
+        },
+        salespersonIds
     )
 
     if(!result.success) {
