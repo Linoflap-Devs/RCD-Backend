@@ -60,3 +60,9 @@ export const changeEmployeePasswordSchema = z.object({
     oldPassword: z.string(),
     newPassword: z.string(),
 })
+
+export const bindAccountToAgentSchema = z.object({
+    email: z.email(),
+    password: z.string(),
+    agentId: z.coerce.number()
+})
