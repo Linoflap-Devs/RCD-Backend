@@ -113,7 +113,101 @@ describe('Agents E2E Test', () => {
         })
     })
 
-    describe.only('POST /new/agent (add UM with SPs)', () => {
+    describe.only('POST /new/agent (add agent with email and pass)', () => {
+
+        const agent = request.agent(app)
+        let adminUser: ITblUsersWeb = {} as ITblUsersWeb
+
+         it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create an admin user', async () => {
+            const admin = await createAdmin()
+            adminUser = admin.data
+            expect(admin.success).toBe(true)
+        })
+
+        it('should login the admin', async () => {
+            const login = await agent
+                .post('/api/auth/login-employee')
+                .send({
+                    username: adminUser.UserName,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        it('should reject a new agent with missing credentials', async () => {
+            const result = await agent
+                .post('/api/agents/new')
+                .send({
+                    agentCode: 'AGENT-TEST',
+                    lastName: 'De La Cruz',
+                    middleName: '',
+                    firstName: 'Juan',
+                    contactNumber: '09123456789',
+                    divisionId: '1',
+                    agentTaxRate: '5',
+                    civilStatus: 'Single',
+                    sex: 'Male',
+                    address: '#81 New Street',
+                    birthdate: '2001-01-01',
+                    email: 'sample@email.com',
+                })
+
+            console.log(result.body)
+            expect(result.statusCode).toBe(400)
+        })
+
+        it('should add a new agent with email and password', async () => {
+            const result = await agent
+                .post('/api/agents/new')
+                .send({
+                    agentCode: 'AGENT-TEST',
+                    lastName: 'De La Cruz',
+                    middleName: '',
+                    firstName: 'Juan',
+                    contactNumber: '09123456789',
+                    divisionId: '1',
+                    agentTaxRate: '5',
+                    civilStatus: 'Single',
+                    sex: 'Male',
+                    address: '#81 New Street',
+                    birthdate: '2001-01-01',
+                    email: 'sample@email.com',
+                    password: 'password'
+                })
+
+            console.log(result.body)
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should login the new agent', async () => {
+            const login = await agent
+                .post('/api/auth/login-agent')
+                .send({
+                    email: 'sample@email.com',
+                    password: 'password'
+                })
+
+            console.log(login.body)
+            expect(login.statusCode).toBe(200)
+        })
+
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+    })
+
+    describe('POST /new/agent (add UM with SPs)', () => {
 
         const agent = request.agent(app)
         let spUsers: ITblAgentUser[] = [] as ITblAgentUser[]
