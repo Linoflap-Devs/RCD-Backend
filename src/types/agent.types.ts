@@ -145,4 +145,6 @@ export interface IAddAgent {
     SSSNumber: string | null;
     TelephoneNumber: string | null;
     TINNumber: string | null;
+    Email?: string | null;
+    Password?: string | null;
 }
