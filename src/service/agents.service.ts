@@ -13,6 +13,7 @@ import { QueryResult } from "../types/global.types";
 import { TblImageWithId } from "../types/image.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
+import { hashPassword } from "../utils/scrypt";
 
 export const getAgentsService = async (
     filters?: {
@@ -402,7 +403,23 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
         data.ReferredCode = referringAgent.data.AgentCode
     }
 
-    const result = await addAgent(userId, data)
+    if((data.Email && !data.Password) || (data.Password && !data.Email)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Email and password must be provided together.'
+            }
+        }
+    }
+
+    let pwHash = ''
+    if(data.Password){
+        pwHash = await hashPassword(data.Password)
+    }
+
+    const result = await addAgent(userId, data, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     console.log(result)
 
     if(!result.success){
@@ -417,9 +434,9 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
     if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID == data.PositionID)){
         const salespersons = await getAgents({ agentIds: salespersonIds })
 
-        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
+        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.agent.DivisionID)
 
-        const assign = await assignUMtoSPs(userId, result.data.AgentID, result.data.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
+        const assign = await assignUMtoSPs(userId, result.data.agent.AgentID, result.data.agent.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
 
         if(!assign.success){
             return {

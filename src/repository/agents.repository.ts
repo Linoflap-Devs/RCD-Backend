@@ -1369,8 +1369,13 @@ export const getAgentImages = async (ids?: number[]): QueryResult<TblImageWithId
     }
 }
 
-export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<ITblAgent> => {
+export const addAgent = async (userId: number, agent: IAddAgent, user?: { email: string, passwordHash: string }): QueryResult<{ agent: ITblAgent, user?: ITblAgentUser}> => {
+    
+    const trx = await db.startTransaction().execute()
+
     try {
+
+        let userResult: ITblAgentUser = {} as ITblAgentUser
 
         const generateAgentCode = (): string => {
             const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
@@ -1395,7 +1400,7 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
 
         const uniqueCode = await getUniqueAgentCode();
 
-        const result = await db.insertInto('Tbl_Agents')
+        const result = await trx.insertInto('Tbl_Agents')
             .values({
                 AgentCode: agent.AgentCode ? agent.AgentCode : uniqueCode,
                 FirstName: agent.FirstName,
@@ -1432,17 +1437,36 @@ export const addAgent = async (userId: number, agent: IAddAgent): QueryResult<IT
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
 
+        if(user){
+            const userQuery = await trx.insertInto('Tbl_AgentUser')
+                .values({
+                    Email: user.email,
+                    Password: user.passwordHash,
+                    AgentID: result.AgentID                    
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            
+            userResult = userQuery
+        }
+
+        await trx.commit().execute()
+
         return {
             success: true,
-            data: result
+            data: {
+                agent: result,
+                user: userResult
+            }
         }
     }
 
     catch(err: unknown){
+        await trx.rollback().execute()
         const error = err as Error
         return {
             success: false,
-            data: {} as ITblAgent,
+            data: {} as { agent: ITblAgent, user?: ITblAgentUser },
             error: {
                 code: 500,
                 message: error.message

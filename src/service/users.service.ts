@@ -1502,7 +1502,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             }
         }
 
-        result = agentResult.data
+        result = agentResult.data.agent
     }
 
     else if (data.BrokerType === 'hands-off'){
