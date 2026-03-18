@@ -1442,7 +1442,8 @@ export const addAgent = async (userId: number, agent: IAddAgent, user?: { email:
                 .values({
                     Email: user.email,
                     Password: user.passwordHash,
-                    AgentID: result.AgentID                    
+                    AgentID: result.AgentID,
+                    IsVerified: 1             
                 })
                 .outputAll('inserted')
                 .executeTakeFirstOrThrow()
