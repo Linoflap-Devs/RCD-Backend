@@ -1,9 +1,9 @@
-import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
+import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens, ITblAgentUser } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -1609,6 +1609,56 @@ export const logoutEmployeeSessionService = async(sessionId: number): QueryResul
     return {
         success: true,
         data: {}
+    }
+}
+
+export const bindNewAccountToExistingAgentService = async (agentId: number, email: string, password: string): QueryResult<ITblAgentUser> => {
+    // check if agent id already has account
+    const existingAgentId = await getAgentUsers({ agentIds: [agentId] })
+
+    if (existingAgentId.success && existingAgentId.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Agent already has an account.',
+                code: 400
+            }
+        }
+    }
+
+    const existingEmail = await getAgentUsers({ emails: [email] })
+
+    if (existingEmail.success && existingEmail.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Email is already registered.',
+                code: 400
+            }
+        }
+    }
+    
+    const hash = await hashPassword(password)
+
+    const result = await bindNewAccountToAgent(email, hash, agentId)
+
+    if(!result.success){
+        logger('Failed to bind new account to agent.', {email: email, agentId: agentId})
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Failed to bind new account to agent.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

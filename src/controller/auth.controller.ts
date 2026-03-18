@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -1041,6 +1041,44 @@ export const changeAgentUserPasswordAdminController = async (req: Request, res: 
     return res.status(200).json({
         success: true, 
         message: "Password changed successfully.", 
+        data: result.data
+    });
+}
+
+export const bindAccountToAgentController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        email,
+        password,
+        agentId
+    } = req.body
+
+    const result = await bindNewAccountToExistingAgentService(agentId, email, password)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to create account.", 
+            data: {}
+        });
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Account created successfully.", 
         data: result.data
     });
 }

@@ -2385,3 +2385,34 @@ export const changeEmployeePassword = async (userId: number, password: string): 
         }
     }
 }
+
+export const bindNewAccountToAgent = async (email: string, passwordHash: string, agentId: number): QueryResult<ITblAgentUser> => {
+    try {
+        const newAgentUser = await db.insertInto('Tbl_AgentUser')
+            .values({
+                Email: email,
+                Password: passwordHash,
+                AgentID: agentId,
+                IsVerified: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: newAgentUser
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
