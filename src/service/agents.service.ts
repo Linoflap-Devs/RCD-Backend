@@ -215,7 +215,7 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     const formattedImages = agentImages.data.map((img: TblImageWithId) => {
             return {
                 ...img,
-                FileContent: img.FileContent.toString('base64')
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : ''
             }
     })
 

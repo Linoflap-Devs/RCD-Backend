@@ -1707,7 +1707,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                         ContentType: img.ContentType,
                         FileExt: img.FileExtension,
                         FileSize: img.FileSize,
-                        FileContent: img.FileContent.toString('base64'),
+                        FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
                         ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
                     }
                 })
@@ -3289,7 +3289,7 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
                 ContentType: img.ContentType,
                 FileExt: img.FileExtension,
                 FileSize: img.FileSize,
-                FileContent: img.FileContent.toString('base64'),
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
                 ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
 
             }    

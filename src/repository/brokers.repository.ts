@@ -119,7 +119,7 @@ export const editBrokerImage = async (imageId: number, imageData: IImage): Query
         const obj = {
             ContentType: result.ContentType,
             CreatedAt: result.CreatedAt,
-            FileContent: `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`,
+            FileContent: result.FileContent ? `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`: '',
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
@@ -175,7 +175,7 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
         const obj = {
             ContentType: addImage.ContentType,
             CreatedAt: addImage.CreatedAt,
-            FileContent: `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}`,
+            FileContent: addImage.FileContent ? `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}` : '',
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,

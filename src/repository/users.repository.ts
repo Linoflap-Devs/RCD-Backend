@@ -584,7 +584,7 @@ export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
-                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileContent: picture.FileContent ? `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}` : '',
                     FileExtension: picture.FileExtension,
                     Filename: picture.Filename,
                     FileSize: picture.FileSize,
@@ -654,7 +654,7 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
                 Image: {
                     ContentType: pictureDetails.ContentType,
                     CreatedAt: pictureDetails.CreatedAt,
-                    FileContent: `data:${pictureDetails.ContentType};base64,${bufferToBase64(pictureDetails.FileContent)}`,
+                    FileContent:  pictureDetails.FileContent ? `data:${pictureDetails.ContentType};base64,${bufferToBase64(pictureDetails.FileContent)}` : '',
                     FileExtension: pictureDetails.FileExtension,
                     Filename: pictureDetails.Filename,
                     FileSize: pictureDetails.FileSize,
@@ -767,7 +767,7 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
-                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileContent:  picture.FileContent ? `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}` : '',
                     FileExtension: picture.FileExtension,
                     Filename: picture.Filename,
                     FileSize: picture.FileSize,
@@ -925,7 +925,7 @@ export const editAgentImage = async (imageId: number, imageData: IImage): QueryR
         const obj = {
             ContentType: result.ContentType,
             CreatedAt: result.CreatedAt,
-            FileContent: `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`,
+            FileContent: result.FileContent ? `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}` : '',
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
@@ -981,7 +981,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
         const obj = {
             ContentType: addImage.ContentType,
             CreatedAt: addImage.CreatedAt,
-            FileContent: `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}`,
+            FileContent: addImage.FileContent ? `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}` : '',
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,

@@ -325,7 +325,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
     const formattedImages = brokerImages.data.map((img: TblImageWithId) => {
             return {
                 ...img,
-                FileContent: img.FileContent.toString('base64')
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : ''
             }
     })
 
