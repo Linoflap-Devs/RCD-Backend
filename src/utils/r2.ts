@@ -1,6 +1,7 @@
-import { PutObjectCommand, PutObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
+import { GetObjectCommand, PutObjectCommand, PutObjectCommandOutput, S3Client } from "@aws-sdk/client-s3"
 import { QueryResult } from "../types/global.types"
 import { R2ImageUploadResult } from "../types/r2.types"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 
 if(!process.env.R2_ENDPOINT) throw new Error('R2_ENDPOINT is not defined')
@@ -18,6 +19,24 @@ const s3client = new S3Client({
         secretAccessKey: process.env.R2_S3_SECRET_KEY
     },
 })
+
+export const getPresignedUrl = async (storageKey: string): QueryResult<string> => {
+    const url = await getSignedUrl(s3client, new GetObjectCommand({ Bucket: bucket, Key: storageKey }), { expiresIn: 60 });
+
+    if(!url) return {
+        success: false,
+        data: '',
+        error: {
+            code: 500,
+            message: 'Failed to get presigned url'
+        }
+    }
+
+    return {
+        success: true,
+        data: url
+    }
+}
 
 const uploadImage = async (bucketName: string, key: string, body: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
     
