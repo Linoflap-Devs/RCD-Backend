@@ -687,11 +687,12 @@ export interface TblDivisionRequests {
 export interface TblImage {
   ContentType: string;
   CreatedAt: Date;
-  FileContent: Buffer;
+  FileContent: Buffer | null;
   FileExtension: string;
   Filename: string;
   FileSize: number;
   ImageID: Generated<number>;
+  StorageKey: string | null;
 }
 
 export interface TblLogs {
