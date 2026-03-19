@@ -913,7 +913,8 @@ export const editAgentImage = async (imageId: number, imageData: IImage): QueryR
             FileContent: imageData.FileContent,
             FileExtension: imageData.FileExt,
             Filename: imageData.FileName,
-            FileSize: imageData.FileSize
+            FileSize: imageData.FileSize,
+            StorageKey: imageData.StorageKey
         };
 
         const result = await db.updateTable('Tbl_Image')

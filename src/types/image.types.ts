@@ -3,7 +3,17 @@ export interface IImage {
     ContentType: string,
     FileExt: string,
     FileSize: number,
-    FileContent: Buffer
+    FileContent: Buffer,
+    StorageKey?: string
+}
+
+export interface IImageR2 {
+    FileName: string,
+    ContentType: string,
+    FileExt: string,
+    FileSize: number,
+    FileContent: Buffer | null,
+    StorageKey: string | null
 }
 
 export interface IImageBase64 {

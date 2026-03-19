@@ -1,7 +1,7 @@
 import express from 'express';
 import { validate } from '../middleware/zod';
 import { registerAgentSchema, registerBrokerSchema, registerInviteSchema } from '../schema/users.schema';
-import { approveAgentRegistrationController, approveBrokerRegistrationController, approveInviteRegistrationController, bindAccountToAgentController, changeAgentUserPasswordAdminController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerBrokerController, registerEmployeeController, registerInviteController, rejectAgentRegistrationController, rejectBrokerRegistrationController, rejectInviteRegistrationController, revokeInviteTokenController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
+import { approveAgentRegistrationController, approveBrokerRegistrationController, approveInviteRegistrationController, bindAccountToAgentController, changeAgentUserPasswordAdminController, changeEmployeePasswordAdminController, changeEmployeePasswordController, getCurrentAgentController, getCurrentEmployeeController, loginAgentController, loginBrokerController, loginEmployeeController, logoutAgentSessionController, logoutBrokerSessionController, logoutEmployeeSessionController, registerAgentController, registerAgentControllerR2, registerBrokerController, registerEmployeeController, registerInviteController, rejectAgentRegistrationController, rejectBrokerRegistrationController, rejectInviteRegistrationController, revokeInviteTokenController, sendOTPController, updateAgentPasswordController, updateForgottenPasswordController, verifyOTPController } from '../controller/auth.controller';
 import { multerUpload } from '../middleware/multer';
 import { approveBrokerRegistrationSchema, approveRegistrationSchema, bindAccountToAgentSchema, changeEmployeePasswordSchema, changeForgottonPasswordSchema, changePasswordSchema, loginAgentSchema, loginEmployeeSchema, registerEmployeeSchema, rejectBrokerRegistrationSchema, rejectRegistrationSchema, verifyOTPSchema } from '../schema/auth.schema';
 import { validateBrokerSession, validateEmployeeSession, validateSession } from '../middleware/auth';
@@ -11,6 +11,8 @@ import { unlinkAgentUserController, unlinkBrokerUserController } from '../contro
 const router = express.Router();
 
 router.route('/register-agent').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]),  validate(registerAgentSchema)], registerAgentController);
+router.route('/register-agent-r2').post([multerUpload.fields([{name: 'profileImage', maxCount: 1}, {name: 'govId', maxCount: 1}, {name: 'selfie', maxCount: 1}]),  validate(registerAgentSchema)], registerAgentControllerR2);
+
 router.route('/login-agent').post(validate(loginAgentSchema), loginAgentController);
 router.route('/logout-agent').delete(validateSession, logoutAgentSessionController);
 

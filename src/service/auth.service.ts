@@ -1,10 +1,10 @@
 import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens, ITblAgentUser } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
-import { IImage } from "../types/image.types";
+import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { editAgentImage, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -21,6 +21,7 @@ import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
 import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
+import { r2UploadAgentAvatar, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -317,6 +318,99 @@ export const registerAgentService = async (
         }
     }
 
+    return result
+}
+
+export const registerAgentServiceR2 = async (
+    data: IAgentRegister, 
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File,
+    agentId?: number
+): QueryResult<any> => {
+
+    if(agentId){
+        const agent = await findAgentDetailsByAgentId(agentId)
+
+        if(!agent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent details.'
+                }
+            }
+        }
+    }
+
+    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+
+    let metadata: IImageR2 | undefined = undefined
+
+    if(image){
+        metadata = {
+            FileName: filename,
+            ContentType: image.mimetype,
+            FileExt: path.extname(image.originalname),
+            FileSize: image.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    }
+
+    let govIdMetadata: IImageR2 | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    )
+    
+    let selfieMetadata: IImageR2 | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    )
+
+    const result = await registerAgentTransactionR2(data, metadata, govIdMetadata, selfieMetadata, agentId)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register agent.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
+
+    // upload images
+    const [avatar, govId, selfie] = await Promise.all([
+        image ? r2UploadAgentAvatar(result.data.agentUser.AgentUserID, image) : Promise.resolve(undefined),
+        govIdImage ? r2UploadGovId(result.data.registration.AgentRegistrationID, govIdImage) : Promise.resolve(undefined),
+        selfieImage ? r2UploadGovSelfie(result.data.registration.AgentRegistrationID, selfieImage) : Promise.resolve(undefined),
+    ])
+
+    const [editAvatar, editGovId, editSelfie] = await Promise.all([
+        avatar && result.data.agentUser.ImageID ? editAgentImage(result.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        govId && result.data.registration.GovImageID ? editAgentImage(result.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        selfie && result.data.registration.SelfieImageID ? editAgentImage(result.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+    ])
+    
     return result
 }
 

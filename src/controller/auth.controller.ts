@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -84,6 +84,89 @@ export const registerAgentController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerAgentControllerR2 = async (req: Request, res: Response) => {
+
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
+    console.log(profileImage)
+
+    const {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        positionId
+    } = req.body
+
+    console.log("req body", req.body)
+
+    console.log("education and experience", education, experience)
+
+    const obj: IAgentRegister = {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        positionId
+    }
+
+    const result = await registerAgentServiceR2(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+
+    console.log(result)
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register agent.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Agent registered successfully.",
+        data: result.data
+    })    
+};
+
 
 export const registerInviteController = async (req: Request, res: Response) => {
     const {
