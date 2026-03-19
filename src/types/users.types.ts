@@ -54,11 +54,12 @@ export type VwAgentPicture = VwAgents & {
     Image?: {
         ContentType: string;
         CreatedAt: Date;
-        FileContent: string;
+        FileContent?: string;
         FileExtension: string;
         Filename: string;
         FileSize: number;
         ImageID: number;
+        StorageKey?: string
     }
 }
 

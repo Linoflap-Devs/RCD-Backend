@@ -26,9 +26,10 @@ export interface ITypedImageBase64 {
 export interface TblImageWithId {
     ContentType: string;
     CreatedAt: Date;
-    FileContent: Buffer;
+    FileContent: Buffer | null;
     FileExtension: string;
     Filename: string;
     FileSize: number;
     ImageID: number;
+    StorageKey: string | null
 }
