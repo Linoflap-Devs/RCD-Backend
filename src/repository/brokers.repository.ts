@@ -593,18 +593,21 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                 'ProfileImage.FileExtension as ProfileFileExtension',
                 'ProfileImage.FileSize as ProfileFileSize',
                 'ProfileImage.FileContent as ProfileFileContent',
+                'ProfileImage.StorageKey as ProfileStorageKey',
                 // Government ID image fields
                 'GovImage.Filename as GovFilename',
                 'GovImage.ContentType as GovContentType',
                 'GovImage.FileExtension as GovFileExtension',
                 'GovImage.FileSize as GovFileSize',
                 'GovImage.FileContent as GovFileContent',
+                'GovImage.StorageKey as GovStorageKey',
                 // Selfie image fields
                 'SelfieImage.Filename as SelfieFilename',
                 'SelfieImage.ContentType as SelfieContentType',
                 'SelfieImage.FileExtension as SelfieFileExtension',
                 'SelfieImage.FileSize as SelfieFileSize',
-                'SelfieImage.FileContent as SelfieFileContent'
+                'SelfieImage.FileContent as SelfieFileContent',
+                'SelfieImage.StorageKey as SelfieStorageKey',
             ])
 
         console.log(filters)
@@ -694,14 +697,15 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             const images: ITypedImageBase64[] = [];
 
             // Add profile image
-            if (broker.ProfileFileContent) {
+            if (broker.ProfileFilename) {
                 images.push({
                     FileName: broker.ProfileFilename || '',
                     ContentType: broker.ProfileContentType || '',
                     FileExt: broker.ProfileFileExtension || '',
                     FileSize: broker.ProfileFileSize || 0,
-                    FileContent: broker.ProfileFileContent.toString('base64'),
-                    ImageType: 'profile'
+                    FileContent: broker.ProfileFileContent ? broker.ProfileFileContent.toString('base64') : '',
+                    ImageType: 'profile',
+                    StorageKey: broker.ProfileStorageKey
                 });
             }
 
@@ -712,8 +716,9 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                     ContentType: broker.GovContentType || '',
                     FileExt: broker.GovFileExtension || '',
                     FileSize: broker.GovFileSize || 0,
-                    FileContent: broker.GovFileContent.toString('base64'),
-                    ImageType: 'govid'
+                    FileContent: broker.GovFileContent ? broker.GovFileContent.toString('base64') : '',
+                    ImageType: 'govid',
+                    StorageKey: broker.GovStorageKey
                 });
             }
 
@@ -724,8 +729,9 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                     ContentType: broker.SelfieContentType || '',
                     FileExt: broker.SelfieFileExtension || '',
                     FileSize: broker.SelfieFileSize || 0,
-                    FileContent: broker.SelfieFileContent.toString('base64'),
-                    ImageType: 'selfie'
+                    FileContent: broker.SelfieFileContent ? broker.SelfieFileContent.toString('base64') : '',
+                    ImageType: 'selfie',
+                    StorageKey: broker.SelfieStorageKey
                 });
             }
 

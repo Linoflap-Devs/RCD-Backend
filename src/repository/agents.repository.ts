@@ -516,18 +516,21 @@ export const getAgentRegistrations = async (
                 'ProfileImage.FileExtension as ProfileFileExtension',
                 'ProfileImage.FileSize as ProfileFileSize',
                 'ProfileImage.FileContent as ProfileFileContent',
+                'ProfileImage.StorageKey as ProfileStorageKey',
                 // Government ID image fields
                 'GovImage.Filename as GovFilename',
                 'GovImage.ContentType as GovContentType',
                 'GovImage.FileExtension as GovFileExtension',
                 'GovImage.FileSize as GovFileSize',
                 'GovImage.FileContent as GovFileContent',
+                'GovImage.StorageKey as GovStorageKey',
                 // Selfie image fields
                 'SelfieImage.Filename as SelfieFilename',
                 'SelfieImage.ContentType as SelfieContentType',
                 'SelfieImage.FileExtension as SelfieFileExtension',
                 'SelfieImage.FileSize as SelfieFileSize',
                 'SelfieImage.FileContent as SelfieFileContent',
+                'SelfieImage.StorageKey as SelfieStorageKey',
                 // Division
                 'Tbl_Division.Division'
             ])
@@ -658,37 +661,40 @@ export const getAgentRegistrations = async (
             const images: ITypedImageBase64[] = [];
 
             // Add profile image
-            if (agent.ProfileFileContent) {
+            if (agent.ProfileFilename) {
                 images.push({
                     FileName: agent.ProfileFilename || '',
                     ContentType: agent.ProfileContentType || '',
                     FileExt: agent.ProfileFileExtension || '',
                     FileSize: agent.ProfileFileSize || 0,
-                    FileContent: agent.ProfileFileContent.toString('base64'),
+                    FileContent: agent.ProfileFileContent ? agent.ProfileFileContent.toString('base64') : '',
+                    StorageKey: agent.ProfileStorageKey,
                     ImageType: 'profile'
                 });
             }
 
             // Add government ID image
-            if (agent.GovFileContent) {
+            if (agent.GovFilename) {
                 images.push({
                     FileName: agent.GovFilename || '',
                     ContentType: agent.GovContentType || '',
                     FileExt: agent.GovFileExtension || '',
                     FileSize: agent.GovFileSize || 0,
-                    FileContent: agent.GovFileContent.toString('base64'),
+                    FileContent: agent.GovFileContent ? agent.GovFileContent.toString('base64') : '',
+                    StorageKey: agent.GovStorageKey,
                     ImageType: 'govid'
                 });
             }
 
             // Add selfie image
-            if (agent.SelfieFileContent) {
+            if (agent.SelfieFilename) {
                 images.push({
                     FileName: agent.SelfieFilename || '',
                     ContentType: agent.SelfieContentType || '',
                     FileExt: agent.SelfieFileExtension || '',
                     FileSize: agent.SelfieFileSize || 0,
-                    FileContent: agent.SelfieFileContent.toString('base64'),
+                    FileContent: agent.SelfieFileContent ? agent.SelfieFileContent.toString('base64') : '',
+                    StorageKey: agent.SelfieStorageKey,
                     ImageType: 'selfie'
                 });
             }

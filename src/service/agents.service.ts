@@ -10,10 +10,11 @@ import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.type
 import { IAgentRegistration, IAgentRegistrationListItem, ITblAgentUser } from "../types/auth.types";
 import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
-import { TblImageWithId } from "../types/image.types";
+import { ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
 import { hashPassword } from "../utils/scrypt";
+import { getPresignedUrl } from "../utils/r2";
 
 export const getAgentsService = async (
     filters?: {
@@ -346,9 +347,37 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
         }
     }
 
+    let resultCopy = result.data.result[0];
+
+    if (resultCopy.Images && resultCopy.Images.length > 0) {
+
+        const imageCopies = resultCopy.Images
+
+        const imageTypes = ['profile', 'govid', 'selfie'] as const;
+
+        const images = imageTypes.map(type =>
+            imageCopies.find((img: ITypedImageBase64) => img.ImageType === type)
+        );
+
+        const urls = await Promise.all(
+            images.map(img =>
+                img?.StorageKey ? getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
+            )
+        );
+
+        resultCopy = {
+            ...resultCopy,
+            Images: images
+                .map((img, i) =>
+                    img ? { ...img, URL: urls[i]?.data ?? null } : null
+                )
+                .filter((img): img is ITypedImageBase64 & { URL: string | null } => img !== null)
+        };
+    }
+
     return {
         success: true,
-        data: result.data.result[0]
+        data: resultCopy
     }
 }
 
