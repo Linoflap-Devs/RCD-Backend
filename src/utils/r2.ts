@@ -8,8 +8,10 @@ if(!process.env.R2_ENDPOINT) throw new Error('R2_ENDPOINT is not defined')
 if(!process.env.R2_S3_ACCESS_KEY) throw new Error('R2_S3_ACCESS_KEY is not defined')
 if(!process.env.R2_S3_SECRET_KEY) throw new Error('R2_S3_SECRET_KEY is not defined')
 if(!process.env.R2_BUCKET) throw new Error('R2_BUCKET is not defined')
+if(!process.env.R2_PUBLIC_BUCKET) throw new Error('R2_PUBLIC_BUCKET is not defined')
 
 const bucket = process.env.R2_BUCKET
+const publicBucket = process.env.R2_PUBLIC_BUCKET
 
 const s3client = new S3Client({
     region: 'auto',
@@ -87,7 +89,25 @@ export const r2UploadGovSelfie = async (agentRegistrationId: number, file: Expre
 }
 
 export const r2UploadAgentAvatar = async (agentId: number, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
-    const result = await uploadImage(bucket, `avatars/user-${agentId}/avatar`, file)
+    const result = await uploadImage(publicBucket, `avatars/user-${agentId}/avatar`, file)
+
+    return result
+}
+
+export const r2UploadBrokerGovId = async (brokerRegistrationId: number, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
+    const result = await uploadImage(bucket, `identification/b_reg-${brokerRegistrationId}/govid`, file)
+
+    return result
+}
+
+export const r2UploadBrokerGovSelfie = async (brokerId: number, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
+    const result = await uploadImage(bucket, `identification/b_reg-${brokerId}/selfie`, file)
+
+    return result
+}
+
+export const r2UploadBrokerAvatar = async (brokerId: number, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
+    const result = await uploadImage(publicBucket, `avatars/broker-${brokerId}/avatar`, file)
 
     return result
 }
