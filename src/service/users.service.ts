@@ -3,7 +3,7 @@ import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
-import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
+import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
 import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
@@ -19,6 +19,7 @@ import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
+import { getPresignedUrl } from "../utils/r2";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1376,11 +1377,39 @@ export const lookupBrokerRegistrationService = async (brokerRegistrationId: numb
         }
     }
 
-    console.log(brokerRegistration)
+    let resultCopy = brokerRegistration.data[0];
+
+    console.log(resultCopy)
+    
+    if (resultCopy.Images && resultCopy.Images.length > 0) {
+
+        const imageCopies = resultCopy.Images
+
+        const imageTypes = ['profile', 'govid', 'selfie'] as const;
+
+        const images = imageTypes.map(type =>
+            imageCopies.find((img: ITypedImageBase64) => img.ImageType === type)
+        );
+
+        const urls = await Promise.all(
+            images.map(img =>
+                img?.StorageKey ? img?.ImageType === 'profile' ? Promise.resolve({data: `${process.env.R2_PUBLIC_ENDPOINT}/${img.StorageKey}`}) : getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
+            )
+        );
+
+        resultCopy = {
+            ...resultCopy,
+            Images: images
+                .map((img, i) =>
+                    img ? { ...img, URL: urls[i]?.data ?? null } : null
+                )
+                .filter((img): img is ITypedImageBase64 & { URL: string | null } => img !== null)
+        };
+    }
 
     return {
         success: true,
-        data: brokerRegistration.data[0]
+        data: resultCopy
     }
 }
 

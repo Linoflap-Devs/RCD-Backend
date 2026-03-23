@@ -710,7 +710,7 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             }
 
             // Add government ID image
-            if (broker.GovFileContent) {
+            if (broker.GovFilename) {
                 images.push({
                     FileName: broker.GovFilename || '',
                     ContentType: broker.GovContentType || '',
@@ -723,7 +723,7 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             }
 
             // Add selfie image
-            if (broker.SelfieFileContent) {
+            if (broker.SelfieFilename) {
                 images.push({
                     FileName: broker.SelfieFilename || '',
                     ContentType: broker.SelfieContentType || '',
