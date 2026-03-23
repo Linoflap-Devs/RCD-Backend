@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -301,6 +301,95 @@ export const registerBrokerController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerBrokerControllerR2 = async (req: Request, res: Response) => {
+
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
+    console.log(profileImage)
+
+    const {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        brokerType,
+    } = req.body
+
+    if(brokerType !== 'hands-on' && brokerType !== 'hands-off'){
+        res.status(400).json({
+            success: false, 
+            message: "Invalid broker type. Avaiable types are 'hands-on' and 'hands-off'.",
+            data: {}
+        })
+
+        return
+    }
+
+
+    const obj: IBrokerRegister = {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+    }
+
+    const result = await registerBrokerServiceR2(obj, brokerType as "hands-on" | "hands-off", profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+
+    console.log(result)
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register broker.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Broker registered successfully.",
+        data: result.data
+    })    
+};
+
 
 export const inviteNewUserController = async (req: Request, res: Response) => {
     
