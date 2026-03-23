@@ -337,6 +337,17 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
         }
     }
 
+    if(!process.env.R2_PUBLIC_ENDPOINT){
+        return {
+            success: false,
+            data: {} as IAgentRegistration,
+            error: {
+                code: 400,
+                message: 'R2_PUBLIC_ENDPOINT is not defined.'
+            }
+        }
+    }
+
     const result = await getAgentRegistrations({agentRegistrationId: agentRegistrationId})
 
     if(!result.success){
@@ -361,7 +372,7 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
 
         const urls = await Promise.all(
             images.map(img =>
-                img?.StorageKey ? getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
+                img?.StorageKey ? img?.ImageType === 'profile' ? Promise.resolve({data: `${process.env.R2_PUBLIC_ENDPOINT}/${img.StorageKey}`}) : getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
             )
         );
 
