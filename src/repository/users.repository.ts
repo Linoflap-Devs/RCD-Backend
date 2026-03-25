@@ -588,7 +588,8 @@ export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult
                     FileExtension: picture.FileExtension,
                     Filename: picture.Filename,
                     FileSize: picture.FileSize,
-                    ImageID: picture.ImageID
+                    ImageID: picture.ImageID,
+                    StorageKey: picture.StorageKey ? picture.StorageKey : null
                 }
             }
         }

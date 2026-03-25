@@ -19,7 +19,7 @@ import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
-import { getPresignedUrl } from "../utils/r2";
+import { getPresignedUrl, getPublicUrl } from "../utils/r2";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -47,6 +47,10 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
                 code: 400
             }
         }
+    }
+
+    if(agentUserDetails.data.Image && agentUserDetails.data.Image.StorageKey){
+        agentUserDetails.data.Image.StorageKey = await getPublicUrl(agentUserDetails.data.Image.StorageKey)
     }
 
     const userInfo = {
@@ -372,6 +376,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         },
         taxRate: agentTaxRate,
         divisions: allowedDivisions,
+
         images: formattedImages
     }
 

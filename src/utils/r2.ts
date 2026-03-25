@@ -9,7 +9,8 @@ if(!process.env.R2_S3_ACCESS_KEY) throw new Error('R2_S3_ACCESS_KEY is not defin
 if(!process.env.R2_S3_SECRET_KEY) throw new Error('R2_S3_SECRET_KEY is not defined')
 if(!process.env.R2_BUCKET) throw new Error('R2_BUCKET is not defined')
 if(!process.env.R2_PUBLIC_BUCKET) throw new Error('R2_PUBLIC_BUCKET is not defined')
-
+if(!process.env.R2_PUBLIC_ENDPOINT) throw new Error('R2_PUBLIC_ENDPOINT is not defined')
+    
 const bucket = process.env.R2_BUCKET
 const publicBucket = process.env.R2_PUBLIC_BUCKET
 
@@ -38,6 +39,10 @@ export const getPresignedUrl = async (storageKey: string): QueryResult<string> =
         success: true,
         data: url
     }
+}
+
+export const getPublicUrl = (storageKey: string): string => {
+    return `${process.env.R2_PUBLIC_ENDPOINT}/${storageKey}`
 }
 
 const uploadImage = async (bucketName: string, key: string, body: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
