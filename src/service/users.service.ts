@@ -50,7 +50,7 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
     }
 
     if(agentUserDetails.data.Image && agentUserDetails.data.Image.StorageKey){
-        agentUserDetails.data.Image.StorageKey = await getPublicUrl(agentUserDetails.data.Image.StorageKey)
+        agentUserDetails.data.Image.URL = getPublicUrl(agentUserDetails.data.Image.StorageKey)
     }
 
     const userInfo = {
@@ -316,6 +316,8 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         //     error: brokerWithUserResult.error
         // }
     }
+
+    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
 
     const imageIds = []
     imageIds.push(brokerWithUserResult.data.user.ImageID || null)
