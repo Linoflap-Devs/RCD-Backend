@@ -199,7 +199,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
 
     // agent details
     const basicInfo = {
-        gender: brokerDetails.data.Sex.trim() || '',
+        gender: brokerDetails.data.Gender.trim() || '',
         civilStatus: brokerUserDetails.data.CivilStatus || brokerDetails.data.CivilStatus.trim() || '',
         religion: brokerUserDetails.data.Religion || brokerDetails.data.Religion?.trim() || '',
         birthday: brokerUserDetails.data.Birthdate || brokerDetails.data.Birthdate,
@@ -207,10 +207,10 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
         address: brokerUserDetails.data.Address || brokerDetails.data.Address.trim(),
         telephoneNumber: brokerUserDetails.data.TelephoneNumber || brokerDetails.data.TelephoneNumber?.trim() || '',
         contactNumber: brokerUserDetails.data.ContactNumber || brokerDetails.data.ContactNumber.trim(),
-        emergencyPerson: brokerUserDetails.data.PersonEmergency || brokerDetails.data.PersonEmergency?.trim() || '',
-        emergencyContact: brokerUserDetails.data.ContactEmergency || brokerDetails.data.ContactEmergency.trim() || '',
-        emergencyAddress: brokerUserDetails.data.AddressEmergency || brokerDetails.data.AddressEmergency.trim() || '',
-        affiliation: brokerUserDetails.data.Affiliation || brokerDetails.data.AffiliationDate || '',
+        emergencyPerson: brokerUserDetails.data.PersonEmergency ? brokerDetails.data.PersonEmergency?.trim() : '',
+        emergencyContact: brokerUserDetails.data.ContactEmergency ? brokerDetails.data.ContactEmergency : '',
+        emergencyAddress: brokerUserDetails.data.AddressEmergency ? brokerDetails.data.AddressEmergency : '',
+        affiliation: brokerUserDetails.data.Affiliation ? brokerDetails.data.AffliationDate : '',
     }
 
     // work experience
@@ -295,8 +295,6 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         getBrokerWorkExp(brokerId)
     ])
 
-    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
-
     let backupBrokerData: ITblBroker | undefined = undefined
 
     if(!brokerWithUserResult.success){
@@ -327,13 +325,29 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
     // images
 
     const brokerImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
-    const formattedImages = brokerImages.data.map((img: TblImageWithId) => {
+
+    const formattedImages = await Promise.all(
+        await brokerImages.data.map(async (img: TblImageWithId) => {
+        
+            const imageType = img.Filename.includes('selfie') ? 'selfie' : img.Filename.includes('gov') ? 'govid' : 'profile'
+
+            let url = ''
+            if(img.StorageKey){
+                if(imageType == 'profile'){
+                    url = await getPublicUrl(img.StorageKey)
+                } else {
+                    url = (await getPresignedUrl(img.StorageKey)).data
+                }
+            }
+
             return {
                 ...img,
-                FileContent: img.FileContent ? img.FileContent.toString('base64') : ''
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
+                StorageKey: img.StorageKey,
+                URL: url 
             }
-    })
-
+        })
+    )
     // divisions
 
     let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
@@ -377,7 +391,7 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         taxRate: agentTaxRate,
         divisions: allowedDivisions,
 
-        images: formattedImages
+        images: formattedImages.length > 0 ? formattedImages : []
     }
 
     return {

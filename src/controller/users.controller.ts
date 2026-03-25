@@ -73,7 +73,7 @@ export const getAgentUserDetailsController = async (req: Request, res: Response)
             success: false,
             message: result.error?.message || "Failed to get user details.",
             data: {}
-         });
+        });
         return
     }
 
