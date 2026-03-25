@@ -659,7 +659,8 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
                     FileExtension: pictureDetails.FileExtension,
                     Filename: pictureDetails.Filename,
                     FileSize: pictureDetails.FileSize,
-                    ImageID: pictureDetails.ImageID
+                    ImageID: pictureDetails.ImageID,
+                    StorageKey: pictureDetails.StorageKey ? pictureDetails.StorageKey : null
                 }
             }
         }

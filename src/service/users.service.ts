@@ -491,6 +491,10 @@ export const getUserDetailsWithValidationService = async (agentUserId: number, t
     //     }
     // }
 
+    if(targetAgentDetails.data.Image && targetAgentDetails.data.Image.StorageKey){
+        targetAgentDetails.data.Image.URL = getPublicUrl(targetAgentDetails.data.Image.StorageKey)
+    }
+
     const userInfo = {
         firstName: targetAgentDetails.data.FirstName?.trim() || '',
         lastName: targetAgentDetails.data.LastName?.trim() || '',
