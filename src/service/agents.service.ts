@@ -14,7 +14,7 @@ import { ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
 import { hashPassword } from "../utils/scrypt";
-import { getPresignedUrl } from "../utils/r2";
+import { getPresignedUrl, getPublicUrl } from "../utils/r2";
 
 export const getAgentsService = async (
     filters?: {
@@ -213,12 +213,28 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     // images
 
     const agentImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
-    const formattedImages = agentImages.data.map((img: TblImageWithId) => {
+    const formattedImages = await Promise.all(
+        await agentImages.data.map(async (img: TblImageWithId) => {
+        
+            const imageType = img.Filename.includes('selfie') ? 'selfie' : img.Filename.includes('gov') ? 'govid' : 'profile'
+
+            let url = ''
+            if(img.StorageKey){
+                if(imageType == 'profile'){
+                    url = await getPublicUrl(img.StorageKey)
+                } else {
+                    url = (await getPresignedUrl(img.StorageKey)).data
+                }
+            }
+
             return {
                 ...img,
-                FileContent: img.FileContent ? img.FileContent.toString('base64') : ''
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
+                StorageKey: img.StorageKey,
+                URL: url 
             }
-    })
+        })
+    )
 
     // divisions
 
