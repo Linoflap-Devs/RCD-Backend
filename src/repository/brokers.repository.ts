@@ -587,11 +587,9 @@ export const getBrokerWithUser = async (agentId: number): QueryResult<{ broker: 
     try {
         const result = await db.selectFrom('Tbl_Broker')
             .innerJoin('Tbl_BrokerUser', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
-            .innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_Broker.BrokerID')
+            //.innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_Broker.BrokerID')
             .selectAll('Tbl_Broker')
             .select([
-                'Tbl_Broker.Religion',
-                'Tbl_Broker.BrokerTaxRate',
                 'Tbl_BrokerUser.BrokerUserID',
                 'Tbl_BrokerUser.BrokerID',
                 'Tbl_BrokerUser.BrokerRegistrationID',
