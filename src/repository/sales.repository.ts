@@ -7,7 +7,7 @@ import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails
 import { TZDate } from "@date-fns/tz";
 import { sql, ExpressionBuilder, Selectable, Insertable } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
 import { CommissionDetailPositions, CommissionRate, CommissionRateDetail } from "../types/commission.types";
 
 // UTILS
@@ -1681,7 +1681,7 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
             .where('PendingSalesTranCode', '=', result.PendingSalesTranCode)
             .execute()
         
-        let imgs: IImageBase64[] = []
+        let imgs: ITypedImageBase64[] = []
 
         const imageJunction = await db.selectFrom('Tbl_SalesTranImage')
             .selectAll()

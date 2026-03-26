@@ -30,7 +30,7 @@ export interface ITypedImageBase64 {
     FileExt: string,
     FileSize: number,
     FileContent: string | null,
-    ImageType: 'profile' | 'govid' | 'selfie',
+    ImageType: 'profile' | 'govid' | 'selfie' | 'receipt' | 'agreement' | 'other',
     StorageKey: string | null
 }
 

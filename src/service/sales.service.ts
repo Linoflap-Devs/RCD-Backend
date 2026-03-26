@@ -6,7 +6,7 @@ import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
-import { IImage, IImageBase64, IImageR2 } from "../types/image.types";
+import { IImage, IImageBase64, IImageR2, ITypedImageBase64 } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
 import { CommissionDetailPositions } from "../types/commission.types";
@@ -16,7 +16,7 @@ import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
 import { getBrokers } from "../repository/brokers.repository";
-import { r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
+import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
 import { addImage, editImage } from "../repository/images.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
@@ -1015,8 +1015,6 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        console.log("agentData", agentData)
-
         if(agentData.data.ReferredByID){
             assignedUM = agentData.data.ReferredByID
         }
@@ -1142,11 +1140,8 @@ export const addPendingSalesServiceR2 = async (
         }
     })
 
-    console.log('modified comm rate', modifiedCommissionRates)
 
     for(const commission of modifiedCommissionRates || []){
-
-        console.log("comm loop", commission)
 
         if(commission.agentId || commission.agentName){
             if(commission.position.toLowerCase() == 'broker') {
@@ -1228,7 +1223,7 @@ export const addPendingSalesServiceR2 = async (
     const imageIds: {id: number, type: string}[] = []
 
     if( data.images && data.images.receipt){
-
+        console.log('receipt')
         const receipt = data.images.receipt;
         const receiptMetadata: IImageR2 = {
             FileName: receipt.originalname,
@@ -1239,8 +1234,12 @@ export const addPendingSalesServiceR2 = async (
             StorageKey: null
         }
         const addDBImage = await addImage(receiptMetadata)
+
+        console.log(addDBImage)
         
         const r2Upload = await r2UploadReceipt(result.data.PendingSalesTranCode, data.images.receipt)
+
+        console.log(r2Upload)
 
         const updateStorageKey = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
 
@@ -1548,6 +1547,21 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
+    let resultCopy = {}
+    if (result.data.Images && result.data.Images.length > 0) {
+        const imageCopies = result.data.Images
+        const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
+            imageCopies.map(async (img: ITypedImageBase64) => {
+                const url = img.StorageKey ? (await getPresignedUrl(img.StorageKey)).data : await Promise.resolve('')
+                return {
+                    ...img,
+                    URL: url
+                }
+            })
+        )
+        resultCopy = { ...result.data, Images: images }
+    }
+
     let brokerId = null
 
     const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
@@ -1608,7 +1622,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
     }
 
     const obj = {
-        ...result.data,
+        ...resultCopy,
         Details: detailsArray,
         LastUpdateby: updatedByName,
         LastUpdateId: result.data.LastUpdateby

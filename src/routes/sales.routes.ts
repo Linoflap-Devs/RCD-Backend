@@ -1,6 +1,6 @@
 import express from 'express';
 import { validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
-import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController, archivePendingSalesController, archiveSalesTransactionController, getWebPersonalSalesController, assignUMPendingSaleController, archiveWebPendingSalesController } from '../controller/sales.controller';
+import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController, archivePendingSalesController, archiveSalesTransactionController, getWebPersonalSalesController, assignUMPendingSaleController, archiveWebPendingSalesController, addPendingSaleControllerR2 } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
 import { addPendingSaleSchema, addSalesTargetSchema, editSalesTargetSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
@@ -45,6 +45,15 @@ router.route('/pending').post(
         validate(addPendingSaleSchema),
     ], 
     addPendingSaleController
+);
+router.route('/pending-r2').post(
+    [
+        validateSession, 
+        validateRole(['AD','SP', 'UM', 'SD']),
+        multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
+        validate(addPendingSaleSchema),
+    ], 
+    addPendingSaleControllerR2
 );
 router.route('/pending/:pendingSalesId').patch([validateSession, validateRole(['UM'])], editPendingSalesController);
 router.route('/pending/:pendingSalesId/images').patch(
