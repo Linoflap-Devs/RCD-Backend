@@ -1,12 +1,12 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
-import { IImage, IImageBase64 } from "../types/image.types";
+import { IImage, IImageBase64, IImageR2 } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
 import { CommissionDetailPositions } from "../types/commission.types";
@@ -16,6 +16,8 @@ import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
 import { getBrokers } from "../repository/brokers.repository";
+import { r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
+import { addImage, editImage } from "../repository/images.repository";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -875,6 +877,402 @@ export const addPendingSalesService = async (
     }
 
     console.log(result.success, webAgentData.Role)
+
+    if(webAgentData && webAgentData.Role === 'SALES ADMIN' && result.success){
+        console.log('starting approval')
+        const approval = await approvePendingSaleTransaction(webAgentData.UserWebID, result.data.AgentPendingSalesID)
+
+        console.log(approval)
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const addPendingSalesServiceR2 = async (
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
+    data: {
+        reservationDate: Date,
+        salesBranchID: number,
+        sectorID: number, 
+        divisionID?: number,
+        buyer: {
+            buyersName: string,
+            address: string,
+            phoneNumber: string,
+            occupation: string,
+        },
+        property: {
+            projectID: number,
+            blkFlr: string,
+            lotUnit: string,
+            phase: string,
+            lotArea: number,
+            flrArea: number,
+            developerCommission?: number,
+            netTCP: number,
+            miscFee: number,
+            financingScheme: string,
+        },
+        payment: {
+            downpayment: number,
+            dpTerms: number,
+            monthlyPayment: number
+            dpStartDate: Date,
+            sellerName: string,
+        },
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: AddPendingSaleDetail[]
+    }
+): QueryResult<any> => {
+
+    console.log("commrates", data.commissionRates)
+
+    if(!user.agentUserId && !user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+
+    if(user.agentUserId && user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Cannot submit both agent and web user.',
+                code: 400
+            }
+        }
+    }
+    
+    let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
+    let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
+    let role = ''
+    let assignedUM = undefined
+
+    if(user.agentUserId){
+        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.AgentID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.DivisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No division found',
+                    code: 400
+                }
+            }
+        }
+        
+        role = agentData.data.Position || ''
+        mobileAgentData = agentData.data
+        user.agentUserId = agentData.data.AgentID
+
+        if(agentData.data.Position !== 'SALES PERSON' && !data.commissionRates){
+            console.log(agentData.data.Position)
+            console.log(data.commissionRates)
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Commission rates are required for this user (Unit Manager / Sales Director).',
+                    code: 400
+                }
+            }
+        }
+
+        console.log("agentData", agentData)
+
+        if(agentData.data.ReferredByID){
+            assignedUM = agentData.data.ReferredByID
+        }
+
+        if(agentData.data.Position == 'UNIT MANAGER'){
+            assignedUM = agentData.data.AgentID
+        }
+    }
+
+    else if(user.webUserId) {
+        const webUserData = await findEmployeeUserById(user.webUserId)
+
+        if(!webUserData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!webUserData.data.UserWebID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.divisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Division is required.',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.images?.receipt){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Receipt images are required.',
+                    code: 400
+                }
+            }
+        }
+
+        if(!data.commissionRates || data.commissionRates.length === 0){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Commission rates are required.',
+                    code: 400
+                }
+            }
+        }
+
+        role = webUserData.data.Role
+        webAgentData = webUserData.data
+        user.webUserId = webUserData.data.UserWebID
+    }
+
+    else {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+    
+
+    const project = await getProjectById(data.property.projectID)
+
+    if(!project.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No project found',
+                code: 400
+            }
+        }
+    }
+
+    if(!data.property.developerCommission) {
+        const developer = await getDevelopers({ developerId: Number(project.data.DeveloperID) })
+
+        if(!developer.success || developer.data.data.length == 0){
+            return {
+                success: false,
+                data: {} as ITblProjects,
+                error: {
+                    code: 404,
+                    message: 'Invalid developer id.'
+                }
+            }
+        }
+
+        data.property.developerCommission = developer.data.data[0].CommRate
+    }
+
+    const validCommissions = []
+
+    const modifiedCommissionRates = data.commissionRates?.map((commission: any) => {
+        return {
+            agentName: commission.agentName || undefined,
+            agentId: Number(commission.agentId) || undefined,
+            commissionRate: commission.commissionRate,
+            position: commission.position
+        }
+    })
+
+    console.log('modified comm rate', modifiedCommissionRates)
+
+    for(const commission of modifiedCommissionRates || []){
+
+        console.log("comm loop", commission)
+
+        if(commission.agentId || commission.agentName){
+            if(commission.position.toLowerCase() == 'broker') {
+                if(commission.agentName){
+                    const findAgent = await getAgents({ name: commission.agentName })
+
+                    if(findAgent.success && findAgent.data.results[0]){
+                        commission.agentId = Number(findAgent.data.results[0].AgentID)
+                    }
+                }
+
+                if(commission.agentId){
+                    const agent = await getAgent(Number(commission.agentId))
+                    
+                    if(agent.success && agent.data){
+                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
+                    }
+                }
+            }
+
+
+            validCommissions.push(commission)
+        }
+        
+    }
+
+    if(role !== 'SALES PERSON' && validCommissions.length === 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'At least one commission rate is required.',
+                code: 400
+            }
+        }
+    }
+
+    
+
+    const updatedData = {
+        ...data,
+        assignedUM: assignedUM || undefined,
+        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
+        property: {
+            ...data.property,
+            developerID: Number(project.data.DeveloperID),
+            developerCommission: Number(data.property.developerCommission)
+        },
+        commissionRates: validCommissions || []
+    }
+
+    const result = await addPendingSaleR2(
+        {
+            agentUserId: user.agentUserId,
+            webUserId: user.webUserId
+        }, 
+        role, 
+        updatedData
+    )
+
+    if(!result.success){
+        //logger('addPendingSalesService', {data: data})
+        logger('addPendingSalesService', {error: result.error})
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Adding sales failed.',
+                code: 400
+            }
+        }
+    }
+
+    console.log(result.success, webAgentData.Role)
+
+    // upload images
+
+    
+    const imageIds: {id: number, type: string}[] = []
+
+    if( data.images && data.images.receipt){
+
+        const receipt = data.images.receipt;
+        const receiptMetadata: IImageR2 = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: null,
+            StorageKey: null
+        }
+        const addDBImage = await addImage(receiptMetadata)
+        
+        const r2Upload = await r2UploadReceipt(result.data.PendingSalesTranCode, data.images.receipt)
+
+        const updateStorageKey = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+
+        imageIds.push({id: addDBImage.data.ImageID, type: 'receipt'})
+
+    }
+
+    if( data.images && data.images.agreement){
+
+        const agreement = data.images.agreement
+        let agreementMetadata: IImageR2 = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(agreementMetadata)
+
+        const r2Upload = await r2UploadAgreement(result.data.PendingSalesTranCode, data.images.agreement)
+
+        const updateStorageKey = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+
+        imageIds.push({id: addDBImage.data.ImageID, type: 'agreement'})
+    }
+
+    // bind images to sales
+    if(imageIds.length > 0){
+        const bindImages = await bindImagesToSales(imageIds, result.data.AgentPendingSalesID, undefined)
+    }
 
     if(webAgentData && webAgentData.Role === 'SALES ADMIN' && result.success){
         console.log('starting approval')

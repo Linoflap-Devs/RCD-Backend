@@ -116,3 +116,15 @@ export const r2UploadBrokerAvatar = async (brokerId: number, file: Express.Multe
 
     return result
 }
+
+export const r2UploadReceipt = async (transCode: string, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
+    const result = await uploadImage(bucket, `sales/${transCode}/receipt`, file)
+
+    return result
+}
+
+export const r2UploadAgreement = async (transCode: string, file: Express.Multer.File): QueryResult<R2ImageUploadResult> => {
+    const result = await uploadImage(bucket, `sales/${transCode}/agreement`, file)
+
+    return result
+}

@@ -1,11 +1,11 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
-import { sql, ExpressionBuilder } from "kysely";
+import { sql, ExpressionBuilder, Selectable, Insertable } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
 import { IImage, IImageBase64 } from "../types/image.types";
 import { CommissionDetailPositions, CommissionRate, CommissionRateDetail } from "../types/commission.types";
@@ -1708,7 +1708,8 @@ export const getPendingSaleById = async (pendingSaleId: number): QueryResult<Age
                         FileExt: img.FileExtension,
                         FileSize: img.FileSize,
                         FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
-                        ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
+                        ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other',
+                        StorageKey: img.StorageKey
                     }
                 })
             }
@@ -2145,6 +2146,380 @@ export const addPendingSale = async (
                 ImageType: 'AGREEMENT',
             }).execute()
         }
+        
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addPendingSaleR2 = async (
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
+    userRole: string,
+    data: {
+        reservationDate: Date,
+        divisionID: number,
+        salesBranchID: number,
+        sectorID: number,
+        assignedUM?: number,
+        buyer: {
+            buyersName: string,
+            address: string,
+            phoneNumber: string,
+            occupation: string,
+        },
+        property: {
+            projectID: number,
+            blkFlr: string,
+            lotUnit: string,
+            phase: string,
+            lotArea?: number | null,
+            flrArea?: number | null,
+            developerID: number,
+            developerCommission: number,
+            netTCP: number,
+            miscFee: number | null,
+            financingScheme: string,
+        },
+        payment: {
+            downpayment: number | null,
+            dpTerms: number | null,
+            monthlyPayment: number | null
+            dpStartDate: Date | null,
+            sellerName: string,
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
+    }
+): QueryResult<IAgentPendingSale> => {
+
+    if(!user.agentUserId && !user.webUserId){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User not found',
+                code: 400
+            }
+        }
+    }
+
+    if(user.agentUserId && user.webUserId){
+        return {
+            success: false,
+            data: {} as IAgentPendingSale,
+            error: {
+                message: 'User role is required to add pending sale.',
+                code: 400
+            }
+        }
+    }
+
+
+
+    const transactionNumber = await generateUniqueTranCode();
+
+    const trx = await db.startTransaction().execute();
+
+    try {
+
+        if(userRole == ''){
+            throw new Error('User role is required to add pending sale.')
+        }
+
+        const lookUpMap = new Map<string, {approvalStatus: number, statusText: string}>([
+            ['SALES PERSON', {approvalStatus: 1, statusText: SalesStatusText.PENDING_UM}],
+            ['UNIT MANAGER', {approvalStatus: 2, statusText: SalesStatusText.PENDING_SD}],
+            ['SALES DIRECTOR', {approvalStatus: 3, statusText: SalesStatusText.PENDING_BH}],
+            ['BRANCH SALES STAFF', {approvalStatus: 4, statusText: SalesStatusText.PENDING_SA}],
+            ['SALES ADMIN', {approvalStatus: 5, statusText: SalesStatusText.APPROVED}]
+        ])
+
+        const {approvalStatus, statusText} = lookUpMap.get(userRole) || {approvalStatus: 1, statusText: SalesStatusText.PENDING_UM};
+
+        // const approvalStatus = userRole === 'SALES PERSON' ? 1 : userRole === 'UNIT MANAGER' ? 2 : 3;
+        // const statusText = userRole === 'SALES PERSON' ? SalesStatusText.PENDING_UM : userRole === 'UNIT MANAGER' ? SalesStatusText.PENDING_SD : SalesStatusText.PENDING_BH;
+
+        const result = await trx.insertInto('Tbl_AgentPendingSales')
+            .values({
+                ReservationDate: data.reservationDate,
+                DateFiled: new TZDate(new Date(), 'Asia/Manila'),
+                DivisionID: data.divisionID,
+                SalesBranchID: data.salesBranchID,
+                SalesSectorID: data.sectorID,
+
+                BuyersName: data.buyer.buyersName,
+                BuyersAddress: data.buyer.address,
+                BuyersContactNumber: data.buyer.phoneNumber,
+                BuyersOccupation: data.buyer.occupation,
+
+                AssignedUM: data.assignedUM || null,
+
+                ProjectID: data.property.projectID,
+                Block: data.property.blkFlr,
+                Lot: data.property.lotUnit,
+                Phase: data.property.phase,
+                LotArea: data.property.lotArea || 0,
+                FloorArea: data.property.flrArea || 0,
+                DeveloperID: data.property.developerID,
+                DevCommType: data.property.developerCommission.toString(),
+                NetTotalTCP: data.property.netTCP,
+                MiscFee: data.property.miscFee || 0,
+                FinancingScheme: data.property.financingScheme,
+
+                DownPayment: data.payment.downpayment || 0,
+                DPTerms: data.payment.dpTerms ? data.payment.dpTerms.toString() : '0', 
+                MonthlyDP: data.payment.monthlyPayment || 0,
+                DPStartSchedule: data.payment.dpStartDate,
+                CreatedBy: user.agentUserId ? user.agentUserId : null,
+                CreatedByWeb: user.webUserId ? user.webUserId : null,
+                SellerName: data.payment.sellerName,
+
+                LastUpdateby: user.agentUserId || undefined,
+                LastUpdateByWeb: user.webUserId || undefined,
+                LastUpdate: new TZDate(new Date(), 'Asia/Manila'),
+
+                PendingSalesTranCode: transactionNumber,
+                ApprovalStatus: approvalStatus,
+                SalesStatus: statusText,
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        // commission details
+        let commissionDetails: CommissionRateDetail = {};
+        if(data.commissionRates && data.commissionRates.length > 0 && userRole !== 'SALES PERSON'){
+
+            // fetch agent ids
+            const agentIds = data.commissionRates
+                .filter(c => c.agentId && c.agentId > 0)
+                .map(c => c.agentId!) // non-null assertion since we filtered out undefined
+
+            const agentData = new Map<number, VwAgents>();
+            if(agentIds.length > 0){
+                const agentsResult = await trx.selectFrom('Vw_Agents')
+                    .selectAll()
+                    .where('AgentID', 'in', agentIds)
+                    .execute()
+                
+                agentsResult.forEach(agent => {
+                    agentData.set(agent.AgentID || 0, agent)
+                })
+            }
+
+            // broker
+            const broker = data.commissionRates.find(c => c.position === CommissionDetailPositions.BROKER);
+            if(broker){
+                commissionDetails.broker = {
+                    agentName: broker.agentName || '',
+                    agentId: broker.agentId || 0,
+                    commissionRate: Number(broker.commissionRate) || 0
+                }
+            }
+
+            // sales director
+            const salesDirector = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_DIRECTOR);
+            const sdAgent = salesDirector && salesDirector.agentId ? agentData.get(salesDirector.agentId) : null;
+            if(salesDirector){
+                commissionDetails.salesDirector = {
+                    agentName: sdAgent ? `${sdAgent.LastName?.trim()}, ${sdAgent.FirstName?.trim()} ${sdAgent.MiddleName ? sdAgent.MiddleName.trim() : ''}` : (salesDirector.agentName || ''),
+                    agentId: salesDirector.agentId || 0,
+                    commissionRate: Number(salesDirector.commissionRate) || 0
+                }
+            }
+
+            // unit manager
+            const unitManager = data.commissionRates.find(c => c.position === CommissionDetailPositions.UNIT_MANAGER);
+            const umAgent = unitManager && unitManager.agentId ? agentData.get(unitManager.agentId) : null;
+            if(unitManager){
+                commissionDetails.unitManager = {
+                    agentName: umAgent ? `${umAgent.LastName?.trim()}, ${umAgent.FirstName?.trim()} ${umAgent.MiddleName ? umAgent.MiddleName.trim() : ''}` : (unitManager.agentName || ''),
+                    agentId: unitManager.agentId || 0,
+                    commissionRate: Number(unitManager.commissionRate) || 0
+                }
+            }
+
+            // sales person
+            const salesPerson = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_PERSON);
+            const spAgent = salesPerson && salesPerson.agentId ? agentData.get(salesPerson.agentId) : null;
+            if(salesPerson){
+                commissionDetails.salesPerson = {
+                    agentName: spAgent ? `${spAgent.LastName?.trim()}, ${spAgent.FirstName?.trim()} ${spAgent.MiddleName ? spAgent.MiddleName.trim() : ''}` : (salesPerson.agentName || ''),
+                    agentId: salesPerson.agentId || 0,
+                    commissionRate: Number(salesPerson.commissionRate) || 0
+                }
+            }
+
+            // sales associate
+            const salesAssociate = data.commissionRates.find(c => c.position === CommissionDetailPositions.SALES_ASSOCIATE);
+            const sAssocAgent = salesAssociate && salesAssociate.agentId ? agentData.get(salesAssociate.agentId) : null;
+            if(salesAssociate){
+                commissionDetails.salesAssociate = {
+                    agentName: sAssocAgent ? `${sAssocAgent.LastName?.trim()}, ${sAssocAgent.FirstName?.trim()} ${sAssocAgent.MiddleName ? sAssocAgent.MiddleName.trim() : ''}` : (salesAssociate.agentName || ''),
+                    agentId: salesAssociate.agentId || 0,
+                    commissionRate: Number(salesAssociate.commissionRate) || 0
+                }
+            }
+
+            // assistance fee
+            const assistanceFee = data.commissionRates.find(c => c.position === CommissionDetailPositions.ASSISTANCE_FEE);
+            const afAgent = assistanceFee && assistanceFee.agentId ? agentData.get(assistanceFee.agentId) : null;
+            if(assistanceFee){
+                commissionDetails.assistanceFee = {
+                    agentName: afAgent ? `${afAgent.LastName?.trim()}, ${afAgent.FirstName?.trim()} ${afAgent.MiddleName ? afAgent.MiddleName.trim() : ''}` : (assistanceFee.agentName || ''),
+                    agentId: assistanceFee.agentId || 0,
+                    commissionRate: Number(assistanceFee.commissionRate) || 0
+                }
+            }
+
+            // referral fee
+            const referralFee = data.commissionRates.find(c => c.position === CommissionDetailPositions.REFERRAL_FEE);
+            const rfAgent = referralFee && referralFee.agentId ? agentData.get(referralFee.agentId) : null;
+            if(referralFee){
+                commissionDetails.referralFee = {
+                    agentName: rfAgent ? `${rfAgent.LastName?.trim()}, ${rfAgent.FirstName?.trim()} ${rfAgent.MiddleName ? rfAgent.MiddleName.trim() : ''}` : (referralFee.agentName || ''),
+                    agentId: referralFee.agentId || 0,
+                    commissionRate: Number(referralFee.commissionRate) || 0
+                }
+            }
+
+            // others
+            const others = data.commissionRates.find(c => c.position === CommissionDetailPositions.OTHERS);
+            const oAgent = others && others.agentId ? agentData.get(others.agentId) : null;
+            if(others){
+                commissionDetails.others = {
+                    agentName: oAgent ? `${oAgent.LastName?.trim()}, ${oAgent.FirstName?.trim()} ${oAgent.MiddleName ? oAgent.MiddleName.trim() : ''}` : (others.agentName || ''),
+                    agentId: others.agentId || 0,
+                    commissionRate: Number(others.commissionRate) || 0
+                }
+            }
+        }
+
+        const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
+            .values([
+                // Broker
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'BROKER',
+                    PositionID: 76,
+                    AgentName: commissionDetails.broker ? (commissionDetails.broker.agentName || '') : '',
+                    AgentID: commissionDetails.broker ? (commissionDetails.broker.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.broker ? commissionDetails.broker.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Director
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES DIRECTOR',
+                    PositionID: 85,
+                    AgentName: commissionDetails.salesDirector ? (commissionDetails.salesDirector.agentName || '') : '',
+                    AgentID: commissionDetails.salesDirector ? (commissionDetails.salesDirector.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesDirector ? commissionDetails.salesDirector.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Unit Manager
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'UNIT MANAGER',
+                    PositionID: 86,
+                    AgentName: commissionDetails.unitManager ? (commissionDetails.unitManager.agentName || '') : '',
+                    AgentID: commissionDetails.unitManager ? (commissionDetails.unitManager.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.unitManager ? commissionDetails.unitManager.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Person
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES PERSON',
+                    PositionID: 0,
+                    AgentName: commissionDetails.salesPerson ? (commissionDetails.salesPerson.agentName || '') : '',
+                    AgentID: commissionDetails.salesPerson ? (commissionDetails.salesPerson.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesPerson ? commissionDetails.salesPerson.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Sales Associate
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'SALES ASSOCIATE',
+                    PositionID: 0,
+                    AgentName: commissionDetails.salesAssociate ? (commissionDetails.salesAssociate.agentName || '') : '',
+                    AgentID: commissionDetails.salesAssociate ? (commissionDetails.salesAssociate.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.salesAssociate ? commissionDetails.salesAssociate.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Assistance Fee
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'ASSISTANCE FEE',
+                    PositionID: 0,
+                    AgentName: commissionDetails.assistanceFee ? (commissionDetails.assistanceFee.agentName || '') : '',
+                    AgentID: commissionDetails.assistanceFee ? (commissionDetails.assistanceFee.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.assistanceFee ? commissionDetails.assistanceFee.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Referral Fee
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'REFERRAL FEE',
+                    PositionID: 0,
+                    AgentName: commissionDetails.referralFee ? (commissionDetails.referralFee.agentName || '') : '',
+                    AgentID: commissionDetails.referralFee ? (commissionDetails.referralFee.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.referralFee ? commissionDetails.referralFee.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+                // Others
+                {
+                    PendingSalesTranCode: result.PendingSalesTranCode,
+                    PositionName: 'OTHERS',
+                    PositionID: 0,
+                    AgentName: commissionDetails.others ? (commissionDetails.others.agentName || '') : '',
+                    AgentID: commissionDetails.others ? (commissionDetails.others.agentId || 0) : 0,
+                    CommissionRate: commissionDetails.others ? commissionDetails.others.commissionRate : 0,
+                    WTaxRate: 0,
+                    VATRate: 0,
+                    Commission: 0
+                },
+            ])
+            .outputAll('inserted')
+            .execute()
+
         
         await trx.commit().execute()
 
@@ -3693,6 +4068,55 @@ export const deleteSalesTarget = async (userId: number, salesTargetId: number): 
         return {
             success: false,
             data: {} as ITblSalesTarget,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const bindImagesToSales = async (images: { id: number, type: string }[], pendingSalesId?: number, salesId?: number): QueryResult<Selectable<TblSalesTranImage>> => {
+    try {
+
+        if(!pendingSalesId && !salesId){
+            return {
+                success: false,
+                data: {} as Selectable<TblSalesTranImage>,
+                error: {
+                    code: 500,
+                    message: 'No sales transaction ID provided.'
+                }
+            }
+        }
+
+        let updateData: Insertable<TblSalesTranImage>[] = []
+
+        images.map((data: {id: number, type: string}) => {
+            updateData.push({
+                SalesTransID: salesId || null,
+                PendingSalesTransID: pendingSalesId || 0,
+                ImageID: data.id,
+                ImageType: data.type
+            })
+        })
+
+        const result = await db.insertInto('Tbl_SalesTranImage')
+            .values(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblSalesTranImage>,
             error: {
                 code: 500,
                 message: error.message
