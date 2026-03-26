@@ -302,12 +302,13 @@ export const editBrokerImage = async (imageId: number, imageData: IImage): Query
             FileContent: imageData.FileContent,
             FileExtension: imageData.FileExt,
             Filename: imageData.FileName,
-            FileSize: imageData.FileSize
+            FileSize: imageData.FileSize,
+            StorageKey: imageData.StorageKey
         };
 
         const result = await db.updateTable('Tbl_Image')
-            .where('ImageID', '=', imageId)
             .set(imageMapped)
+            .where('ImageID', '=', imageId)
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 

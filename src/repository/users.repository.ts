@@ -1,5 +1,6 @@
+import { Selectable, Updateable } from "kysely";
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblBroker, TblBrokerUser, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerV2, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
@@ -548,6 +549,50 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{
         return {
             success: false,
             data: {} as {agentUserId: number, agentRegistrationId: number | null, email: string,  isVerified: boolean, password: string, imageId: number | null},
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
+export const findBrokerUserById = async (brokerUserId: number): QueryResult<{
+    brokerUserId: number, 
+    brokerRegistrationId: number | null, 
+    email: string, 
+    isVerified: boolean, 
+    password: string,
+    imageId: number | null
+}> => {
+    try {
+        const user = await db.selectFrom('Tbl_BrokerUser')
+            .where('BrokerUserID', '=', brokerUserId)
+            .select(['BrokerUserID', 'Email', 'IsVerified', 'Password', 'BrokerRegistrationID', 'ImageID'])
+            .executeTakeFirstOrThrow()
+
+        if(!user){
+            throw new Error('No user found.')
+        }
+
+        return {    
+            success: true,
+            data: { 
+                brokerUserId: user.BrokerUserID, 
+                brokerRegistrationId: user.BrokerRegistrationID || null,
+                email: user.Email, 
+                isVerified: user.IsVerified == 1 ? true : false, 
+                password: user.Password ,
+                imageId: user.ImageID
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as {brokerUserId: number, brokerRegistrationId: number | null, email: string,  isVerified: boolean, password: string, imageId: number | null},
             error: {
                 code: 400,
                 message: error.message
@@ -1516,6 +1561,33 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
         return {
             success: false,
             data: {} as ITblBrokerUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const updateBrokerUser = async (brokerUserId: number, data: Updateable<TblBrokerUser>): QueryResult<Selectable<TblBrokerUser>> => {
+    try {
+        const result = await db.updateTable('Tbl_BrokerUser')
+            .set(data)
+            .where('BrokerUserID', '=', brokerUserId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }   
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblBrokerUser>,
             error: {
                 code: 500,
                 message: error.message
