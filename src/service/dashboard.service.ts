@@ -9,6 +9,7 @@ import { FnDivisionSales, SalesTargetTotals } from "../types/sales.types";
 import { getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales } from "../types/agent.types";
 import { FnCommissionForecastByMonth, FnCommissionForecastPercentage, FnCommissionForecastYear } from "../types/commission.types";
+import { getPublicUrl } from "../utils/r2";
 
 export const getAgentDashboard = async (agentUserId: number, filters?: { month?: number, year?: number }): QueryResult<any> => {
 
@@ -37,6 +38,10 @@ export const getAgentDashboard = async (agentUserId: number, filters?: { month?:
                 code: 500
             }
         }
+    }
+
+    if(result.data.Image && result.data.Image.StorageKey){
+        result.data.Image.URL = getPublicUrl(result.data.Image.StorageKey)
     }
 
     const userInfo = {
