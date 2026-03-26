@@ -1375,39 +1375,6 @@ export const getAgentImages = async (ids?: number[]): QueryResult<TblImageWithId
     }
 }
 
-export const addImage = async (imageData: IImageR2): QueryResult<Selectable<TblImage>> => {
-    try {
-
-        const addImage = await db.insertInto('Tbl_Image')
-            .values({
-                ContentType: imageData.ContentType,
-                FileExtension: imageData.FileExt,
-                Filename: imageData.FileName,
-                FileSize: imageData.FileSize,
-                CreatedAt: new Date()
-            })
-            .outputAll('inserted')
-            .executeTakeFirstOrThrow()
-
-        return {
-            success: true,
-            data: addImage
-        }
-    }
-
-    catch(err: unknown){
-        const error = err as Error
-        return {
-            success: false,
-            data: {} as Selectable<TblImage>,
-            error: {
-                code: 500,
-                message: error.message
-            }
-        }
-    }
-}
-
 export const addAgent = async (userId: number, agent: IAddAgent, user?: { email: string, passwordHash: string }): QueryResult<{ agent: ITblAgent, user?: ITblAgentUser}> => {
     
     const trx = await db.startTransaction().execute()

@@ -952,53 +952,6 @@ export const editBrokerDetails = async (brokerId: number, data: Partial<ITblBrok
     }
 }
 
-export const editAgentImage = async (imageId: number, imageData: IImage): QueryResult<IImageBase64> => {
-    try {
-
-        const imageMapped = {
-            ContentType: imageData.ContentType,
-            FileContent: imageData.FileContent,
-            FileExtension: imageData.FileExt,
-            Filename: imageData.FileName,
-            FileSize: imageData.FileSize,
-            StorageKey: imageData.StorageKey
-        };
-
-        const result = await db.updateTable('Tbl_Image')
-            .where('ImageID', '=', imageId)
-            .set(imageMapped)
-            .outputAll('inserted')
-            .executeTakeFirstOrThrow();
-
-        const obj = {
-            ContentType: result.ContentType,
-            CreatedAt: result.CreatedAt,
-            FileContent: result.FileContent ? `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}` : '',
-            FileExt: result.FileExtension,
-            FileName: result.Filename,
-            FileSize: result.FileSize,
-            ImageID: result.ImageID
-        }
-
-        return {
-            success: true,
-            data: obj
-        }
-    }
-
-    catch (err: unknown){
-        const error = err as Error
-        return {
-            success: false,
-            data: {} as IImageBase64,
-            error: {
-                code: 400,
-                message: error.message
-            },
-        }
-    }
-}
-
 export const addAgentImage = async (agentId: number, imageData: IImage): QueryResult<IImageBase64> => {
 
     const trx = await db.startTransaction().execute();

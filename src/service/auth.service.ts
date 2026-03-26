@@ -4,7 +4,7 @@ import { addMinutes, format } from 'date-fns'
 import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
 import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
-import { editAgentImage, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -22,6 +22,7 @@ import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
 import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
 import { r2UploadAgentAvatar, r2UploadBrokerAvatar, r2UploadBrokerGovId, r2UploadBrokerGovSelfie, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
+import { editImage } from "../repository/images.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -408,9 +409,9 @@ export const registerAgentServiceR2 = async (
     console.log(avatar, govId, selfie)
 
     const [editAvatar, editGovId, editSelfie] = await Promise.all([
-        avatar && result.data.agentUser.ImageID ? editAgentImage(result.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
-        govId && result.data.registration.GovImageID ? editAgentImage(result.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
-        selfie && result.data.registration.SelfieImageID ? editAgentImage(result.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        avatar && result.data.agentUser.ImageID ? editImage(result.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        govId && result.data.registration.GovImageID ? editImage(result.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        selfie && result.data.registration.SelfieImageID ? editImage(result.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
     ])
     
     return result
@@ -808,9 +809,9 @@ export const registerBrokerServiceR2 = async (
         ])
 
         const [editAvatar, editGovId, editSelfie] = await Promise.all([
-            avatar && response.data.agentUser.ImageID ? editAgentImage(response.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
-            govId && response.data.registration.GovImageID ? editAgentImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
-            selfie && response.data.registration.SelfieImageID ? editAgentImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            avatar && response.data.agentUser.ImageID ? editImage(response.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            govId && response.data.registration.GovImageID ? editImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            selfie && response.data.registration.SelfieImageID ? editImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
         ])
         
 
@@ -839,9 +840,9 @@ export const registerBrokerServiceR2 = async (
         ])
 
         const [editAvatar, editGovId, editSelfie] = await Promise.all([
-            avatar && response.data.broker.ImageID ? editAgentImage(response.data.broker.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
-            govId && response.data.registration.GovImageID ? editAgentImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
-            selfie && response.data.registration.SelfieImageID ? editAgentImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            avatar && response.data.broker.ImageID ? editImage(response.data.broker.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            govId && response.data.registration.GovImageID ? editImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            selfie && response.data.registration.SelfieImageID ? editImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
         ])
 
         result = response.data

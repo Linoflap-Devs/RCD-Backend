@@ -1,12 +1,12 @@
 import { add, format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, addImage, editAgentUser, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, editAgentUser, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -20,6 +20,7 @@ import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
 import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar, r2UploadBrokerAvatar } from "../utils/r2";
+import { addImage, editImage } from "../repository/images.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -818,15 +819,15 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
     if(agentUser.data.imageId && agentUserDetails.data.Image){
         console.log('existing image')
         // update existing image
-        const editImage = await editAgentImage(agentUserDetails.data.Image?.ImageID, metadata)
+        const editImageAgent = await editImage(agentUserDetails.data.Image?.ImageID, metadata)
 
-        if(!editImage.success) return {
+        if(!editImageAgent.success) return {
             success: false,
             data: {},
-            error: editImage.error
+            error: editImageAgent.error
         }
 
-        result = editImage.data
+        result = editImageAgent.data
     }
 
     else {
@@ -916,7 +917,7 @@ export const editAgentImageServiceR2 = async (agentId: number, image: Express.Mu
         error: r2Upload.error
     }
 
-    const updateAgentImage = await editAgentImage(addDBImg.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+    const updateAgentImage = await editImage(addDBImg.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
 
     if(!updateAgentImage.success) return {
         success: false,
