@@ -3,10 +3,10 @@ import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
-import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
+import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, addImage, editAgentUser, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -19,7 +19,7 @@ import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
-import { getPresignedUrl, getPublicUrl } from "../utils/r2";
+import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar } from "../utils/r2";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -842,6 +842,94 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
         }
 
         result = transaction.data
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const editAgentImageServiceR2 = async (agentId: number, image: Express.Multer.File): QueryResult<any> => {
+
+    const agentUserDetails = await findAgentDetailsByUserId(agentId)
+
+    if(!agentUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agentUserDetails.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await findAgentUserById(agentId)
+
+    if(!agentUser.success) {
+        return {
+            success: false,
+            data: {},
+            error: agentUser.error
+        }
+    }
+
+    const filename = `${agentUserDetails.data.LastName}-${agentUserDetails.data.FirstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    
+    let metadata: IImageR2 = {
+        FileName: filename,
+        ContentType: image.mimetype,
+        FileExt: path.extname(image.originalname),
+        FileSize: image.size,
+        FileContent: null,
+        StorageKey: null
+    }
+
+    let result: IImageBase64 | undefined = undefined
+
+    console.log(agentUserDetails.data)
+    console.log(agentUser.data)
+
+    const addDBImg = await addImage(metadata)
+    
+    if(!addDBImg.success) return {
+        success: false,
+        data: {},
+        error: addDBImg.error
+    }
+
+    const r2Upload = await r2UploadAgentAvatar(agentUser.data.agentUserId, image)
+
+    if(!r2Upload.success) return {
+        success: false,
+        data: {},
+        error: r2Upload.error
+    }
+
+    const updateAgentImage = await editAgentImage(addDBImg.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+
+    if(!updateAgentImage.success) return {
+        success: false,
+        data: {},
+        error: updateAgentImage.error
+    }
+
+    const updateAgentUser = await editAgentUser(agentUser.data.agentUserId, { ImageID: addDBImg.data.ImageID })
+
+    if(!updateAgentUser.success) return {
+        success: false,
+        data: {},
+        error: updateAgentUser.error
     }
 
     return {

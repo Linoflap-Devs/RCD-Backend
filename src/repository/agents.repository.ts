@@ -2,11 +2,11 @@ import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
 import { IAgentRegister, IAgentRegistration, ITblAgentUser, IVwAgents } from "../types/auth.types";
-import { IImage, IImageBase64, ITypedImageBase64, TblImageWithId } from "../types/image.types";
-import { sql } from "kysely";
+import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
+import { Selectable, sql, Updateable } from "kysely";
 import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IAgentUser } from "../types/auth.types";
-import { TblAgentUser, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
+import { TblAgentUser, TblImage, VwAgents, VwUniqueActiveAgents, VwUniqueAgents } from "../db/db-types";
 import { it } from "zod/v4/locales/index.cjs";
 import { TZDate } from "@date-fns/tz";
 import { ITblBroker } from "../types/brokers.types";
@@ -1375,6 +1375,39 @@ export const getAgentImages = async (ids?: number[]): QueryResult<TblImageWithId
     }
 }
 
+export const addImage = async (imageData: IImageR2): QueryResult<Selectable<TblImage>> => {
+    try {
+
+        const addImage = await db.insertInto('Tbl_Image')
+            .values({
+                ContentType: imageData.ContentType,
+                FileExtension: imageData.FileExt,
+                Filename: imageData.FileName,
+                FileSize: imageData.FileSize,
+                CreatedAt: new Date()
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: addImage
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblImage>,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const addAgent = async (userId: number, agent: IAddAgent, user?: { email: string, passwordHash: string }): QueryResult<{ agent: ITblAgent, user?: ITblAgentUser}> => {
     
     const trx = await db.startTransaction().execute()
@@ -1618,6 +1651,33 @@ export const deleteAgent = async (userId: number, agentId: number): QueryResult<
         return {
             success: false,
             data: {} as ITblAgent,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editAgentUser = async (agentUserId: number, data: Updateable<TblAgentUser>): QueryResult<Selectable<TblAgentUser>> => {
+    try {
+        const result = await db.updateTable('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .set(data)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblAgentUser>,
             error: {
                 code: 500,
                 message: error.message
