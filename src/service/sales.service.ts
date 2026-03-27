@@ -3474,6 +3474,21 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
+    let resultCopy = {}
+    if (result.data.Images && result.data.Images.length > 0) {
+        const imageCopies = result.data.Images
+        const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
+            imageCopies.map(async (img: ITypedImageBase64) => {
+                const url = img.StorageKey ? (await getPresignedUrl(img.StorageKey)).data : await Promise.resolve('')
+                return {
+                    ...img,
+                    URL: url
+                }
+            })
+        )
+        resultCopy = { ...result.data, Images: images }
+    }
+
     let brokerId = null
 
     const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
@@ -3534,7 +3549,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
     }
 
     const obj = {
-        ...result.data,
+        ...resultCopy,
         Details: detailsArray,
         LastUpdateby: lastUpdatedByName,
         LastUpdateId: result.data.LastUpdateby
