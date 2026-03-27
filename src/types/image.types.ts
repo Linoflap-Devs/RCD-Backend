@@ -31,7 +31,8 @@ export interface ITypedImageBase64 {
     FileSize: number,
     FileContent: string | null,
     ImageType: 'profile' | 'govid' | 'selfie' | 'receipt' | 'agreement' | 'other',
-    StorageKey: string | null
+    StorageKey: string | null,
+    ImageID?: number
 }
 
 export interface TblImageWithId {

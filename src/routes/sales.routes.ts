@@ -59,7 +59,7 @@ router.route('/pending/:pendingSalesId').patch([validateSession, validateRole(['
 router.route('/pending/:pendingSalesId/images').patch(
     [
         validateSession,
-        validateRole(['SP']),
+        validateRole(['SP', 'UM', 'SD']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
     ],
     editSaleImagesController

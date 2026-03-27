@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -1268,7 +1268,7 @@ export const editSaleImagesController = async (req: Request, res: Response) => {
 
     const { pendingSalesId } = req.params
 
-    const result = await editPendingSaleImagesService(
+    const result = await editPendingSaleImagesServiceR2(
         Number(pendingSalesId), 
         {
             receipt: images?.receipt ? images.receipt[0] : undefined, 

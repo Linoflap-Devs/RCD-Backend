@@ -17,7 +17,8 @@ import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
 import { getBrokers } from "../repository/brokers.repository";
 import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
-import { addImage, editImage } from "../repository/images.repository";
+import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "../repository/images.repository";
+import { format } from "date-fns";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -1226,7 +1227,7 @@ export const addPendingSalesServiceR2 = async (
         console.log('receipt')
         const receipt = data.images.receipt;
         const receiptMetadata: IImageR2 = {
-            FileName: receipt.originalname,
+            FileName: `${result.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: receipt.mimetype,
             FileExt: path.extname(receipt.originalname),
             FileSize: receipt.size,
@@ -1251,7 +1252,7 @@ export const addPendingSalesServiceR2 = async (
 
         const agreement = data.images.agreement
         let agreementMetadata: IImageR2 = {
-            FileName: agreement.originalname,
+            FileName: `${result.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: agreement.mimetype,
             FileExt: path.extname(agreement.originalname),
             FileSize: agreement.size,
@@ -3717,6 +3718,143 @@ export const editPendingSaleImagesService = async (
     return {
         success: true,
         data: result.data
+    }
+}
+
+export const editPendingSaleImagesServiceR2 = async (
+    pendingSalesId: number, 
+    images: {
+        receipt?: Express.Multer.File,
+        agreement?: Express.Multer.File
+    },
+    agentUserId: number,
+): QueryResult<any> => {
+    
+    const pendingSale = await getPendingSaleById(pendingSalesId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sales found',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await findAgentDetailsByUserId(agentUserId)
+
+    if(!agentUser.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    if(pendingSale.data.CreatedBy != agentUser.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale does not belong to you.',
+                code: 403
+            }
+        }
+    }
+
+    if(pendingSale.data.ApprovalStatus > 1){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been approved.',
+                code: 403
+            }
+        }
+    }
+
+    const pendingSaleTranImage = await getSaleTranImages({ pendingSalesId: pendingSalesId })
+
+    if(images.receipt){
+        let receiptImg: IImageR2 | undefined = {
+            FileName: images.receipt.originalname,
+            ContentType: images.receipt.mimetype,
+            FileExt: path.extname(images.receipt.originalname),
+            FileSize: images.receipt.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(receiptImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.PendingSalesTranCode, images.receipt)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'receipt')
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], pendingSalesId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(images.agreement){
+        let agreementImg: IImageR2 | undefined = {
+            FileName: images.agreement.originalname,
+            ContentType: images.agreement.mimetype,
+            FileExt: path.extname(images.agreement.originalname),
+            FileSize: images.agreement.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(agreementImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.PendingSalesTranCode, images.agreement)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'agreement')
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], pendingSalesId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: {}
     }
 }
 
