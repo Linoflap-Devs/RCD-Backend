@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -752,7 +752,7 @@ export const editPendingSalesControllerV2 = async (req: Request, res: Response) 
         }
     }
 
-    const result = await editPendingSaleService(
+    const result = await editPendingSaleServiceR2(
         {
             agentUserId: session.userID
         }, 

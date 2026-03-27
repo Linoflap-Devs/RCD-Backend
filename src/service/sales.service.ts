@@ -1,5 +1,5 @@
 import { VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteSalesTarget, editPendingSale, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteSalesTarget, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -2356,6 +2356,358 @@ export const editPendingSaleService = async (
         pendingSale.data.AgentPendingSalesID,
         updatedData
     )
+
+    if(!updatePendingSale.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: updatePendingSale?.error?.message,
+                code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: updatePendingSale.data,
+    }
+}
+
+export const editPendingSaleServiceR2 = async (
+    user: {
+        agentUserId?: number,
+        webUserId?: number
+    },
+    data: {
+        pendingSalesId: number,
+        reservationDate?: Date,
+        divisionID?: number,
+        salesBranchID?: number,
+        sectorID?: number,
+        buyersName?: string,
+        address?: string,
+        phoneNumber?: string,
+        occupation?: string,
+        projectID?: number,
+        blkFlr?: string,
+        lotUnit?: string,
+        phase?: string,
+        lotArea?: number,
+        flrArea?: number,
+        developerID?: number,
+        developerCommission?: number,
+        netTCP?: number,
+        miscFee?: number,
+        financingScheme?: string,
+        downpayment?: number,
+        dpTerms?: number,
+        monthlyPayment?: number
+        dpStartDate?: Date | null,
+        sellerName?: string,
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: {
+            commissionRate: number,
+            agentId?: number,
+            agentName?: string,
+            position: CommissionDetailPositions
+        }[]
+    }
+) => {
+
+    // validations
+
+    const pendingSale = await getPendingSaleById(data.pendingSalesId)
+
+    if(!pendingSale.success && !pendingSale.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No pending sale found.',
+                code: 400
+            }
+        }
+    }
+
+    if(!user.agentUserId && !user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+
+    if(user.agentUserId && user.webUserId){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Cannot submit both agent and web user.',
+                code: 400
+            }
+        }
+    }
+    
+    let mobileAgentData: VwAgentPicture = {} as VwAgentPicture
+    let webAgentData: ITblUsersWeb = {} as ITblUsersWeb
+    let role = ''
+
+    if(user.agentUserId){
+        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+        if(!agentData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.AgentID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!agentData.data.DivisionID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No division found',
+                    code: 400
+                }
+            }
+        }
+
+        role = agentData.data.Position || ''
+        mobileAgentData = agentData.data
+        user.agentUserId = agentData.data.AgentID
+    }
+
+    else if(user.webUserId) {
+        const webUserData = await findEmployeeUserById(user.webUserId)
+
+        if(!webUserData.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(!webUserData.data.UserWebID){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No user found',
+                    code: 400
+                }
+            }
+        }
+
+        if(webUserData.data.Role !== 'SALES ADMIN'){
+            
+        }
+
+        role = webUserData.data.Role
+        webAgentData = webUserData.data
+        user.webUserId = webUserData.data.UserWebID
+    }
+
+    else {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No user submitted.',
+                code: 400
+            }
+        }
+    }
+    
+    let project: VwProjectDeveloper | undefined = undefined
+    
+    if(data.projectID){
+        let projectQuery = await getProjectById(data.projectID)
+        if(!projectQuery.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No project found',
+                    code: 400
+                }
+            }
+        }
+
+        project = projectQuery.data
+        
+    }
+
+    
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
+     const validCommissions = []
+
+    for(const commission of data.commissionRates || []){
+        console.log('commissions', commission)
+        if(commission.agentId || commission.agentName){
+            if(commission.position.toLowerCase() == 'broker') {
+                if(commission.agentName){
+
+                    
+                    const findAgent = await getAgents({ name: commission.agentName })
+                    console.log(commission.agentName)
+                    console.log(findAgent)
+                    if(findAgent.success && findAgent.data.results[0]){
+                        commission.agentId = findAgent.data.results[0].AgentID
+                    }
+                }
+
+                if(commission.agentId){
+                    const agent = await getAgent(commission.agentId)
+                    
+                    if(agent.success && agent.data){
+                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
+                    }
+                }
+            }
+
+
+            validCommissions.push(commission)
+        }
+        
+    }
+
+    const updatedData = {
+        ...data,
+        ...project && {developerID: Number(project.DeveloperID)},
+        ...data.divisionID && {divisionID: data.divisionID},
+        commissionRates: validCommissions
+    }
+
+    const updatePendingSale = await editPendingSaleR2(
+        {
+            ...user.agentUserId && {agentUserId: user.agentUserId},
+            ...user.webUserId && {webUserId: user.webUserId},
+        },
+        role,
+        pendingSale.data.AgentPendingSalesID,
+        updatedData
+    )
+
+    if(data.images && data.images.receipt){
+        let receiptImg: IImageR2 | undefined = {
+            FileName: `${pendingSale.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.receipt.mimetype,
+            FileExt: path.extname(data.images.receipt.originalname),
+            FileSize: data.images.receipt.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(receiptImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.PendingSalesTranCode, data.images.receipt)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'receipt')
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], data.pendingSalesId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(data.images && data.images.agreement){
+        let agreementImg: IImageR2 | undefined = {
+            FileName: `${pendingSale.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.agreement.mimetype,
+            FileExt: path.extname(data.images.agreement.originalname),
+            FileSize: data.images.agreement.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(agreementImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.PendingSalesTranCode, data.images.agreement)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'agreement')
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], data.pendingSalesId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
 
     if(!updatePendingSale.success){
         return {
