@@ -864,7 +864,7 @@ export const editWebPendingSalesControllerV2 = async (req: Request, res: Respons
         }
     }
 
-    const result = await editPendingSaleService(
+    const result = await editPendingSaleServiceR2(
         {
             webUserId: session.userID
         }, 

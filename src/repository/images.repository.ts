@@ -132,7 +132,7 @@ export const deleteSaleTranImages = async (
     target: {
         pendingSalesId?: number,
         salesTranId?: number,
-        imageId?: number
+        imageId?: number[]
     }
 ): QueryResult<Selectable<TblSalesTranImage>[]> => {
 
@@ -159,16 +159,7 @@ export const deleteSaleTranImages = async (
         }
 
         if(target.imageId){
-            baseQuery = baseQuery.where('ImageID', '=', target.imageId)
-        }
-
-        return {
-            success: false,
-            data: [],
-            error: {
-                code: 505,
-                message: "Guardrail."
-            }
+            baseQuery = baseQuery.where('ImageID', 'in', target.imageId)
         }
 
         const result = await baseQuery.outputAll('deleted').execute()

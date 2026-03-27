@@ -19,6 +19,7 @@ import { getBrokers } from "../repository/brokers.repository";
 import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
 import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "../repository/images.repository";
 import { format } from "date-fns";
+import { del } from "k6/http";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -2563,31 +2564,6 @@ export const editPendingSaleServiceR2 = async (
         
     }
 
-    
-    let receiptMetadata: IImage | undefined = undefined;
-    let receipt = data.images?.receipt;
-    if(receipt){
-        receiptMetadata = {
-            FileName: receipt.originalname,
-            ContentType: receipt.mimetype,
-            FileExt: path.extname(receipt.originalname),
-            FileSize: receipt.size,
-            FileContent: receipt.buffer
-        }
-    }
-
-    let agreementMetadata: IImage | undefined = undefined; 
-    let agreement = data.images?.agreement;
-    if(agreement){
-        agreementMetadata = {
-            FileName: agreement.originalname,
-            ContentType: agreement.mimetype,
-            FileExt: path.extname(agreement.originalname),
-            FileSize: agreement.size,
-            FileContent: agreement.buffer
-        }
-    }
-
      const validCommissions = []
 
     for(const commission of data.commissionRates || []){
@@ -2653,10 +2629,14 @@ export const editPendingSaleServiceR2 = async (
 
         const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
 
-        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'receipt')
+        const existing = pendingSale.data.Images?.filter((i) => i.ImageType == 'receipt')
+
+        console.log('receipt existing', existing)
 
         if(existing){
-            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
+            
+            console.log(deleteSalesTranImage)
         }
 
         const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], data.pendingSalesId)
@@ -2689,10 +2669,10 @@ export const editPendingSaleServiceR2 = async (
 
         const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
 
-        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'agreement')
+        const existing = pendingSale.data.Images?.filter((i) => i.ImageType == 'agreement')
 
         if(existing){
-            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
         }
 
         const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], data.pendingSalesId)
@@ -4148,10 +4128,10 @@ export const editPendingSaleImagesServiceR2 = async (
 
         const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
 
-        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'receipt')
+        const existing = pendingSale.data.Images?.filter((i) => i.ImageType == 'receipt')
 
         if(existing){
-            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
         }
 
         const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], pendingSalesId)
@@ -4184,10 +4164,10 @@ export const editPendingSaleImagesServiceR2 = async (
 
         const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
 
-        const existing = pendingSale.data.Images?.find((i) => i.ImageType == 'agreement')
+        const existing = pendingSale.data.Images?.filter((i) => i.ImageType == 'agreement')
 
         if(existing){
-            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.ImageID || undefined})
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
         }
 
         const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], pendingSalesId)
