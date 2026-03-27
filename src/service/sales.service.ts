@@ -2675,7 +2675,7 @@ export const editPendingSaleServiceR2 = async (
 
     if(data.images && data.images.agreement){
         let agreementImg: IImageR2 | undefined = {
-            FileName: `${pendingSale.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            FileName: `${pendingSale.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: data.images.agreement.mimetype,
             FileExt: path.extname(data.images.agreement.originalname),
             FileSize: data.images.agreement.size,
@@ -4134,7 +4134,7 @@ export const editPendingSaleImagesServiceR2 = async (
 
     if(images.receipt){
         let receiptImg: IImageR2 | undefined = {
-            FileName: images.receipt.originalname,
+            FileName: `${pendingSale.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: images.receipt.mimetype,
             FileExt: path.extname(images.receipt.originalname),
             FileSize: images.receipt.size,
@@ -4170,7 +4170,7 @@ export const editPendingSaleImagesServiceR2 = async (
 
     if(images.agreement){
         let agreementImg: IImageR2 | undefined = {
-            FileName: images.agreement.originalname,
+            FileName: `${pendingSale.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: images.agreement.mimetype,
             FileExt: path.extname(images.agreement.originalname),
             FileSize: images.agreement.size,
