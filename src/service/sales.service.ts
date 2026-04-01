@@ -2655,7 +2655,7 @@ export const editPendingSaleServiceR2 = async (
 
     if(data.images && data.images.agreement){
         let agreementImg: IImageR2 | undefined = {
-            FileName: `${pendingSale.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            FileName: `${pendingSale.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
             ContentType: data.images.agreement.mimetype,
             FileExt: path.extname(data.images.agreement.originalname),
             FileSize: data.images.agreement.size,
