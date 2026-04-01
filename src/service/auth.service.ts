@@ -489,7 +489,7 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, hasUMDivision?: boolean}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
@@ -571,6 +571,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
             email: email,
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
+            unitManagerId: agentDetails.data.ReferredByID || undefined,
             ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
