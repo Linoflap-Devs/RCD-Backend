@@ -4796,9 +4796,12 @@ export const getSalesDistributionListService = async(showInactive: boolean = fal
 export const addSalesDistributionListService = async(userId: number, distribution: Insertable<TblDistribution>): QueryResult<Selectable<TblDistribution>> => {
     const obj: Insertable<TblDistribution> = {
         ...distribution,
-        UpdateBy: userId
+        UpdateBy: userId,
+        IsActive: 1
     } 
     const result = await addDistributionList(obj);
+
+    console.log(result)
 
     if(!result.success){
         return {

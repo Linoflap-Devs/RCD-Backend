@@ -18,7 +18,7 @@ router.route('/targets/:salesTargetId').patch([validateEmployeeSession, validate
 router.route('/targets/:salesTargetId').delete([validateEmployeeSession], deleteSalesTargetController);
 
 router.route('/distribution').get([validateAgentEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getDistributionListController);
-router.route('/distribution').post([validateEmployeeSession, validateRole(['AD', 'BH']), validate(addSalesDistributionSchema)], addDistributionListController);
+router.route('/distribution').post([validateEmployeeSession, validateRole(['AD', 'SA']), validate(addSalesDistributionSchema)], addDistributionListController);
 
 // personal sales
 router.route('/web/agent-sales/:agentId').get([validateEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getWebPersonalSalesController);

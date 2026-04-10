@@ -1638,6 +1638,8 @@ export const addDistributionListController = async (req: Request, res: Response)
         PositionID: positionID
     })
 
+    console.log(result.data)
+
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add distribution list', data: {}})
         return;
