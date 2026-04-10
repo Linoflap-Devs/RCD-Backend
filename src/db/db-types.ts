@@ -653,12 +653,12 @@ export interface TblDevelopers {
 export interface TblDistribution {
   Distribution: string;
   DistributionCode: string;
-  DistributionID: number;
-  IsActive: number;
-  LastUpdate: Date;
+  DistributionID: Generated<number>;
+  IsActive: Generated<number>;
+  LastUpdate: Date | null;
   Level: number;
   PositionID: number;
-  UpdateBy: number;
+  UpdateBy: number | null;
 }
 
 export interface TblDivision {
