@@ -1,11 +1,11 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { TblAgentPendingSalesDtl, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { DB, TblAgentPendingSalesDtl, TblDistribution, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, EditPendingSaleDetail, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
-import { sql, ExpressionBuilder, Selectable, Insertable } from "kysely";
+import { sql, ExpressionBuilder, Selectable, Insertable, Transaction, Updateable } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
 import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
 import { CommissionDetailPositions, CommissionRate, CommissionRateDetail } from "../types/commission.types";
@@ -4332,6 +4332,172 @@ export const bindImagesToSales = async (images: { id: number, type: string }[], 
                 code: 500,
                 message: error.message
             }
+        }
+    }
+}
+
+// Shift levels up (increment) for insert — makes room at the target level
+const shiftLevelsUp = async (fromLevel: number, trx: Transaction<DB>) => {
+    await trx.updateTable('Tbl_Distribution')
+        .set((eb) => ({ Level: eb('Level', '+', 1) }))
+        .where('Level', '>=', fromLevel)
+        .execute()
+}
+
+// Shift levels down (decrement) for delete — closes the gap
+const shiftLevelsDown = async (fromLevel: number, trx: Transaction<DB>) => {
+    await trx.updateTable('Tbl_Distribution')
+        .set((eb) => ({ Level: eb('Level', '-', 1) }))
+        .where('Level', '>', fromLevel)
+        .execute()
+}
+
+export const getDistributionList = async (showInactive: boolean = false): QueryResult<Selectable<TblDistribution>[]> => {
+    try {
+        let baseQuery = await db.selectFrom('Tbl_Distribution')
+
+        if(!showInactive){
+            baseQuery = baseQuery.where('IsActive', '=', 1)
+        }
+
+        const result = await db.selectFrom('Tbl_Distribution')
+            .selectAll()
+            .orderBy('Level', 'desc')
+            .execute()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as Selectable<TblDistribution>[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addDistributionList = async (data: Insertable<TblDistribution>): QueryResult<Selectable<TblDistribution>> => {
+    const trx = await db.startTransaction().execute()
+    try {
+
+        await shiftLevelsUp(data.Level, trx)
+
+        const result = await trx.insertInto('Tbl_Distribution')
+            .values(data)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute()
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblDistribution>,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editDistributionList = async (distributionId: number, data: Updateable<TblDistribution>): QueryResult<Selectable<TblDistribution>> => {
+    const trx = await db.startTransaction().execute()
+    try {
+        const current = await trx.selectFrom('Tbl_Distribution')
+                .selectAll()
+                .where('DistributionID', '=', distributionId)
+                .executeTakeFirstOrThrow()
+
+        if (data.Level !== undefined && data.Level !== current.Level) {
+            if (data.Level > current.Level) {
+                // Moving down: shift rows between old+1 and new level UP
+                await trx.updateTable('Tbl_Distribution')
+                    .set((eb) => ({ Level: eb('Level', '-', 1) }))
+                    .where('Level', '>', current.Level)
+                    .where('Level', '<=', data.Level as number)
+                    .execute()
+            } else {
+                // Moving up: shift rows between new level and old-1 DOWN
+                await trx.updateTable('Tbl_Distribution')
+                    .set((eb) => ({ Level: eb('Level', '+', 1) }))
+                    .where('Level', '>=', data.Level as number)
+                    .where('Level', '<', current.Level)
+                    .execute()
+            }
+        }
+
+        const result = await trx.updateTable('Tbl_Distribution')
+                .set(data)
+                .where('DistributionID', '=', distributionId)
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute()
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblDistribution>,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteDistributionList = async (
+    id: number
+): QueryResult<Selectable<TblDistribution>> => {
+    try {
+        const result = await db.transaction().execute(async (trx) => {
+            // Get the row first so we know which level to close
+            const current = await trx.selectFrom('Tbl_Distribution')
+                .selectAll()
+                .where('DistributionID', '=', id)
+                .executeTakeFirstOrThrow()
+
+            const deleted = await trx.deleteFrom('Tbl_Distribution')
+                .where('DistributionID', '=', id)
+                .outputAll('deleted')
+                .executeTakeFirstOrThrow()
+
+            // Close the gap left by the deleted row
+            await shiftLevelsDown(current.Level, trx)
+
+            return deleted
+        })
+
+        return { success: true, data: result }
+    } catch (err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblDistribution>,
+            error: { code: 500, message: error.message }
         }
     }
 }
