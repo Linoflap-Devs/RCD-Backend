@@ -1,9 +1,9 @@
-import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens } from "../types/auth.types";
+import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens, ITblAgentUser, ITblBrokerUser } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
-import { IImage } from "../types/image.types";
+import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerBrokerTransaction, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -21,6 +21,8 @@ import { getBrokerUsers } from "../repository/brokers.repository";
 import { sendSimpleEmail, sendTemplateEmail } from "./email.service";
 import { send } from "process";
 import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
+import { r2UploadAgentAvatar, r2UploadBrokerAvatar, r2UploadBrokerGovId, r2UploadBrokerGovSelfie, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
+import { editImage } from "../repository/images.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -320,6 +322,101 @@ export const registerAgentService = async (
     return result
 }
 
+export const registerAgentServiceR2 = async (
+    data: IAgentRegister, 
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File,
+    agentId?: number
+): QueryResult<any> => {
+
+    if(agentId){
+        const agent = await findAgentDetailsByAgentId(agentId)
+
+        if(!agent.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    code: 500,
+                    message: 'Failed to find agent details.'
+                }
+            }
+        }
+    }
+
+    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+
+    let metadata: IImageR2 | undefined = undefined
+
+    if(image){
+        metadata = {
+            FileName: filename,
+            ContentType: image.mimetype,
+            FileExt: path.extname(image.originalname),
+            FileSize: image.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    }
+
+    let govIdMetadata: IImageR2 | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    )
+    
+    let selfieMetadata: IImageR2 | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    )
+
+    const result = await registerAgentTransactionR2(data, metadata, govIdMetadata, selfieMetadata, agentId)
+
+    if(!result.success) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: result.error?.message || 'Failed to register agent.',
+                code: result.error?.code || 500 
+            }
+        }
+    }
+
+    // upload images
+    const [avatar, govId, selfie] = await Promise.all([
+        image ? r2UploadAgentAvatar(result.data.agentUser.AgentUserID, image) : Promise.resolve(undefined),
+        govIdImage ? r2UploadGovId(result.data.registration.AgentRegistrationID, govIdImage) : Promise.resolve(undefined),
+        selfieImage ? r2UploadGovSelfie(result.data.registration.AgentRegistrationID, selfieImage) : Promise.resolve(undefined),
+    ])
+
+    console.log(avatar, govId, selfie)
+
+    const [editAvatar, editGovId, editSelfie] = await Promise.all([
+        avatar && result.data.agentUser.ImageID ? editImage(result.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        govId && result.data.registration.GovImageID ? editImage(result.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        selfie && result.data.registration.SelfieImageID ? editImage(result.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+    ])
+    
+    return result
+}
+
 export const registerInviteService = async (
     inviteToken: string,
     data: IAgentInvite
@@ -392,7 +489,7 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, hasUMDivision?: boolean}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
@@ -474,6 +571,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
             email: email,
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
+            unitManagerId: agentDetails.data.ReferredByID || undefined,
             ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
@@ -602,6 +700,167 @@ export const registerBrokerService = async (
             }
         }
     }
+
+    return {
+        success: true,
+        data: result
+    }
+}
+
+export const registerBrokerServiceR2 = async (
+    data: IBrokerRegister, 
+    brokerType: "hands-on" | "hands-off",
+    image?: Express.Multer.File,
+    govIdImage?: Express.Multer.File,
+    selfieImage?: Express.Multer.File,
+    //agentId?: number
+): QueryResult<any> => {
+
+    const filename = `${data.lastName}-${data.firstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const govIdFilename = `${data.lastName}-${data.firstName}-govid_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    const selfieFilename = `${data.lastName}-${data.firstName}-selfie_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+
+    let metadata: IImageR2 | undefined = undefined
+
+    if(image)(
+        metadata = {
+            FileName: filename,
+            ContentType: image.mimetype,
+            FileExt: path.extname(image.originalname),
+            FileSize: image.size,
+            FileContent: null,
+            StorageKey: null,
+        }
+    )
+
+    let govIdMetadata: IImageR2 | undefined = undefined
+    if(govIdImage)(
+        govIdMetadata = {
+            FileName: govIdFilename,
+            ContentType: govIdImage.mimetype,
+            FileExt: path.extname(govIdImage.originalname),
+            FileSize: govIdImage.size,
+            FileContent: null,
+            StorageKey: null
+        }
+    )
+    
+    let selfieMetadata: IImageR2 | undefined = undefined
+    if(selfieImage)(
+        selfieMetadata = {
+            FileName: selfieFilename,
+            ContentType: selfieImage.mimetype,
+            FileExt: path.extname(selfieImage.originalname),
+            FileSize: selfieImage.size,
+            FileContent: null,
+            StorageKey: null
+        }
+    )
+
+    // check email availability
+    const [
+        agentEmailCheck,
+        brokerEmailCheck
+    ] = await Promise.all([
+        findAgentUserByEmail(data.email),
+        findBrokerUserByEmail(data.email)
+    ])
+
+    if(agentEmailCheck.success || brokerEmailCheck.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Email already exists.',
+                code: 400
+            }
+        }
+    }
+
+    let result: { registration: ITblAgentRegistration, agentUser: ITblAgentUser } | { registration: ITblBrokerRegistration, broker: ITblBrokerUser } | undefined = undefined 
+
+    if(brokerType == "hands-on"){
+
+        // get position id for broker
+        const brokerPosition = await getPositions({positionName: "BROKER"})
+
+        const mappedData = {
+            ...data,
+            positionId: brokerPosition.data[0].PositionID ? brokerPosition.data[0].PositionID : 76
+        }
+
+        const response = await registerAgentTransactionR2(mappedData, metadata, govIdMetadata, selfieMetadata, undefined)
+
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-on broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        // upload images
+        const [avatar, govId, selfie] = await Promise.all([
+            image ? r2UploadAgentAvatar(response.data.agentUser.AgentUserID, image) : Promise.resolve(undefined),
+            govIdImage ? r2UploadGovId(response.data.registration.AgentRegistrationID, govIdImage) : Promise.resolve(undefined),
+            selfieImage ? r2UploadGovSelfie(response.data.registration.AgentRegistrationID, selfieImage) : Promise.resolve(undefined),
+        ])
+
+        const [editAvatar, editGovId, editSelfie] = await Promise.all([
+            avatar && response.data.agentUser.ImageID ? editImage(response.data.agentUser.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            govId && response.data.registration.GovImageID ? editImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            selfie && response.data.registration.SelfieImageID ? editImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        ])
+        
+
+
+        result = response.data
+
+    } else {
+        const response = await registerBrokerTransactionR2(data, metadata, govIdMetadata, selfieMetadata, undefined)
+        
+        if(!response.success) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: response.error?.message || 'Failed to register hands-off broker.',
+                    code: response.error?.code || 500 
+                }
+            }
+        }
+
+        // upload images
+        const [avatar, govId, selfie] = await Promise.all([
+            image ? r2UploadBrokerAvatar(response.data.broker.BrokerUserID, image) : Promise.resolve(undefined),
+            govIdImage ? r2UploadBrokerGovId(response.data.registration.BrokerRegistrationID, govIdImage) : Promise.resolve(undefined),
+            selfieImage ? r2UploadBrokerGovSelfie(response.data.registration.BrokerRegistrationID, selfieImage) : Promise.resolve(undefined),
+        ])
+
+        const [editAvatar, editGovId, editSelfie] = await Promise.all([
+            avatar && response.data.broker.ImageID ? editImage(response.data.broker.ImageID, { StorageKey: avatar.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            govId && response.data.registration.GovImageID ? editImage(response.data.registration.GovImageID, { StorageKey: govId.data.storageKey } as IImage ) : Promise.resolve(undefined),
+            selfie && response.data.registration.SelfieImageID ? editImage(response.data.registration.SelfieImageID, { StorageKey: selfie.data.storageKey } as IImage ) : Promise.resolve(undefined),
+        ])
+
+        result = response.data
+    }
+
+    if(!result) {
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Failed to register broker.',
+                code: 500 
+            }
+        }
+    }
+
+    
 
     return {
         success: true,
@@ -1609,6 +1868,56 @@ export const logoutEmployeeSessionService = async(sessionId: number): QueryResul
     return {
         success: true,
         data: {}
+    }
+}
+
+export const bindNewAccountToExistingAgentService = async (agentId: number, email: string, password: string): QueryResult<ITblAgentUser> => {
+    // check if agent id already has account
+    const existingAgentId = await getAgentUsers({ agentIds: [agentId] })
+
+    if (existingAgentId.success && existingAgentId.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Agent already has an account.',
+                code: 400
+            }
+        }
+    }
+
+    const existingEmail = await getAgentUsers({ emails: [email] })
+
+    if (existingEmail.success && existingEmail.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Email is already registered.',
+                code: 400
+            }
+        }
+    }
+    
+    const hash = await hashPassword(password)
+
+    const result = await bindNewAccountToAgent(email, hash, agentId)
+
+    if(!result.success){
+        logger('Failed to bind new account to agent.', {email: email, agentId: agentId})
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
+            error: {
+                message: 'Failed to bind new account to agent.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

@@ -15,6 +15,8 @@ import { ITblAgent } from '../../../types/agent.types'
 import { after } from 'node:test'
 import { createPendingSale } from '../../helpers/sales.helpers'
 import { ITblAgentPendingSales } from '../../../types/sales.types'
+import { TblDistribution } from '../../../db/db-types'
+import { Selectable } from 'kysely'
 
 const app = express()
 
@@ -112,6 +114,72 @@ describe('Sales E2E Test', () => {
 
         afterAll( async () => {
             await truncateAllTables()
+        })
+    })
+
+    describe.only('POST /api/sales/distribution', () => {
+        let saUserAccount: ITblUsersWeb = {} as ITblUsersWeb  
+        const agent = request.agent(app)
+
+        let salesDistribution: Selectable<TblDistribution> = {} as Selectable<TblDistribution>
+
+        it('should create divisions', async () => {
+            const divisions = await seedDivisions()
+
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should create positions', async () =>{
+            const positions = await seedPositions()
+
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create an SA user', async () => {
+            const saUser = await createAdmin()
+
+            saUserAccount = saUser.data
+            expect(saUser.success).toBe(true)
+        })     
+
+        it('should login the SA user', async () => {
+            const result = await agent
+                .post('/api/auth/login-employee')
+                .send({
+                    username: saUserAccount.UserName,
+                    password: process.env.TESTING_PW || ''
+                })
+
+            expect(result.status).toBe(200)
+            expect(result.body.success).toBe(true)
+        })
+
+        it('should create a sales distribution entry', async () => {
+            const result = await agent
+                .post('/api/sales/distribution')
+                .send({
+                    distributionCode: 'TEST_DIST_CODE',
+                    distributionName: 'Test Distribution',
+                    level: 1,
+                    positionID: 1
+                })
+
+            salesDistribution = result.body.data
+
+            console.log(result.body)
+
+            expect(result.status).toBe(200)
+            expect(result.body.success).toBe(true)
+        })
+
+        it('should see the sales distribution in the list', async () => {
+            const result = await agent
+                .get('/api/sales/distribution')
+
+            expect(result.status).toBe(200)
+            expect(result.body.success).toBe(true)
+            expect(result.body.data.length).toBeGreaterThan(0)
+            expect(result.body.data.some((dist: TblDistribution) => Number(dist.DistributionID) == salesDistribution.DistributionID)).toBe(true)
         })
     })
 

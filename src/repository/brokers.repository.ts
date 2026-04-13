@@ -6,21 +6,216 @@ import { QueryResult } from "../types/global.types"
 import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types"
 import { bufferToBase64 } from "../utils/utils"
 
-export const getBrokerRegistrationByUserId = async (brokerUserId: number): QueryResult<ITblBrokerRegistration> => {
+export const getBrokerRegistrationByUserId = async (brokerUserId: number): QueryResult<IBrokerRegistration> => {
     try {
         const brokerUser = await db.selectFrom('Tbl_BrokerUser')
             .where('BrokerUserID', '=', brokerUserId)
             .selectAll()
             .executeTakeFirstOrThrow()
         
-        const brokerRegistration = await db.selectFrom('Tbl_BrokerRegistration')
-            .where('BrokerRegistrationID', '=', brokerUser.BrokerRegistrationID)
-            .selectAll()
+        // const brokerRegistration = await db.selectFrom('Tbl_BrokerRegistration')
+        //     .where('BrokerRegistrationID', '=', brokerUser.BrokerRegistrationID)
+        //     .selectAll()
+        //     .executeTakeFirstOrThrow()
+
+        let baseBrokerDataQuery = await db.selectFrom('Tbl_BrokerRegistration')
+            .innerJoin('Tbl_BrokerUser', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
+            // Join for profile image
+            .leftJoin('Tbl_Image as ProfileImage', 'Tbl_BrokerUser.ImageID', 'ProfileImage.ImageID')
+            // Join for government ID image
+            .leftJoin('Tbl_Image as GovImage', 'Tbl_BrokerRegistration.GovImageID', 'GovImage.ImageID')
+            // Join for selfie image
+            .leftJoin('Tbl_Image as SelfieImage', 'Tbl_BrokerRegistration.SelfieImageID', 'SelfieImage.ImageID')
+            // Join for division info
+            .leftJoin('Tbl_Broker', 'Tbl_BrokerRegistration.ReferredByID', 'Tbl_Broker.BrokerID')
+            .select([
+                'Tbl_BrokerRegistration.BrokerRegistrationID',
+                'Tbl_BrokerRegistration.IsVerified',
+                'Tbl_BrokerRegistration.FirstName',
+                'Tbl_BrokerRegistration.MiddleName', 
+                'Tbl_BrokerRegistration.LastName',
+                'Tbl_BrokerRegistration.Address',
+                'Tbl_BrokerRegistration.Birthdate',
+                'Tbl_BrokerRegistration.Birthplace',
+                'Tbl_BrokerRegistration.CivilStatus',
+                'Tbl_BrokerRegistration.ContactNumber',
+                'Tbl_BrokerRegistration.Sex',
+                'Tbl_BrokerRegistration.Religion',
+                'Tbl_BrokerRegistration.TelephoneNumber',
+                'Tbl_BrokerRegistration.SSSNumber',
+                'Tbl_BrokerRegistration.PhilhealthNumber',
+                'Tbl_BrokerRegistration.PagIbigNumber',
+                'Tbl_BrokerRegistration.TINNumber',
+                'Tbl_BrokerRegistration.PRCNumber',
+                'Tbl_BrokerRegistration.DSHUDNumber',
+                'Tbl_BrokerRegistration.EmployeeIDNumber',
+                'Tbl_BrokerRegistration.PersonEmergency',
+                'Tbl_BrokerRegistration.ContactEmergency',
+                'Tbl_BrokerRegistration.AddressEmergency',
+                'Tbl_BrokerRegistration.AffiliationDate',
+                'Tbl_BrokerUser.Email',
+                'Tbl_BrokerUser.Password',
+                'Tbl_BrokerUser.BrokerID',
+                // Profile image fields
+                'ProfileImage.Filename as ProfileFilename',
+                'ProfileImage.ContentType as ProfileContentType',
+                'ProfileImage.FileExtension as ProfileFileExtension',
+                'ProfileImage.FileSize as ProfileFileSize',
+                'ProfileImage.FileContent as ProfileFileContent',
+                'ProfileImage.StorageKey as ProfileStorageKey',
+                // Government ID image fields
+                'GovImage.Filename as GovFilename',
+                'GovImage.ContentType as GovContentType',
+                'GovImage.FileExtension as GovFileExtension',
+                'GovImage.FileSize as GovFileSize',
+                'GovImage.FileContent as GovFileContent',
+                'GovImage.StorageKey as GovStorageKey',
+                // Selfie image fields
+                'SelfieImage.Filename as SelfieFilename',
+                'SelfieImage.ContentType as SelfieContentType',
+                'SelfieImage.FileExtension as SelfieFileExtension',
+                'SelfieImage.FileSize as SelfieFileSize',
+                'SelfieImage.FileContent as SelfieFileContent',
+                'SelfieImage.StorageKey as SelfieStorageKey'
+            ])
+            .where('Tbl_BrokerUser.BrokerUserID', '=', brokerUserId)
             .executeTakeFirstOrThrow()
+
+        const educationData = await db.selectFrom('Tbl_BrokerEducation')
+            .select([
+                'BrokerEducationID',
+                'BrokerID',
+                'BrokerRegistrationID',
+                'Degree',
+                'EndDate',
+                'School',
+                'StartDate'
+            ])
+            .where('BrokerRegistrationID', 'in', baseBrokerDataQuery.BrokerRegistrationID)
+            .execute();
+
+        // 3. Get work experience data for all brokers in one query
+        const workExpData = await db.selectFrom('Tbl_BrokerWorkExp')
+            .select([
+                'BrokerWorkExpID',
+                'BrokerID', 
+                'BrokerRegistrationID',
+                'Company',
+                'EndDate',
+                'JobTitle',
+                'StartDate'
+            ])
+            .where('BrokerRegistrationID', '=', baseBrokerDataQuery.BrokerRegistrationID)
+            .execute();
+
+        // 4. Create lookup maps for efficient data retrieval
+        const educationByBrokerId = educationData.reduce((acc, edu) => {
+            if (!acc[edu.BrokerRegistrationID!]) {
+                acc[edu.BrokerRegistrationID!] = [];
+            }
+            acc[edu.BrokerRegistrationID!].push({
+                BrokerEducationID: edu.BrokerEducationID,
+                Degree: edu.Degree,
+                EndDate: edu.EndDate,
+                School: edu.School,
+                StartDate: edu.StartDate
+            });
+            return acc;
+        }, {} as Record<number, ITblBrokerEducation[]>);
+
+        const workExpByBrokerId = workExpData.reduce((acc, work) => {
+            if (!acc[work.BrokerRegistrationID!]) {
+                acc[work.BrokerRegistrationID!] = [];
+            }
+            acc[work.BrokerRegistrationID!].push({
+                BrokerWorkExpID: work.BrokerWorkExpID,
+                Company: work.Company,
+                EndDate: work.EndDate || null,
+                JobTitle: work.JobTitle,
+                StartDate: work.StartDate
+            });
+            return acc;
+        }, {} as Record<number, ITblBrokerWorkExp[]>);
+
+        // 5. Build the final result array
+        let result: IBrokerRegistration = {} as IBrokerRegistration;
+
+        const broker = baseBrokerDataQuery;
+        const images: ITypedImageBase64[] = [];
+
+        // Add profile image
+        if (broker.ProfileFilename) {
+            images.push({
+                FileName: broker.ProfileFilename || '',
+                ContentType: broker.ProfileContentType || '',
+                FileExt: broker.ProfileFileExtension || '',
+                FileSize: broker.ProfileFileSize || 0,
+                FileContent: broker.ProfileFileContent ? broker.ProfileFileContent.toString('base64') : '',
+                StorageKey: broker.ProfileStorageKey,
+                ImageType: 'profile'
+            });
+        }
+
+        // Add government ID image
+        if (broker.GovFilename) {
+            images.push({
+                FileName: broker.GovFilename || '',
+                ContentType: broker.GovContentType || '',
+                FileExt: broker.GovFileExtension || '',
+                FileSize: broker.GovFileSize || 0,
+                FileContent: broker.GovFileContent ? broker.GovFileContent.toString('base64') : '',
+                StorageKey: broker.GovStorageKey,
+                ImageType: 'govid'
+            });
+        }
+
+        // Add selfie image
+        if (broker.SelfieFilename) {
+            images.push({
+                FileName: broker.SelfieFilename || '',
+                ContentType: broker.SelfieContentType || '',
+                FileExt: broker.SelfieFileExtension || '',
+                FileSize: broker.SelfieFileSize || 0,
+                FileContent: broker.SelfieFileContent ? broker.SelfieFileContent.toString('base64') : '',
+                StorageKey: broker.SelfieStorageKey,
+                ImageType: 'selfie'
+            });
+        }
+
+        result = {
+            BrokerRegistrationID: broker.BrokerRegistrationID!,
+            IsVerified: broker.IsVerified,
+            FirstName: broker.FirstName,
+            MiddleName: broker.MiddleName,
+            LastName: broker.LastName,
+            Email: broker.Email,
+            Gender: broker.Sex as ('Male' | 'Female'),
+            CivilStatus: broker.CivilStatus as ('Single' | 'Married'),
+            Religion: broker.Religion || '',
+            Birthdate: broker.Birthdate!,
+            Birthplace: broker.Birthplace || '',
+            Address: broker.Address || '',
+            TelephoneNumber: broker.TelephoneNumber || '',
+            ContactNumber: broker.ContactNumber || '',
+            PersonEmergency: broker.PersonEmergency || '',
+            ContactEmergency: broker.ContactEmergency || '',
+            AddressEmergency: broker.AddressEmergency || '',
+            AffliationDate: new Date(broker.AffiliationDate),
+            SssNumber: broker.SSSNumber || '',
+            PhilhealthNumber: broker.PhilhealthNumber,
+            PagibigNumber: broker.PagIbigNumber,
+            TinNumber: broker.TINNumber,
+            PrcNumber: broker.PRCNumber,
+            DshudNumber: broker.DSHUDNumber,
+            EmployeeIdNumber: broker.EmployeeIDNumber,
+            Images: images,
+            Experience: workExpByBrokerId[broker.BrokerRegistrationID!] || [],
+            Education: educationByBrokerId[broker.BrokerRegistrationID!] || [],
+        };
 
         return {
             success: true,
-            data: brokerRegistration
+            data: result
         }
     }
 
@@ -28,7 +223,7 @@ export const getBrokerRegistrationByUserId = async (brokerUserId: number): Query
         const error = err as Error
         return {
             success: false,
-            data: {} as ITblBrokerRegistration,
+            data: {} as IBrokerRegistration,
             error: {
                 code: 400,
                 message: error.message
@@ -107,19 +302,20 @@ export const editBrokerImage = async (imageId: number, imageData: IImage): Query
             FileContent: imageData.FileContent,
             FileExtension: imageData.FileExt,
             Filename: imageData.FileName,
-            FileSize: imageData.FileSize
+            FileSize: imageData.FileSize,
+            StorageKey: imageData.StorageKey
         };
 
         const result = await db.updateTable('Tbl_Image')
-            .where('ImageID', '=', imageId)
             .set(imageMapped)
+            .where('ImageID', '=', imageId)
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
         const obj = {
             ContentType: result.ContentType,
             CreatedAt: result.CreatedAt,
-            FileContent: `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`,
+            FileContent: result.FileContent ? `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`: '',
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
@@ -175,7 +371,7 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
         const obj = {
             ContentType: addImage.ContentType,
             CreatedAt: addImage.CreatedAt,
-            FileContent: `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}`,
+            FileContent: addImage.FileContent ? `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}` : '',
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
@@ -392,11 +588,9 @@ export const getBrokerWithUser = async (agentId: number): QueryResult<{ broker: 
     try {
         const result = await db.selectFrom('Tbl_Broker')
             .innerJoin('Tbl_BrokerUser', 'Tbl_Broker.BrokerID', 'Tbl_BrokerUser.BrokerID')
-            .innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_Broker.BrokerID')
+            //.innerJoin('Tbl_Broker', 'Tbl_Broker.BrokerID', 'Tbl_Broker.BrokerID')
             .selectAll('Tbl_Broker')
             .select([
-                'Tbl_Broker.Religion',
-                'Tbl_Broker.BrokerTaxRate',
                 'Tbl_BrokerUser.BrokerUserID',
                 'Tbl_BrokerUser.BrokerID',
                 'Tbl_BrokerUser.BrokerRegistrationID',
@@ -584,6 +778,10 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                 'Tbl_BrokerRegistration.PRCNumber',
                 'Tbl_BrokerRegistration.DSHUDNumber',
                 'Tbl_BrokerRegistration.EmployeeIDNumber',
+                'Tbl_BrokerRegistration.PersonEmergency',
+                'Tbl_BrokerRegistration.ContactEmergency',
+                'Tbl_BrokerRegistration.AddressEmergency',
+                'Tbl_BrokerRegistration.AffiliationDate',
                 'Tbl_BrokerUser.Email',
                 'Tbl_BrokerUser.Password',
                 'Tbl_BrokerUser.BrokerID',
@@ -593,18 +791,21 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                 'ProfileImage.FileExtension as ProfileFileExtension',
                 'ProfileImage.FileSize as ProfileFileSize',
                 'ProfileImage.FileContent as ProfileFileContent',
+                'ProfileImage.StorageKey as ProfileStorageKey',
                 // Government ID image fields
                 'GovImage.Filename as GovFilename',
                 'GovImage.ContentType as GovContentType',
                 'GovImage.FileExtension as GovFileExtension',
                 'GovImage.FileSize as GovFileSize',
                 'GovImage.FileContent as GovFileContent',
+                'GovImage.StorageKey as GovStorageKey',
                 // Selfie image fields
                 'SelfieImage.Filename as SelfieFilename',
                 'SelfieImage.ContentType as SelfieContentType',
                 'SelfieImage.FileExtension as SelfieFileExtension',
                 'SelfieImage.FileSize as SelfieFileSize',
-                'SelfieImage.FileContent as SelfieFileContent'
+                'SelfieImage.FileContent as SelfieFileContent',
+                'SelfieImage.StorageKey as SelfieStorageKey',
             ])
 
         console.log(filters)
@@ -694,38 +895,41 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
             const images: ITypedImageBase64[] = [];
 
             // Add profile image
-            if (broker.ProfileFileContent) {
+            if (broker.ProfileFilename) {
                 images.push({
                     FileName: broker.ProfileFilename || '',
                     ContentType: broker.ProfileContentType || '',
                     FileExt: broker.ProfileFileExtension || '',
                     FileSize: broker.ProfileFileSize || 0,
-                    FileContent: broker.ProfileFileContent.toString('base64'),
-                    ImageType: 'profile'
+                    FileContent: broker.ProfileFileContent ? broker.ProfileFileContent.toString('base64') : '',
+                    ImageType: 'profile',
+                    StorageKey: broker.ProfileStorageKey
                 });
             }
 
             // Add government ID image
-            if (broker.GovFileContent) {
+            if (broker.GovFilename) {
                 images.push({
                     FileName: broker.GovFilename || '',
                     ContentType: broker.GovContentType || '',
                     FileExt: broker.GovFileExtension || '',
                     FileSize: broker.GovFileSize || 0,
-                    FileContent: broker.GovFileContent.toString('base64'),
-                    ImageType: 'govid'
+                    FileContent: broker.GovFileContent ? broker.GovFileContent.toString('base64') : '',
+                    ImageType: 'govid',
+                    StorageKey: broker.GovStorageKey
                 });
             }
 
             // Add selfie image
-            if (broker.SelfieFileContent) {
+            if (broker.SelfieFilename) {
                 images.push({
                     FileName: broker.SelfieFilename || '',
                     ContentType: broker.SelfieContentType || '',
                     FileExt: broker.SelfieFileExtension || '',
                     FileSize: broker.SelfieFileSize || 0,
-                    FileContent: broker.SelfieFileContent.toString('base64'),
-                    ImageType: 'selfie'
+                    FileContent: broker.SelfieFileContent ? broker.SelfieFileContent.toString('base64') : '',
+                    ImageType: 'selfie',
+                    StorageKey: broker.SelfieStorageKey
                 });
             }
 
@@ -751,6 +955,10 @@ export const getBrokerRegistrations = async (filters?: {brokerRegistrationId?: n
                 PrcNumber: broker.PRCNumber,
                 DshudNumber: broker.DSHUDNumber,
                 EmployeeIdNumber: broker.EmployeeIDNumber,
+                PersonEmergency: broker.PersonEmergency || '',
+                ContactEmergency: broker.ContactEmergency || '',
+                AddressEmergency: broker.AddressEmergency || '',
+                AffliationDate: new Date(broker.AffiliationDate),
                 Images: images,
                 Experience: workExpByBrokerId[broker.BrokerRegistrationID] || [],
                 Education: educationByBrokerId[broker.BrokerRegistrationID] || []

@@ -1,8 +1,8 @@
 import express from 'express';
-import { validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
-import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController, archivePendingSalesController, archiveSalesTransactionController, getWebPersonalSalesController, assignUMPendingSaleController, archiveWebPendingSalesController } from '../controller/sales.controller';
+import { validateAgentEmployeeSession, validateEmployeeSession, validateMobileSession, validateSession } from '../middleware/auth';
+import { getDivisionSalesController, getPersonalSalesController, getSalesTransactionDetailController, addPendingSaleController, editPendingSalesController, getPendingSalesController, getPendingSalesDetailsController, rejectPendingSalesController, approvePendingSalesController, getCombinedPersonalSalesController, approvePendingSalesSDController, approvePendingSalesBHController, getWebPendingSalesController, getWebPendingSalesDetailsController, editSaleImagesController, addWebPendingSaleController, rejectWebPendingSalesController, editPendingSalesControllerV2, editWebPendingSalesControllerV2, getWebSalesTransController, getWebSalesTransDtlController, editSalesTransactionController, getDivisionSalesTotalFnController, getDivisionSalesTotalsYearlyFnController, getSalesByDeveloperTotalsFnController, getSalesTargetsController, addSalesTargetController, editSalesTargetController, deleteSalesTargetController, getSalesTargetController, archivePendingSalesController, archiveSalesTransactionController, getWebPersonalSalesController, assignUMPendingSaleController, archiveWebPendingSalesController, addPendingSaleControllerR2, getDistributionListController, addDistributionListController } from '../controller/sales.controller';
 import { validate } from '../middleware/zod';
-import { addPendingSaleSchema, addSalesTargetSchema, editSalesTargetSchema } from '../schema/sales.schema';
+import { addPendingSaleSchema, addSalesDistributionSchema, addSalesTargetSchema, editSalesTargetSchema } from '../schema/sales.schema';
 import { validateRole } from '../middleware/roles';
 import { multerUpload } from '../middleware/multer';
 
@@ -16,6 +16,9 @@ router.route('/targets').post([validateEmployeeSession, validate(addSalesTargetS
 router.route('/targets/:salesTargetId').get([validateEmployeeSession], getSalesTargetController);
 router.route('/targets/:salesTargetId').patch([validateEmployeeSession, validate(editSalesTargetSchema)], editSalesTargetController);
 router.route('/targets/:salesTargetId').delete([validateEmployeeSession], deleteSalesTargetController);
+
+router.route('/distribution').get([validateAgentEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getDistributionListController);
+router.route('/distribution').post([validateEmployeeSession, validateRole(['AD', 'SA']), validate(addSalesDistributionSchema)], addDistributionListController);
 
 // personal sales
 router.route('/web/agent-sales/:agentId').get([validateEmployeeSession, validateRole(['AD','BH', 'SA', 'AL', 'ML'])], getWebPersonalSalesController);
@@ -46,11 +49,20 @@ router.route('/pending').post(
     ], 
     addPendingSaleController
 );
+router.route('/pending-r2').post(
+    [
+        validateSession, 
+        validateRole(['AD','SP', 'UM', 'SD']),
+        multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
+        validate(addPendingSaleSchema),
+    ], 
+    addPendingSaleControllerR2
+);
 router.route('/pending/:pendingSalesId').patch([validateSession, validateRole(['UM'])], editPendingSalesController);
 router.route('/pending/:pendingSalesId/images').patch(
     [
         validateSession,
-        validateRole(['SP']),
+        validateRole(['SP', 'UM', 'SD']),
         multerUpload.fields([{name: 'receipt', maxCount: 1}, {name: 'agreement', maxCount: 1}]),
     ],
     editSaleImagesController
@@ -86,8 +98,6 @@ router.route('/pending/approve/sa/:pendingSalesId').patch([validateEmployeeSessi
 router.route('/combined').get([validateMobileSession], getCombinedPersonalSalesController);
 
 router.route('/:salesTransactionId').get([validateMobileSession], getSalesTransactionDetailController);
-
-
 
 router.route('/web/division/').get([validateEmployeeSession], getDivisionSalesTotalFnController)
 router.route('/web/division/yearly/').get([validateEmployeeSession], getDivisionSalesTotalsYearlyFnController)

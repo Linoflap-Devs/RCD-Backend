@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerBrokerService, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -84,6 +84,89 @@ export const registerAgentController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerAgentControllerR2 = async (req: Request, res: Response) => {
+
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
+    console.log(profileImage)
+
+    const {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        positionId
+    } = req.body
+
+    console.log("req body", req.body)
+
+    console.log("education and experience", education, experience)
+
+    const obj: IAgentRegister = {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        positionId
+    }
+
+    const result = await registerAgentServiceR2(obj, profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+
+    console.log(result)
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register agent.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Agent registered successfully.",
+        data: result.data
+    })    
+};
+
 
 export const registerInviteController = async (req: Request, res: Response) => {
     const {
@@ -218,6 +301,95 @@ export const registerBrokerController = async (req: Request, res: Response) => {
         data: result.data
     })    
 };
+
+export const registerBrokerControllerR2 = async (req: Request, res: Response) => {
+
+    const profileImage = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+    console.log(JSON.stringify(req.files))
+    console.log(profileImage)
+
+    const {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+        brokerType,
+    } = req.body
+
+    if(brokerType !== 'hands-on' && brokerType !== 'hands-off'){
+        res.status(400).json({
+            success: false, 
+            message: "Invalid broker type. Avaiable types are 'hands-on' and 'hands-off'.",
+            data: {}
+        })
+
+        return
+    }
+
+
+    const obj: IBrokerRegister = {
+        firstName,
+        middleName,
+        lastName,
+        gender,
+        civilStatus,
+        religion,
+        birthdate,
+        birthplace,
+        address,
+        telephoneNumber,
+        contactNumber,
+        sssNumber,
+        philhealthNumber,
+        pagibigNumber,
+        tinNumber,
+        prcNumber,
+        dshudNumber,
+        employeeIdNumber,
+        email,
+        password,
+        education,
+        experience,
+    }
+
+    const result = await registerBrokerServiceR2(obj, brokerType as "hands-on" | "hands-off", profileImage?.profileImage[0], profileImage?.govId[0], profileImage?.selfie[0]);
+
+    console.log(result)
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to register broker.",
+            data: {}
+        })
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Broker registered successfully.",
+        data: result.data
+    })    
+};
+
 
 export const inviteNewUserController = async (req: Request, res: Response) => {
     
@@ -417,7 +589,7 @@ export const loginAgentController = async (req: Request, res: Response) => {
     }
 
     const isTest = process.env.NODE_ENV === 'testing' ? true : false
-    res.cookie('_rcd_agent_cookie', result.data.token, {httpOnly: true, sameSite: isTest ? 'lax' : 'none', secure: !isTest, maxAge: 24 * 60 * 60 * 1000})
+    res.cookie('_rcd_agent_cookie', result.data.token, {httpOnly: true, sameSite: isTest ? 'lax' : 'none', secure: !isTest, maxAge: 60 * 24 * 60 * 60 * 1000})
 
     return res.status(200).json({
         success: true, 
@@ -1041,6 +1213,44 @@ export const changeAgentUserPasswordAdminController = async (req: Request, res: 
     return res.status(200).json({
         success: true, 
         message: "Password changed successfully.", 
+        data: result.data
+    });
+}
+
+export const bindAccountToAgentController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        email,
+        password,
+        agentId
+    } = req.body
+
+    const result = await bindNewAccountToExistingAgentService(agentId, email, password)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to create account.", 
+            data: {}
+        });
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Account created successfully.", 
         data: result.data
     });
 }

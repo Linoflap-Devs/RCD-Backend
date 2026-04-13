@@ -10,9 +10,11 @@ import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.type
 import { IAgentRegistration, IAgentRegistrationListItem, ITblAgentUser } from "../types/auth.types";
 import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
-import { TblImageWithId } from "../types/image.types";
+import { ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
+import { hashPassword } from "../utils/scrypt";
+import { getPresignedUrl, getPublicUrl } from "../utils/r2";
 
 export const getAgentsService = async (
     filters?: {
@@ -211,12 +213,28 @@ export const lookupAgentDetailsService = async (agentId: number): QueryResult<an
     // images
 
     const agentImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
-    const formattedImages = agentImages.data.map((img: TblImageWithId) => {
+    const formattedImages = await Promise.all(
+        await agentImages.data.map(async (img: TblImageWithId) => {
+        
+            const imageType = img.Filename.includes('selfie') ? 'selfie' : img.Filename.includes('gov') ? 'govid' : 'profile'
+
+            let url = ''
+            if(img.StorageKey){
+                if(imageType == 'profile'){
+                    url = await getPublicUrl(img.StorageKey)
+                } else {
+                    url = (await getPresignedUrl(img.StorageKey)).data
+                }
+            }
+
             return {
                 ...img,
-                FileContent: img.FileContent.toString('base64')
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
+                StorageKey: img.StorageKey,
+                URL: url 
             }
-    })
+        })
+    )
 
     // divisions
 
@@ -335,6 +353,17 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
         }
     }
 
+    if(!process.env.R2_PUBLIC_ENDPOINT){
+        return {
+            success: false,
+            data: {} as IAgentRegistration,
+            error: {
+                code: 400,
+                message: 'R2_PUBLIC_ENDPOINT is not defined.'
+            }
+        }
+    }
+
     const result = await getAgentRegistrations({agentRegistrationId: agentRegistrationId})
 
     if(!result.success){
@@ -345,9 +374,37 @@ export const lookupAgentRegistrationService = async (userId: number, agentRegist
         }
     }
 
+    let resultCopy = result.data.result[0];
+
+    if (resultCopy.Images && resultCopy.Images.length > 0) {
+
+        const imageCopies = resultCopy.Images
+
+        const imageTypes = ['profile', 'govid', 'selfie'] as const;
+
+        const images = imageTypes.map(type =>
+            imageCopies.find((img: ITypedImageBase64) => img.ImageType === type)
+        );
+
+        const urls = await Promise.all(
+            images.map(img =>
+                img?.StorageKey ? img?.ImageType === 'profile' ? Promise.resolve({data: `${process.env.R2_PUBLIC_ENDPOINT}/${img.StorageKey}`}) : getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
+            )
+        );
+
+        resultCopy = {
+            ...resultCopy,
+            Images: images
+                .map((img, i) =>
+                    img ? { ...img, URL: urls[i]?.data ?? null } : null
+                )
+                .filter((img): img is ITypedImageBase64 & { URL: string | null } => img !== null)
+        };
+    }
+
     return {
         success: true,
-        data: result.data.result[0]
+        data: resultCopy
     }
 }
 
@@ -402,7 +459,23 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
         data.ReferredCode = referringAgent.data.AgentCode
     }
 
-    const result = await addAgent(userId, data)
+    if((data.Email && !data.Password) || (data.Password && !data.Email)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Email and password must be provided together.'
+            }
+        }
+    }
+
+    let pwHash = ''
+    if(data.Password){
+        pwHash = await hashPassword(data.Password)
+    }
+
+    const result = await addAgent(userId, data, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     console.log(result)
 
     if(!result.success){
@@ -417,9 +490,9 @@ export const addAgentService = async (userId: number, data: IAddAgent, salespers
     if(salespersonIds && salespersonIds.length > 0 && (umPosition.data[0].PositionID == data.PositionID)){
         const salespersons = await getAgents({ agentIds: salespersonIds })
 
-        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.DivisionID)
+        const validSps = salespersons.data.results.filter((sp: IAgent) => sp.DivisionID === result.data.agent.DivisionID)
 
-        const assign = await assignUMtoSPs(userId, result.data.AgentID, result.data.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
+        const assign = await assignUMtoSPs(userId, result.data.agent.AgentID, result.data.agent.AgentCode, validSps.map((sp: IAgent) => sp.AgentID))
 
         if(!assign.success){
             return {

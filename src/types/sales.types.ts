@@ -1,4 +1,5 @@
 import { CommissionDetailPositions } from "./commission.types";
+import { IImageR2, ITypedImageBase64 } from "./image.types";
 
 export interface AgentPendingSalesDetail {
     AgentID: number;
@@ -169,7 +170,8 @@ export interface AgentPendingSalesWithDetails {
         PositionName: string;
         VATRate: number;
         WTaxRate: number;
-    }[]
+    }[],
+    Images?: ITypedImageBase64[]
 }
 
 export interface EditPendingSaleDetail {

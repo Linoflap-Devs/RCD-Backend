@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
+import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentImageServiceR2, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerImageServiceR2, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -73,7 +73,7 @@ export const getAgentUserDetailsController = async (req: Request, res: Response)
             success: false,
             message: result.error?.message || "Failed to get user details.",
             data: {}
-         });
+        });
         return
     }
 
@@ -442,7 +442,7 @@ export const editAgentImageController = async (req: Request, res: Response) => {
         return
     }
 
-    const result = await editAgentImageService(session.userID, profileImage.profileImage[0])
+    const result = await editAgentImageServiceR2(session.userID, profileImage.profileImage[0])
 
     if(!result.success) {
         res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit user image'})
@@ -473,7 +473,7 @@ export const editBrokerImageController = async (req: Request, res: Response) => 
         return
     }
 
-    const result = await editBrokerImageService(session.userID, profileImage.profileImage[0])
+    const result = await editBrokerImageServiceR2(session.userID, profileImage.profileImage[0])
 
     if(!result.success) {
         res.status(result.error?.code || 400).json({success: false, data: {}, message: result.error?.message || 'Failed to edit user image'})

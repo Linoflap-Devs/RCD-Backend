@@ -653,12 +653,12 @@ export interface TblDevelopers {
 export interface TblDistribution {
   Distribution: string;
   DistributionCode: string;
-  DistributionID: number;
-  IsActive: number;
-  LastUpdate: Date;
+  DistributionID: Generated<number>;
+  IsActive: Generated<number>;
+  LastUpdate: Date | null;
   Level: number;
   PositionID: number;
-  UpdateBy: number;
+  UpdateBy: number | null;
 }
 
 export interface TblDivision {
@@ -687,11 +687,12 @@ export interface TblDivisionRequests {
 export interface TblImage {
   ContentType: string;
   CreatedAt: Date;
-  FileContent: Buffer;
+  FileContent: Buffer | null;
   FileExtension: string;
   Filename: string;
   FileSize: number;
   ImageID: Generated<number>;
+  StorageKey: string | null;
 }
 
 export interface TblLogs {

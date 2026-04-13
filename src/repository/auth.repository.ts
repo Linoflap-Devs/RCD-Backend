@@ -1,8 +1,8 @@
 import { QueryResult } from "../types/global.types";
 import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
-import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, IInviteTokens, ITblAgentUser, ITblUsersWeb, Token } from "../types/auth.types";
-import { IImage } from "../types/image.types";
+import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb, Token } from "../types/auth.types";
+import { IImage, IImageR2 } from "../types/image.types";
 import { profile } from "console";
 import { hashPassword } from "../utils/scrypt";
 import { logger } from "../utils/logger";
@@ -1012,6 +1012,173 @@ export const registerAgentTransaction = async(
     }
 }
 
+export const registerAgentTransactionR2 = async(
+    data: IAgentRegister, 
+    profileImageMetadata?: IImageR2, 
+    govIdImageMetadata?: IImageR2,
+    selfieImageMetadata?: IImageR2,
+    agentId?: number,
+    fromInvite: boolean = false
+): QueryResult<{ registration: ITblAgentRegistration, agentUser: ITblAgentUser }> => {
+
+    const registerTransaction = await db.startTransaction().execute();
+
+    try {
+
+        // insert into image
+        let imageId = -1;
+        if(profileImageMetadata){
+            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: profileImageMetadata.FileName,
+                ContentType: profileImageMetadata.ContentType,
+                FileExtension: profileImageMetadata.FileExt,
+                FileSize: profileImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            imageId = agentImage.ImageID
+        }
+
+        let govImageId = -1
+        if(govIdImageMetadata){
+            const govImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: govIdImageMetadata.FileName,
+                ContentType: govIdImageMetadata.ContentType,
+                FileExtension: govIdImageMetadata.FileExt,
+                FileSize: govIdImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            govImageId = govImage.ImageID
+        }
+
+        let selfieImageId = -1
+        if(selfieImageMetadata){
+            const selfieImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: selfieImageMetadata.FileName,
+                ContentType: selfieImageMetadata.ContentType,
+                FileExtension: selfieImageMetadata.FileExt,
+                FileSize: selfieImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            selfieImageId = selfieImage.ImageID
+        }
+
+        // insert into agent registration
+        const agentRegistration = await registerTransaction.insertInto('Tbl_AgentRegistration').values({
+            AgentCode: '',
+            LastName: data.lastName,
+            FirstName: data.firstName,
+            MiddleName: data.middleName ?? '',
+            ContactNumber: data.contactNumber,
+            AgentTaxRate: 5,
+            CivilStatus: data.civilStatus,
+            Sex: data.gender,
+            Address: data.address,
+            PositionID: data.positionId || undefined,
+            Birthdate: data.birthdate,
+            Birthplace: data.birthplace ?? '',
+            Religion: data.religion ?? '',
+            PhilhealthNumber: data.philhealthNumber ?? '',
+            SSSNumber: data.sssNumber ?? '',
+            PagIbigNumber: data.pagibigNumber ?? '',
+            TINNumber: data.tinNumber ?? '',
+            PRCNumber: data.prcNumber ?? '',
+            DSHUDNumber: data.dshudNumber ?? '',
+            TelephoneNumber: data.telephoneNumber ?? '', 
+            EmployeeIDNumber: data.employeeIdNumber ?? '',
+            PersonEmergency: '',
+            ContactEmergency: '',
+            AddressEmergency: '',
+            AffiliationDate: new Date(),
+            GovImageID: govImageId > 0 ? govImageId : null,
+            SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
+            ReferredByID: data.referredById ? data.referredById : null,
+            ReferredCode: data.referredCode ? data.referredCode : null,
+            DivisionID: data.divisionId ? data.divisionId.toString() : null,
+            IsVerified: fromInvite ? 0 : 1
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        // insert into work exp
+        if(data.experience && data.experience.length > 0) {
+            const agentWork = await registerTransaction.insertInto('Tbl_AgentWorkExp').values(
+                data.experience.map((exp: any) => ({
+                    Company: exp.company,
+                    JobTitle: exp.jobTitle,
+                    StartDate: exp.startDate,
+                    EndDate: exp.endDate,
+                    AgentRegistrationID: agentRegistration.AgentRegistrationID,
+                    AgentID: agentId ? agentId : null // Only if agent id is present
+                }))
+            ).execute()
+        }
+
+        // insert into educ
+        if(data.education && data.education.length > 0) {
+            const agentEduc = await registerTransaction.insertInto('Tbl_AgentEducation').values(
+                data.education.map((educ: any) => ({
+                    School: educ.school,
+                    Degree: educ.degree,
+                    StartDate: educ.startDate,
+                    EndDate: educ.endDate,
+                    AgentRegistrationID: agentRegistration.AgentRegistrationID,
+                    AgentID: agentId ? agentId : null // Only if agent id is present
+                }))
+            ).execute()
+        }
+
+        
+        // insert into Agent User
+
+        const hash = await hashPassword(data.password);
+
+        const agentUser = await registerTransaction.insertInto('Tbl_AgentUser').values({
+            AgentRegistrationID: agentRegistration.AgentRegistrationID,
+            Email: data.email,
+            Password: hash,
+            ImageID: imageId > 0 ? imageId : null,
+            IsVerified: agentId ? 1 : 0, // Only if agent id is present
+            AgentID: agentId ? agentId : null // Only if agent id is present
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        await registerTransaction.commit().execute();
+
+        return {
+            success: true,
+            data: {
+                registration: agentRegistration,
+                agentUser: agentUser
+            }
+        }
+    }
+    catch (err: unknown) {
+
+        await registerTransaction.rollback().execute();
+        const error = err as Error;
+
+        let message = error.message
+        let code = 500
+        console.log(error.message)
+        console.log(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser'))
+        if(error.message.includes('IX_Tbl_AgentUser_Email') && error.message.includes('Tbl_AgentUser')){
+            message = 'Email already exists.'
+            code = 401
+        }
+
+
+        return {
+            success: false,
+            data: {} as {registration: ITblAgentRegistration, agentUser: ITblAgentUser},
+            error: {
+                code: code,
+                message: message
+            }
+        }
+    }
+}
+
+
 
 export const deleteInviteRegistrationTransaction = async (agentRegistrationId: number, inviteToken: string, agentUserId: number): QueryResult<null> => {
     const trx = await db.startTransaction().execute()
@@ -1243,6 +1410,163 @@ export const registerBrokerTransaction = async(
         return {
             success: false,
             data: {} as ITblBrokerRegistration,
+            error: {
+                code: code,
+                message: message
+            }
+        }
+    }
+}
+
+export const registerBrokerTransactionR2 = async(
+    data: IBrokerRegister, 
+    profileImageMetadata?: IImageR2, 
+    govIdImageMetadata?: IImageR2,
+    selfieImageMetadata?: IImageR2,
+    brokerId?: number
+): QueryResult<{registration: ITblBrokerRegistration, broker: ITblBrokerUser}> => {
+
+    const registerTransaction = await db.startTransaction().execute();
+
+    try {
+
+        // insert into image
+        let imageId = -1;
+        if(profileImageMetadata){
+            const agentImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: profileImageMetadata.FileName,
+                ContentType: profileImageMetadata.ContentType,
+                FileExtension: profileImageMetadata.FileExt,
+                FileSize: profileImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            imageId = agentImage.ImageID
+        }
+
+        let govImageId = -1
+        if(govIdImageMetadata){
+            const govImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: govIdImageMetadata.FileName,
+                ContentType: govIdImageMetadata.ContentType,
+                FileExtension: govIdImageMetadata.FileExt,
+                FileSize: govIdImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            govImageId = govImage.ImageID
+        }
+
+        let selfieImageId = -1
+        if(selfieImageMetadata){
+            const selfieImage = await registerTransaction.insertInto('Tbl_Image').values({
+                Filename: selfieImageMetadata.FileName,
+                ContentType: selfieImageMetadata.ContentType,
+                FileExtension: selfieImageMetadata.FileExt,
+                FileSize: selfieImageMetadata.FileSize,
+                CreatedAt: new Date()
+            }).output('inserted.ImageID').executeTakeFirstOrThrow();
+
+            selfieImageId = selfieImage.ImageID
+        }
+
+        // insert into agent registration
+        const brokerRegistration = await registerTransaction.insertInto('Tbl_BrokerRegistration').values({
+            BrokerCode: '',
+            LastName: data.lastName,
+            FirstName: data.firstName,
+            MiddleName: data.middleName ?? '',
+            ContactNumber: data.contactNumber,
+            BrokerTaxRate: 5,
+            CivilStatus: data.civilStatus,
+            Sex: data.gender,
+            Address: data.address,
+            Birthdate: data.birthdate,
+            Birthplace: data.birthplace ?? '',
+            Religion: data.religion ?? '',
+            PhilhealthNumber: data.philhealthNumber ?? '',
+            SSSNumber: data.sssNumber ?? '',
+            PagIbigNumber: data.pagibigNumber ?? '',
+            TINNumber: data.tinNumber ?? '',
+            PRCNumber: data.prcNumber ?? '',
+            DSHUDNumber: data.dshudNumber ?? '',
+            EmployeeIDNumber: data.employeeIdNumber ?? '',
+            PersonEmergency: '',
+            ContactEmergency: '',
+            AddressEmergency: '',
+            AffiliationDate: new Date(),
+            GovImageID: govImageId > 0 ? govImageId : null,
+            SelfieImageID: selfieImageId > 0 ? selfieImageId : null,
+            IsVerified: 1
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        // insert into work exp
+        if(data.experience && data.experience.length > 0) {
+            const brokerWork = await registerTransaction.insertInto('Tbl_BrokerWorkExp').values(
+                data.experience.map((exp: any) => ({
+                    Company: exp.company,
+                    JobTitle: exp.jobTitle,
+                    StartDate: exp.startDate,
+                    EndDate: exp.endDate,
+                    BrokerRegistrationID: brokerRegistration.BrokerRegistrationID,
+                    BrokerID: brokerId ? brokerId : null // Only if agent id is present
+                }))
+            ).execute()
+        }
+
+        // insert into educ
+        if(data.education && data.education.length > 0) {
+            const brokerEduc = await registerTransaction.insertInto('Tbl_BrokerEducation').values(
+                data.education.map((educ: any) => ({
+                    School: educ.school,
+                    Degree: educ.degree,
+                    StartDate: educ.startDate,
+                    EndDate: educ.endDate,
+                    BrokerRegistrationID: brokerRegistration.BrokerRegistrationID,
+                    BrokerID: brokerId ? brokerId : null // Only if agent id is present
+                }))
+            ).execute()
+        }
+
+        
+        // insert into Broker User
+
+        const hash = await hashPassword(data.password);
+
+        const brokerUser = await registerTransaction.insertInto('Tbl_BrokerUser').values({
+            BrokerRegistrationID: brokerRegistration.BrokerRegistrationID,
+            Email: data.email,
+            Password: hash,
+            ImageID: imageId > 0 ? imageId : null,
+            IsVerified: brokerId ? 1 : 0, // Only if agent id is present
+            BrokerID: brokerId ? brokerId : null // Only if agent id is present
+        }).outputAll('inserted').executeTakeFirstOrThrow();
+
+        await registerTransaction.commit().execute();
+
+        return {
+            success: true,
+            data: {broker: brokerUser, registration: brokerRegistration}
+        }
+    }
+    catch (err: unknown) {
+
+        await registerTransaction.rollback().execute();
+        const error = err as Error;
+
+        let message = error.message
+        let code = 500
+        console.log(error.message)
+        console.log(error.message.includes('IX_Tbl_BrokerUser_Email') && error.message.includes('Tbl_BrokerUser'))
+        if(error.message.includes('IX_Tbl_BrokerUser_Email') && error.message.includes('Tbl_BrokerUser')){
+            message = 'Email already exists.'
+            code = 401
+        }
+
+
+        return {
+            success: false,
+            data: {} as { broker: ITblBrokerUser, registration: ITblBrokerRegistration },
             error: {
                 code: code,
                 message: message
@@ -2378,6 +2702,37 @@ export const changeEmployeePassword = async (userId: number, password: string): 
         return {
             success: false,
             data: {} as ITblUsersWeb,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const bindNewAccountToAgent = async (email: string, passwordHash: string, agentId: number): QueryResult<ITblAgentUser> => {
+    try {
+        const newAgentUser = await db.insertInto('Tbl_AgentUser')
+            .values({
+                Email: email,
+                Password: passwordHash,
+                AgentID: agentId,
+                IsVerified: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: newAgentUser
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgentUser,
             error: {
                 code: 500,
                 message: error.message

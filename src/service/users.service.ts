@@ -1,12 +1,12 @@
-import { format } from "date-fns";
+import { add, format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentImage, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
-import { IImage, IImageBase64, TblImageWithId } from "../types/image.types";
+import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import path from "path";
 import { logger } from "../utils/logger";
-import { addAgent, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
+import { addAgent, editAgentUser, getAgentBrokers, getAgentByCode, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgentRegistrationWithoutUser, getAgents, getSalesPersonSalesTotalsFn, getUnitManagerSalesTotalsFn } from "../repository/agents.repository";
 import { FnAgentSales, ITblAgent } from "../types/agent.types";
 import { IAgentRegistration, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, IEditBroker, ITblBroker, ITblBrokerEducation, ITblBrokerRegistration, ITblBrokerWorkExp } from "../types/brokers.types";
@@ -19,6 +19,8 @@ import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
+import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar, r2UploadBrokerAvatar } from "../utils/r2";
+import { addImage, editImage } from "../repository/images.repository";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -46,6 +48,10 @@ export const getUserDetailsService = async (agentUserId: number): QueryResult<an
                 code: 400
             }
         }
+    }
+
+    if(agentUserDetails.data.Image && agentUserDetails.data.Image.StorageKey){
+        agentUserDetails.data.Image.URL = getPublicUrl(agentUserDetails.data.Image.StorageKey)
     }
 
     const userInfo = {
@@ -194,7 +200,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
 
     // agent details
     const basicInfo = {
-        gender: brokerDetails.data.Sex.trim() || '',
+        gender: brokerDetails.data.Gender.trim() || '',
         civilStatus: brokerUserDetails.data.CivilStatus || brokerDetails.data.CivilStatus.trim() || '',
         religion: brokerUserDetails.data.Religion || brokerDetails.data.Religion?.trim() || '',
         birthday: brokerUserDetails.data.Birthdate || brokerDetails.data.Birthdate,
@@ -202,10 +208,10 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
         address: brokerUserDetails.data.Address || brokerDetails.data.Address.trim(),
         telephoneNumber: brokerUserDetails.data.TelephoneNumber || brokerDetails.data.TelephoneNumber?.trim() || '',
         contactNumber: brokerUserDetails.data.ContactNumber || brokerDetails.data.ContactNumber.trim(),
-        emergencyPerson: brokerUserDetails.data.PersonEmergency || brokerDetails.data.PersonEmergency?.trim() || '',
-        emergencyContact: brokerUserDetails.data.ContactEmergency || brokerDetails.data.ContactEmergency.trim() || '',
-        emergencyAddress: brokerUserDetails.data.AddressEmergency || brokerDetails.data.AddressEmergency.trim() || '',
-        affiliation: brokerUserDetails.data.Affiliation || brokerDetails.data.AffiliationDate || '',
+        emergencyPerson: brokerUserDetails.data.PersonEmergency ? brokerDetails.data.PersonEmergency?.trim() : '',
+        emergencyContact: brokerUserDetails.data.ContactEmergency ? brokerDetails.data.ContactEmergency : '',
+        emergencyAddress: brokerUserDetails.data.AddressEmergency ? brokerDetails.data.AddressEmergency : '',
+        affiliation: brokerUserDetails.data.Affiliation ? brokerDetails.data.AffliationDate : '',
     }
 
     // work experience
@@ -290,8 +296,6 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         getBrokerWorkExp(brokerId)
     ])
 
-    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
-
     let backupBrokerData: ITblBroker | undefined = undefined
 
     if(!brokerWithUserResult.success){
@@ -314,6 +318,8 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         // }
     }
 
+    console.log(brokerWithUserResult, registrationResult, brokerEducation, brokerWork)
+
     const imageIds = []
     imageIds.push(brokerWithUserResult.data.user.ImageID || null)
     imageIds.push(registrationResult.data.SelfieImageID || null)
@@ -322,13 +328,29 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
     // images
 
     const brokerImages = await getAgentImages(imageIds.filter(id => id != null) as number[])
-    const formattedImages = brokerImages.data.map((img: TblImageWithId) => {
+
+    const formattedImages = await Promise.all(
+        await brokerImages.data.map(async (img: TblImageWithId) => {
+        
+            const imageType = img.Filename.includes('selfie') ? 'selfie' : img.Filename.includes('gov') ? 'govid' : 'profile'
+
+            let url = ''
+            if(img.StorageKey){
+                if(imageType == 'profile'){
+                    url = await getPublicUrl(img.StorageKey)
+                } else {
+                    url = (await getPresignedUrl(img.StorageKey)).data
+                }
+            }
+
             return {
                 ...img,
-                FileContent: img.FileContent.toString('base64')
+                FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
+                StorageKey: img.StorageKey,
+                URL: url 
             }
-    })
-
+        })
+    )
     // divisions
 
     let allowedDivisions: { DivisionID: number, DivisionName: string}[] = []
@@ -371,7 +393,8 @@ export const lookupBrokerDetailsService = async (brokerId: number): QueryResult<
         },
         taxRate: agentTaxRate,
         divisions: allowedDivisions,
-        images: formattedImages
+
+        images: formattedImages.length > 0 ? formattedImages : []
     }
 
     return {
@@ -468,6 +491,10 @@ export const getUserDetailsWithValidationService = async (agentUserId: number, t
     //         }
     //     }
     // }
+
+    if(targetAgentDetails.data.Image && targetAgentDetails.data.Image.StorageKey){
+        targetAgentDetails.data.Image.URL = getPublicUrl(targetAgentDetails.data.Image.StorageKey)
+    }
 
     const userInfo = {
         firstName: targetAgentDetails.data.FirstName?.trim() || '',
@@ -792,15 +819,15 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
     if(agentUser.data.imageId && agentUserDetails.data.Image){
         console.log('existing image')
         // update existing image
-        const editImage = await editAgentImage(agentUserDetails.data.Image?.ImageID, metadata)
+        const editImageAgent = await editImage(agentUserDetails.data.Image?.ImageID, metadata)
 
-        if(!editImage.success) return {
+        if(!editImageAgent.success) return {
             success: false,
             data: {},
-            error: editImage.error
+            error: editImageAgent.error
         }
 
-        result = editImage.data
+        result = editImageAgent.data
     }
 
     else {
@@ -816,6 +843,94 @@ export const editAgentImageService = async (agentId: number, image: Express.Mult
         }
 
         result = transaction.data
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const editAgentImageServiceR2 = async (agentId: number, image: Express.Multer.File): QueryResult<any> => {
+
+    const agentUserDetails = await findAgentDetailsByUserId(agentId)
+
+    if(!agentUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!agentUserDetails.data.AgentID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No agent found',
+                code: 400
+            }
+        }
+    }
+
+    const agentUser = await findAgentUserById(agentId)
+
+    if(!agentUser.success) {
+        return {
+            success: false,
+            data: {},
+            error: agentUser.error
+        }
+    }
+
+    const filename = `${agentUserDetails.data.LastName}-${agentUserDetails.data.FirstName}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    
+    let metadata: IImageR2 = {
+        FileName: filename,
+        ContentType: image.mimetype,
+        FileExt: path.extname(image.originalname),
+        FileSize: image.size,
+        FileContent: null,
+        StorageKey: null
+    }
+
+    let result: IImageBase64 | undefined = undefined
+
+    console.log(agentUserDetails.data)
+    console.log(agentUser.data)
+
+    const addDBImg = await addImage(metadata)
+    
+    if(!addDBImg.success) return {
+        success: false,
+        data: {},
+        error: addDBImg.error
+    }
+
+    const r2Upload = await r2UploadAgentAvatar(agentUser.data.agentUserId, image)
+
+    if(!r2Upload.success) return {
+        success: false,
+        data: {},
+        error: r2Upload.error
+    }
+
+    const updateAgentImage = await editImage(addDBImg.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+
+    if(!updateAgentImage.success) return {
+        success: false,
+        data: {},
+        error: updateAgentImage.error
+    }
+
+    const updateAgentUser = await editAgentUser(agentUser.data.agentUserId, { ImageID: addDBImg.data.ImageID })
+
+    if(!updateAgentUser.success) return {
+        success: false,
+        data: {},
+        error: updateAgentUser.error
     }
 
     return {
@@ -893,6 +1008,100 @@ export const editBrokerImageService = async (brokerId: number, image: Express.Mu
         }
 
         result = transaction.data
+    }
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const editBrokerImageServiceR2 = async (brokerId: number, image: Express.Multer.File): QueryResult<any> => {
+
+    const brokerUserDetails = await findBrokerDetailsByUserId(brokerId)
+
+    if(!brokerUserDetails.success) return {
+        success: false,
+        data: {},
+        error: {
+            message: 'No user found',
+            code: 400
+        }
+    }
+
+    if(!brokerUserDetails.data.BrokerID){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
+        }
+    }
+
+    const name = brokerUserDetails.data.RepresentativeName
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '') // Remove anything that's not a letter or space
+        .split(' ')
+        .filter(part => part) // Remove empty strings from double spaces
+        .join('-');
+
+    const brokerUser = await findBrokerUserById(brokerId)
+
+    if(!brokerUser.success) return {
+        success: false,
+        data: {},
+        error: brokerUser.error
+    }
+
+    const filename = `${name}_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase();
+    
+    let metadata: IImageR2 = {
+        FileName: filename,
+        ContentType: image.mimetype,
+        FileExt: path.extname(image.originalname),
+        FileSize: image.size,
+        FileContent: null,
+        StorageKey: null
+    }
+
+    let result: IImageBase64 | undefined = undefined
+
+    const addDBImg = await addImage(metadata)
+
+    if(!addDBImg.success) return {
+        success: false,
+        data: {},
+        error: addDBImg.error
+    }
+
+    const r2Upload = await r2UploadBrokerAvatar(brokerUser.data.brokerUserId, image)
+
+    if(!r2Upload.success) return {
+        success: false,
+        data: {},
+        error: r2Upload.error
+    }
+    console.log(addDBImg.data.ImageID, r2Upload.data.storageKey)
+    const updateBrokerImage = await editBrokerImage(addDBImg.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+
+
+    if(!updateBrokerImage.success){ 
+        console.log('updateBrokerImage', updateBrokerImage)
+        return {
+            success: false,
+            data: {},
+            error: updateBrokerImage.error
+        }
+    }
+
+    const editBroker = await updateBrokerUser(brokerUser.data.brokerUserId, { ImageID: addDBImg.data.ImageID })
+
+    if(!editBroker.success) return {
+        success: false,
+        data: {},
+        error: editBroker.error
     }
 
     return {
@@ -1376,11 +1585,39 @@ export const lookupBrokerRegistrationService = async (brokerRegistrationId: numb
         }
     }
 
-    console.log(brokerRegistration)
+    let resultCopy = brokerRegistration.data[0];
+
+    console.log(resultCopy)
+    
+    if (resultCopy.Images && resultCopy.Images.length > 0) {
+
+        const imageCopies = resultCopy.Images
+
+        const imageTypes = ['profile', 'govid', 'selfie'] as const;
+
+        const images = imageTypes.map(type =>
+            imageCopies.find((img: ITypedImageBase64) => img.ImageType === type)
+        );
+
+        const urls = await Promise.all(
+            images.map(img =>
+                img?.StorageKey ? img?.ImageType === 'profile' ? Promise.resolve({data: `${process.env.R2_PUBLIC_ENDPOINT}/${img.StorageKey}`}) : getPresignedUrl(img.StorageKey) : Promise.resolve(undefined)
+            )
+        );
+
+        resultCopy = {
+            ...resultCopy,
+            Images: images
+                .map((img, i) =>
+                    img ? { ...img, URL: urls[i]?.data ?? null } : null
+                )
+                .filter((img): img is ITypedImageBase64 & { URL: string | null } => img !== null)
+        };
+    }
 
     return {
         success: true,
-        data: brokerRegistration.data[0]
+        data: resultCopy
     }
 }
 
@@ -1502,7 +1739,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             }
         }
 
-        result = agentResult.data
+        result = agentResult.data.agent
     }
 
     else if (data.BrokerType === 'hands-off'){

@@ -185,6 +185,10 @@ export interface IBrokerRegistration {
     PrcNumber?: string | null,
     DshudNumber?: string | null,
     EmployeeIdNumber?: string | null,
+    PersonEmergency: string | null,
+    ContactEmergency: string | null,
+    AddressEmergency: string | null,
+    AffliationDate: Date,
     Email: string,
 
     Images?: ITypedImageBase64[] | null

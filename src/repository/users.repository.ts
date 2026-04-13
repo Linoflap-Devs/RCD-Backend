@@ -1,5 +1,6 @@
+import { Selectable, Updateable } from "kysely";
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblBroker, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentWorkExp, TblBroker, TblBrokerUser, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerV2, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
@@ -556,6 +557,50 @@ export const findAgentUserById = async (agentUserId: number): QueryResult<{
     }
 }
 
+export const findBrokerUserById = async (brokerUserId: number): QueryResult<{
+    brokerUserId: number, 
+    brokerRegistrationId: number | null, 
+    email: string, 
+    isVerified: boolean, 
+    password: string,
+    imageId: number | null
+}> => {
+    try {
+        const user = await db.selectFrom('Tbl_BrokerUser')
+            .where('BrokerUserID', '=', brokerUserId)
+            .select(['BrokerUserID', 'Email', 'IsVerified', 'Password', 'BrokerRegistrationID', 'ImageID'])
+            .executeTakeFirstOrThrow()
+
+        if(!user){
+            throw new Error('No user found.')
+        }
+
+        return {    
+            success: true,
+            data: { 
+                brokerUserId: user.BrokerUserID, 
+                brokerRegistrationId: user.BrokerRegistrationID || null,
+                email: user.Email, 
+                isVerified: user.IsVerified == 1 ? true : false, 
+                password: user.Password ,
+                imageId: user.ImageID
+            }
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as {brokerUserId: number, brokerRegistrationId: number | null, email: string,  isVerified: boolean, password: string, imageId: number | null},
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult<VwAgentPicture> => {
     try {
 
@@ -584,11 +629,12 @@ export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
-                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileContent: picture.FileContent ? `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}` : '',
                     FileExtension: picture.FileExtension,
                     Filename: picture.Filename,
                     FileSize: picture.FileSize,
-                    ImageID: picture.ImageID
+                    ImageID: picture.ImageID,
+                    StorageKey: picture.StorageKey ? picture.StorageKey : null
                 }
             }
         }
@@ -654,11 +700,12 @@ export const findAgentDetailsByAgentId = async (agentId: number): QueryResult<Vw
                 Image: {
                     ContentType: pictureDetails.ContentType,
                     CreatedAt: pictureDetails.CreatedAt,
-                    FileContent: `data:${pictureDetails.ContentType};base64,${bufferToBase64(pictureDetails.FileContent)}`,
+                    FileContent:  pictureDetails.FileContent ? `data:${pictureDetails.ContentType};base64,${bufferToBase64(pictureDetails.FileContent)}` : '',
                     FileExtension: pictureDetails.FileExtension,
                     Filename: pictureDetails.Filename,
                     FileSize: pictureDetails.FileSize,
-                    ImageID: pictureDetails.ImageID
+                    ImageID: pictureDetails.ImageID,
+                    StorageKey: pictureDetails.StorageKey ? pictureDetails.StorageKey : null
                 }
             }
         }
@@ -767,7 +814,7 @@ export const findBrokerDetailsByUserId = async (brokerUserId: number): QueryResu
                 Image: {
                     ContentType: picture.ContentType,
                     CreatedAt: picture.CreatedAt,
-                    FileContent: `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}`,
+                    FileContent:  picture.FileContent ? `data:${picture.ContentType};base64,${bufferToBase64(picture.FileContent)}` : '',
                     FileExtension: picture.FileExtension,
                     Filename: picture.Filename,
                     FileSize: picture.FileSize,
@@ -905,52 +952,6 @@ export const editBrokerDetails = async (brokerId: number, data: Partial<ITblBrok
     }
 }
 
-export const editAgentImage = async (imageId: number, imageData: IImage): QueryResult<IImageBase64> => {
-    try {
-
-        const imageMapped = {
-            ContentType: imageData.ContentType,
-            FileContent: imageData.FileContent,
-            FileExtension: imageData.FileExt,
-            Filename: imageData.FileName,
-            FileSize: imageData.FileSize
-        };
-
-        const result = await db.updateTable('Tbl_Image')
-            .where('ImageID', '=', imageId)
-            .set(imageMapped)
-            .outputAll('inserted')
-            .executeTakeFirstOrThrow();
-
-        const obj = {
-            ContentType: result.ContentType,
-            CreatedAt: result.CreatedAt,
-            FileContent: `data:${result.ContentType};base64,${bufferToBase64(result.FileContent)}`,
-            FileExt: result.FileExtension,
-            FileName: result.Filename,
-            FileSize: result.FileSize,
-            ImageID: result.ImageID
-        }
-
-        return {
-            success: true,
-            data: obj
-        }
-    }
-
-    catch (err: unknown){
-        const error = err as Error
-        return {
-            success: false,
-            data: {} as IImageBase64,
-            error: {
-                code: 400,
-                message: error.message
-            },
-        }
-    }
-}
-
 export const addAgentImage = async (agentId: number, imageData: IImage): QueryResult<IImageBase64> => {
 
     const trx = await db.startTransaction().execute();
@@ -981,7 +982,7 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
         const obj = {
             ContentType: addImage.ContentType,
             CreatedAt: addImage.CreatedAt,
-            FileContent: `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}`,
+            FileContent: addImage.FileContent ? `data:${addImage.ContentType};base64,${bufferToBase64(addImage.FileContent)}` : '',
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
@@ -1513,6 +1514,33 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
         return {
             success: false,
             data: {} as ITblBrokerUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const updateBrokerUser = async (brokerUserId: number, data: Updateable<TblBrokerUser>): QueryResult<Selectable<TblBrokerUser>> => {
+    try {
+        const result = await db.updateTable('Tbl_BrokerUser')
+            .set(data)
+            .where('BrokerUserID', '=', brokerUserId)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }   
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblBrokerUser>,
             error: {
                 code: 500,
                 message: error.message
