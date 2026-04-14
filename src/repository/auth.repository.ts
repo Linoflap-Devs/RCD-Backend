@@ -2740,3 +2740,34 @@ export const bindNewAccountToAgent = async (email: string, passwordHash: string,
         }
     }
 }
+
+export const bindNewAccountToBroker = async (email: string, passwordHash: string, brokerId: number): QueryResult<ITblBrokerUser> => {
+    try {
+        const newBrokerUser = await db.insertInto('Tbl_BrokerUser')
+            .values({
+                Email: email,
+                Password: passwordHash,
+                BrokerID: brokerId,
+                IsVerified: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: newBrokerUser
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}

@@ -3,7 +3,7 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, bindNewAccountToBroker, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
@@ -1910,6 +1910,56 @@ export const bindNewAccountToExistingAgentService = async (agentId: number, emai
             data: {} as ITblAgentUser,
             error: {
                 message: 'Failed to bind new account to agent.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const bindNewAccountToExistingBrokerService = async (brokerId: number, email: string, password: string): QueryResult<ITblBrokerUser> => {
+    // check if broker id already has account
+    const existingBrokerId = await getBrokerUsers({ brokerIds: [brokerId] })
+
+    if (existingBrokerId.success && existingBrokerId.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Broker already has an account.',
+                code: 400
+            }
+        }
+    }
+
+    const existingEmail = await getBrokerUsers({ emails: [email] })
+
+    if (existingEmail.success && existingEmail.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Email is already registered.',
+                code: 400
+            }
+        }
+    }
+    
+    const hash = await hashPassword(password)
+
+    const result = await bindNewAccountToBroker(email, hash, brokerId)
+
+    if(!result.success){
+        logger('Failed to bind new account to broker.', {email: email, brokerId: brokerId})
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Failed to bind new account to broker.',
                 code: 500
             }
         }

@@ -66,3 +66,9 @@ export const bindAccountToAgentSchema = z.object({
     password: z.string(),
     agentId: z.coerce.number()
 })
+
+export const bindAccountToBrokerSchema = z.object({
+    email: z.email(),
+    password: z.string(),
+    brokerId: z.coerce.number()
+})
