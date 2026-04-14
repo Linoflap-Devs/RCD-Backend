@@ -1432,7 +1432,7 @@ export const addAgent = async (userId: number, agent: IAddAgent, user?: { email:
                 AffiliationDate: agent.AffiliationDate || new Date(),
                 DivisionID: agent.DivisionID || null,
                 ReferredByID: agent.ReferredByID,
-                ReferredCode: agent.ReferredCode,
+                ReferredCode: agent.ReferredCode && agent.ReferredCode.trim() !== '' ? agent.ReferredCode : null,
                 TelephoneNumber: agent.TelephoneNumber,
                 TINNumber: agent.TINNumber || '',
                 SSSNumber: agent.SSSNumber || '',
