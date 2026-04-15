@@ -273,7 +273,7 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
             .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
             .selectAll('Vw_Agents')
             .select('Tbl_AgentRegistration.AgentRegistrationID')
-            .select('Tbl_AgentUser.Email')
+            .select(['Tbl_AgentUser.Email', 'Tbl_AgentUser.AgentUserID'])
 
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())

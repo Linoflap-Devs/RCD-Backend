@@ -124,6 +124,7 @@ export interface ITblBroker {
     TINNumber: string | null;
     UpdateBy: number;
     BrokerRegistrationID?: number | null,
+    BrokerUserID?: number | null,
     Email?: string | null,
 }
 
