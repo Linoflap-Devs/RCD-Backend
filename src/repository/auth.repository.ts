@@ -165,6 +165,31 @@ export const deleteSessionUser = async (userId: number): QueryResult<null> => {
     }
 }
 
+export const deleteSessionBroker = async (userId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_BrokerSession').where('BrokerUserID', '=', userId).execute();
+
+        console.log(result)
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const extendSessionExpiry = async (sessionId: number, expiry: Date): QueryResult<null> => {
     try {
 
@@ -2662,6 +2687,32 @@ export const changePassword = async (userId: number, password: string): QueryRes
         const result = await db.updateTable('Tbl_AgentUser')
             .set({ Password: password })
             .where('AgentUserID', '=', userId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const changeBrokerPassword = async (userId: number, password: string): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_BrokerUser')
+            .set({ Password: password })
+            .where('BrokerUserID', '=', userId)
             .executeTakeFirstOrThrow()
 
         return {
