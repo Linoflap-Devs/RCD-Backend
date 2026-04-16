@@ -8,10 +8,10 @@ import { bufferToBase64 } from "../utils/utils"
 
 export const getBrokerRegistrationByUserId = async (brokerUserId: number): QueryResult<IBrokerRegistration> => {
     try {
-        const brokerUser = await db.selectFrom('Tbl_BrokerUser')
-            .where('BrokerUserID', '=', brokerUserId)
-            .selectAll()
-            .executeTakeFirstOrThrow()
+        // const brokerUser = await db.selectFrom('Tbl_BrokerUser')
+        //     .where('BrokerUserID', '=', brokerUserId)
+        //     .selectAll()
+        //     .executeTakeFirstOrThrow()
         
         // const brokerRegistration = await db.selectFrom('Tbl_BrokerRegistration')
         //     .where('BrokerRegistrationID', '=', brokerUser.BrokerRegistrationID)
@@ -81,6 +81,8 @@ export const getBrokerRegistrationByUserId = async (brokerUserId: number): Query
             .where('Tbl_BrokerUser.BrokerUserID', '=', brokerUserId)
             .executeTakeFirstOrThrow()
 
+        console.log("Registration ID", baseBrokerDataQuery)
+
         const educationData = await db.selectFrom('Tbl_BrokerEducation')
             .select([
                 'BrokerEducationID',
@@ -91,7 +93,7 @@ export const getBrokerRegistrationByUserId = async (brokerUserId: number): Query
                 'School',
                 'StartDate'
             ])
-            .where('BrokerRegistrationID', 'in', baseBrokerDataQuery.BrokerRegistrationID)
+            .where('BrokerRegistrationID', '=', baseBrokerDataQuery.BrokerRegistrationID)
             .execute();
 
         // 3. Get work experience data for all brokers in one query

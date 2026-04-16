@@ -171,6 +171,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     }
 
     if(!brokerUserDetails.data.BrokerID){
+        console.log('No broker found', { parameter: brokerUserId, details: brokerUserDetails })
         return {
             success: false,
             data: {},
@@ -189,12 +190,15 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
 
     const brokerDetails = await getBrokerRegistrationByUserId(brokerUserId)
 
-    if(!brokerDetails.success) return {
-        success: false,
-        data: {},
-        error: {
-            message: 'No broker found',
-            code: 400
+    if(!brokerDetails.success) {   
+        console.log('No broker registration found', { parameter: brokerUserId, details: brokerDetails })
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
         }
     }
 
