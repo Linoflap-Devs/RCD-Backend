@@ -286,4 +286,6 @@ export interface IAddBroker {
     SSSNumber: string | null;
     TelephoneNumber: string | null;
     TINNumber: string | null;
+    Email?: string,
+    Password?: string
 }

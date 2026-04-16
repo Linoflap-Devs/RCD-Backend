@@ -401,11 +401,39 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
     }
 }
 
-export const addBroker = async (userId: number, broker: IAddBroker): QueryResult<ITblBroker> => {
+export const addBroker = async (userId: number, broker: IAddBroker, user?: { email: string, passwordHash: string }): QueryResult<{ broker: ITblBroker, user?: ITblBrokerUser}> => {
+    const trx = await db.startTransaction().execute();
     try {
-        const result = await db.insertInto('Tbl_Broker')
+
+
+        let userResult: ITblBrokerUser = {} as ITblBrokerUser
+
+        const generateBrokerCode = (): string => {
+            const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
+            return `0.${randomNumber}`;
+        };
+
+        const checkDuplicateBrokerCode = async (brokerCode: string): Promise<boolean> => {
+            const broker = await db.selectFrom('Tbl_Broker')
+                .where('BrokerCode', '=', brokerCode)
+                .selectAll()
+                .executeTakeFirst();
+            return !!broker; // Returns true if broker exists, false otherwise
+        };
+
+        const getUniqueBrokerCode = async (): Promise<string> => {
+            let brokerCode: string;
+            do {
+                brokerCode = generateBrokerCode();
+            } while (await checkDuplicateBrokerCode(brokerCode));
+            return brokerCode;
+        };
+
+        const uniqueCode = await getUniqueBrokerCode();
+
+        const result = await trx.insertInto('Tbl_Broker')
             .values({
-                BrokerCode: broker.BrokerCode,
+                BrokerCode: broker.BrokerCode ? broker.BrokerCode : uniqueCode,
                 Broker: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
                 RepresentativeName: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
                 Birthdate: broker.Birthdate,
@@ -435,18 +463,38 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
-        
+       
+        if(user){
+            const userQuery = await trx.insertInto('Tbl_BrokerUser')
+                .values({
+                    Email: user.email,
+                    Password: user.passwordHash,
+                    BrokerID: result.BrokerID,
+                    IsVerified: 1             
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            
+            userResult = userQuery
+        }
+
+        await trx.commit().execute()
+
         return {
             success: true,
-            data: result
+            data: {
+                broker: result,
+                user: userResult
+            }
         }
     }
 
     catch (err: unknown){
+        await trx.rollback().execute();
         const error = err as Error
         return {
             success: false,
-            data: {} as ITblBroker,
+            data: {} as { broker: ITblBroker, user?: ITblBrokerUser },
             error: {
                 code: 400,
                 message: error.message

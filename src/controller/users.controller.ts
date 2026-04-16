@@ -760,7 +760,9 @@ export const addBrokerController = async (req: Request, res: Response) => {
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        email,
+        password
     } = req.body
 
     const result = await addBrokerService(session.userID,
@@ -793,7 +795,9 @@ export const addBrokerController = async (req: Request, res: Response) => {
             PhilhealthNumber: philhealthNumber,
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
-            EmployeeIDNumber: employeeIdNumber
+            EmployeeIDNumber: employeeIdNumber,
+            Email: email,
+            Password: password
         }
     )
 

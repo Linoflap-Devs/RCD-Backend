@@ -21,6 +21,7 @@ import { findInviteToken, findInviteTokenWithRegistration } from "../repository/
 import { TZDate } from "@date-fns/tz";
 import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar, r2UploadBrokerAvatar } from "../utils/r2";
 import { addImage, editImage } from "../repository/images.repository";
+import { hashPassword } from "../utils/scrypt";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -1710,6 +1711,23 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
 
     let result: ITblBroker | ITblAgent | undefined = undefined 
 
+    if((data.Email && !data.Password) || (data.Password && !data.Email)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Email and password must be provided together.'
+            }
+        }
+    }
+
+    let pwHash = ''
+    if(data.Password){
+        pwHash = await hashPassword(data.Password)
+    }
+
+
     if(data.BrokerType === 'hands-on'){
 
         const mappedData = {
@@ -1737,7 +1755,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             mappedData.PositionID = position.data[0].PositionID
         }
     
-        const agentResult = await addAgent(userId, mappedData)
+        const agentResult = await addAgent(userId, mappedData, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     
         if(!agentResult.success){
             return {
@@ -1774,7 +1792,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
         }
     
     
-        const brokerResult = await addBroker(userId, data)
+        const brokerResult = await addBroker(userId, data, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     
         if(!brokerResult.success){
             return {
@@ -1784,7 +1802,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             }
         }
 
-        result = brokerResult.data
+        result = brokerResult.data.broker
     }
 
 
