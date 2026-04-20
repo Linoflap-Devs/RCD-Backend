@@ -1102,6 +1102,8 @@ export const getSalesByDeveloperTotals = async (sorts?: DeveloperSalesSortOption
                 (eb) => eb.fn.sum('NetTotalTCP').as('NetTotalTCP')
             ])
             .where('SalesStatus', '<>', 'ARCHIVED')
+            .where('DeveloperID', 'is not', null)
+            .where('DeveloperID', '>', 0)
             .groupBy('DeveloperName')
 
         if(date){

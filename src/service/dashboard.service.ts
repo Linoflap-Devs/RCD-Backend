@@ -383,7 +383,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
         getDivisionSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'Division', direction: 'asc' }], 10),
         getUnitManagerSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
         getSalesPersonSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
-        getSalesByDeveloperTotals([{ field: 'NetTotalTCP', direction: 'desc' }], undefined, new Date()),
+        getSalesByDeveloperTotals([{ field: 'NetTotalTCP', direction: 'desc' }], undefined, undefined, { month: new Date().getMonth() + 1, year: new Date().getFullYear() }),
         getCommissionForecastPercentageFn(),
         getCommissionForecastTopBuyersFn([{ field: 'NetTotalTCP', direction: 'desc' }], 10),
         getCommissionForecastByMonthFn([{ field: 'Year', direction: 'desc' }, { field: 'Month', direction: 'desc' }]),
