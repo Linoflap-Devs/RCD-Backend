@@ -410,7 +410,7 @@ export const addBroker = async (userId: number, broker: IAddBroker, user?: { ema
 
         const generateBrokerCode = (): string => {
             const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
-            return `0.${randomNumber}`;
+            return `0${randomNumber}`;
         };
 
         const checkDuplicateBrokerCode = async (brokerCode: string): Promise<boolean> => {

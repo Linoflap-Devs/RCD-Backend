@@ -1385,7 +1385,7 @@ export const addAgent = async (userId: number, agent: IAddAgent, user?: { email:
 
         const generateAgentCode = (): string => {
             const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
-            return `0.${randomNumber}`;
+            return `0${randomNumber}`;
         };
 
         const checkDuplicateAgentCode = async (agentCode: string): Promise<boolean> => {
