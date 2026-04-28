@@ -768,7 +768,7 @@ export const addBrokerController = async (req: Request, res: Response) => {
     const result = await addBrokerService(session.userID,
         {
             BrokerType: brokerType,
-            BrokerCode: brokerCode,
+            BrokerCode: brokerCode.trim().length > 0 ? brokerCode : null,
             LastName: lastName,
             FirstName: firstName,
             MiddleName: middleName,
