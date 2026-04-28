@@ -45,3 +45,12 @@ export const addSalesDistributionSchema = z.object({
     level: z.coerce.number(),
     positionID: z.coerce.number().optional()
 })
+
+export const editSalesDistributionSchema = z.object({
+    distributionCode: z.string().max(50).optional(),
+    distributionName: z.string().max(255).optional(),
+    level: z.coerce.number().optional(),
+    positionID: z.coerce.number().optional()
+}).refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'At least one field is required.'
+})

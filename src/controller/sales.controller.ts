@@ -1,8 +1,7 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
-import { addDistributionList } from "../repository/sales.repository";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
     const session = req.session
@@ -1635,7 +1634,7 @@ export const addDistributionListController = async (req: Request, res: Response)
         DistributionCode: distributionCode,
         Distribution: distributionName,
         Level: level,
-        PositionID: positionID
+        PositionID: positionID ? Number(positionID) : 0
     })
 
     console.log(result.data)
@@ -1646,4 +1645,70 @@ export const addDistributionListController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Distribution list added', data: result.data})
+}
+
+export const editDistributionListController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    const {
+        distributionCode,
+        distributionName,
+        level,
+        positionID,
+    } = req.body
+
+    const {
+        distributionId
+    } = req.params
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await editSalesDistributionListService(session.userID, Number(distributionId), {
+        DistributionCode: distributionCode ?? undefined,
+        Distribution: distributionName ?? undefined,
+        Level: level ?? undefined,
+        PositionID: positionID ?? undefined
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit distribution list', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Distribution list edited', data: result.data})
+}
+
+export const deleteDistributionListController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    const {
+        distributionId
+    } = req.params
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await deleteSalesDistributionListService(session.userID, Number(distributionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to delete distribution list', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Distribution list deleted', data: result.data})
 }

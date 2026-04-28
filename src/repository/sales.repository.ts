@@ -4362,8 +4362,7 @@ export const getDistributionList = async (showInactive: boolean = false): QueryR
             baseQuery = baseQuery.where('IsActive', '=', 1)
         }
 
-        const result = await db.selectFrom('Tbl_Distribution')
-            .selectAll()
+        const result = await baseQuery.selectAll()
             .orderBy('Level', 'desc')
             .execute()
         
@@ -4451,6 +4450,8 @@ export const editDistributionList = async (distributionId: number, data: Updatea
                 .outputAll('inserted')
                 .executeTakeFirstOrThrow()
 
+        await trx.commit().execute()
+
         return {
             success: true,
             data: result
@@ -4472,23 +4473,20 @@ export const editDistributionList = async (distributionId: number, data: Updatea
 }
 
 export const deleteDistributionList = async (
+    userId: number,
     id: number
 ): QueryResult<Selectable<TblDistribution>> => {
     try {
         const result = await db.transaction().execute(async (trx) => {
-            // Get the row first so we know which level to close
-            const current = await trx.selectFrom('Tbl_Distribution')
-                .selectAll()
+            const deleted = await trx.updateTable('Tbl_Distribution')
+                .set({
+                    IsActive: 0,
+                    UpdateBy: userId,
+                    LastUpdate: new Date()
+                })
                 .where('DistributionID', '=', id)
+                .outputAll('inserted')
                 .executeTakeFirstOrThrow()
-
-            const deleted = await trx.deleteFrom('Tbl_Distribution')
-                .where('DistributionID', '=', id)
-                .outputAll('deleted')
-                .executeTakeFirstOrThrow()
-
-            // Close the gap left by the deleted row
-            await shiftLevelsDown(current.Level, trx)
 
             return deleted
         })

@@ -1,5 +1,5 @@
 import { TblDistribution, VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteSalesTarget, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -20,7 +20,7 @@ import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2
 import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "../repository/images.repository";
 import { format } from "date-fns";
 import { del } from "k6/http";
-import { Insertable, Selectable } from "kysely";
+import { Insertable, Selectable, Updateable } from "kysely";
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -4782,7 +4782,7 @@ export const getSalesDistributionListService = async(showInactive: boolean = fal
             data: [] as Selectable<TblDistribution>[],
             error: {
                 code: 500,
-                message: 'No sales found.'
+                message: 'Failed to get distribution list.'
             }
         }
     }
@@ -4810,6 +4810,51 @@ export const addSalesDistributionListService = async(userId: number, distributio
             error: {
                 code: 500,
                 message: 'Failed to add distribution list.'
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const editSalesDistributionListService = async(userId: number, distributionId: number, distribution: Updateable<TblDistribution>): QueryResult<Selectable<TblDistribution>> => {
+    const obj: Updateable<TblDistribution> = {
+        ...distribution,
+        UpdateBy: userId,
+        LastUpdate: new Date()
+    }
+    const result = await editDistributionList(distributionId, obj);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as Selectable<TblDistribution>,
+            error: {
+                code: 500,
+                message: 'Failed to edit distribution list.'
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+export const deleteSalesDistributionListService = async(userId: number, distributionId: number): QueryResult<Selectable<TblDistribution>> => {
+    const result = await deleteDistributionList(userId, distributionId);
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as Selectable<TblDistribution>,
+            error: {
+                code: 500,
+                message: 'Failed to delete distribution list.'
             }
         }
     }
