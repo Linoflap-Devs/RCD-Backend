@@ -1,15 +1,14 @@
 import { TblDistribution, VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
-import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, EditPendingSaleDetail, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
 import { IAgent, VwAgentPicture } from "../types/users.types";
 import { IImage, IImageBase64, IImageR2, ITypedImageBase64 } from "../types/image.types";
 import path from "path";
 import { ITblUsersWeb } from "../types/auth.types";
-import { CommissionDetailPositions } from "../types/commission.types";
 import { ITblProjects, VwProjectDeveloper } from "../types/projects.types";
 import { IBrokerEmailPicture } from "../types/brokers.types";
 import { getDevelopers } from "../repository/developers.repository";
@@ -21,6 +20,230 @@ import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "..
 import { format } from "date-fns";
 import { del } from "k6/http";
 import { Insertable, Selectable, Updateable } from "kysely";
+import { property } from "zod";
+
+const normalizeDistributionValue = (value?: string | null): string => {
+    return value?.trim().toUpperCase() || ''
+}
+
+const getActiveDistributionTemplateService = async (): QueryResult<Selectable<TblDistribution>[]> => {
+    const result = await getActiveDistributionTemplate()
+
+    if(!result.success){
+        return {
+            success: false,
+            data: [] as Selectable<TblDistribution>[],
+            error: {
+                code: 500,
+                message: 'Failed to get active distribution template.'
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
+const buildDistributionTemplateMap = (template: Selectable<TblDistribution>[]) => {
+    const templateMap = new Map<string, Selectable<TblDistribution>>()
+
+    for(const row of template){
+        const distributionKey = normalizeDistributionValue(row.Distribution)
+        const distributionCodeKey = normalizeDistributionValue(row.DistributionCode)
+
+        if(distributionKey){
+            templateMap.set(distributionKey, row)
+        }
+
+        if(distributionCodeKey){
+            templateMap.set(distributionCodeKey, row)
+        }
+    }
+
+    return templateMap
+}
+
+const buildDistributionTemplateIdMap = (template: Selectable<TblDistribution>[]) => {
+    return new Map<number, Selectable<TblDistribution>>(
+        template
+            .filter((row) => row.DistributionID !== null && row.DistributionID !== undefined)
+            .map((row) => [Number(row.DistributionID), row])
+    )
+}
+
+const normalizeCommissionRatesAgainstTemplate = async (
+    commissionRates: AddPendingSaleDetail[] | undefined,
+    template: Selectable<TblDistribution>[]
+): Promise<QueryResult<AddPendingSaleDetail[]>> => {
+    const templateMap = buildDistributionTemplateMap(template)
+    const templateIdMap = buildDistributionTemplateIdMap(template)
+    const invalidPositions = new Set<string>()
+    const modifiedCommissionRates: AddPendingSaleDetail[] = []
+
+    for(const commission of commissionRates || []){
+        const templateRow = templateIdMap.get(Number(commission.distributionId))
+            || templateMap.get(normalizeDistributionValue(commission.distributionCode))
+
+        if(!templateRow){
+            invalidPositions.add(
+                commission.distributionCode
+                || String(commission.distributionId)
+            )
+            continue
+        }
+
+        modifiedCommissionRates.push({
+            distributionId: Number(templateRow.DistributionID),
+            distributionCode: templateRow.DistributionCode || undefined,
+            agentName: commission.agentName || undefined,
+            agentId: Number(commission.agentId) || undefined,
+            commissionRate: Number(commission.commissionRate) || 0
+        })
+    }
+
+    if(invalidPositions.size > 0){
+        return {
+            success: false,
+            data: [] as AddPendingSaleDetail[],
+            error: {
+                code: 400,
+                message: `Invalid commission position(s): ${Array.from(invalidPositions).join(', ')}`
+            }
+        }
+    }
+
+    for(const commission of modifiedCommissionRates){
+        if(commission.agentId || commission.agentName){
+            if(normalizeDistributionValue(commission.distributionCode) === 'BROKER') {
+                if(commission.agentName){
+                    const findAgent = await getAgents({ name: commission.agentName })
+
+                    if(findAgent.success && findAgent.data.results[0]){
+                        commission.agentId = Number(findAgent.data.results[0].AgentID)
+                    }
+                }
+
+                if(commission.agentId){
+                    const agent = await getAgent(Number(commission.agentId))
+                    
+                    if(agent.success && agent.data){
+                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
+                    }
+                }
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: modifiedCommissionRates
+    }
+}
+
+const getValidatedCommissionRates = async (
+    commissionRates: AddPendingSaleDetail[] | undefined
+): Promise<QueryResult<AddPendingSaleDetail[]>> => {
+    const activeDistributionTemplate = await getActiveDistributionTemplateService()
+
+    if(!activeDistributionTemplate.success){
+        return {
+            success: false,
+            data: [] as AddPendingSaleDetail[],
+            error: {
+                code: activeDistributionTemplate.error?.code || 500,
+                message: activeDistributionTemplate.error?.message || 'Failed to load commission template.'
+            }
+        }
+    }
+
+    return normalizeCommissionRatesAgainstTemplate(
+        commissionRates,
+        activeDistributionTemplate.data
+    )
+}
+
+type CommissionDetailReadRow = {
+    AgentID: number | null,
+    AgentName: string | null,
+    CommissionRate: number | null,
+    PositionName: string | null,
+    DistributionID?: number | null,
+}
+
+const buildBrokerIdMap = async (details: CommissionDetailReadRow[]): Promise<Map<string, number>> => {
+    const brokerNames = Array.from(
+        new Set(
+            details
+                .filter((detail) =>
+                    normalizeDistributionValue(detail.PositionName) === 'BROKER'
+                    && (!detail.AgentID || detail.AgentID === 0)
+                    && detail.AgentName
+                )
+                .map((detail) => detail.AgentName?.trim() || '')
+                .filter((name) => name.length > 0)
+        )
+    )
+
+    const brokerIdMap = new Map<string, number>()
+
+    await Promise.all(
+        brokerNames.map(async (brokerName) => {
+            const brokerData = await getBrokers({ name: brokerName })
+
+            if(brokerData.success && brokerData.data[0]?.BrokerID){
+                brokerIdMap.set(brokerName, brokerData.data[0].BrokerID)
+            }
+        })
+    )
+
+    return brokerIdMap
+}
+
+const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[]) => {
+    const brokerIdMap = await buildBrokerIdMap(details)
+
+    return details.map((detail: AgentPendingSalesDetail) => {
+        const positionName = detail.PositionName?.trim() || ''
+        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+            ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
+            : null
+
+        return {
+            ...detail,
+            DistributionID: detail.DistributionID ?? null,
+            PositionName: positionName,
+            AgentID: agentId,
+            AgentName: detail.AgentName?.trim() || '',
+            BrokerID: brokerId
+        }
+    })
+}
+
+const mapSalesCommissionDetails = async (details: VwSalesTransactions[]) => {
+    const brokerIdMap = await buildBrokerIdMap(details)
+
+    return details.map((detail: VwSalesTransactions) => {
+        const positionName = detail.PositionName?.trim() || ''
+        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+            ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
+            : null
+
+        return {
+            SalesTranDtlId: detail.SalesTransDtlID,
+            DistributionID: detail.DistributionID ?? null,
+            Position: positionName,
+            PositionName: positionName,
+            AgentID: agentId,
+            BrokerID: brokerId,
+            AgentName: detail.AgentName?.trim() || '',
+            CommissionRate: detail.CommissionRate
+        }
+    })
+}
 
 export const getUserDivisionSalesService = async (userId: number, filters?: {month?: number, year?: number},  pagination?: {page?: number, pageSize?: number}): QueryResult<any> => {
 
@@ -327,28 +550,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         }
     }
 
-    let brokerId = null
-
-    const brokerResult = result.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
-
-    if(brokerResult && brokerResult.AgentName){
-        const brokerData = await getBrokers({ name: brokerResult.AgentName })
-
-        if(brokerData){
-            brokerId = brokerData.data[0]?.BrokerID || null
-        }
-    }
-
-    const details = result.data.map((sale: VwSalesTransactions) => {
-        return {
-            SalesTranDtlId: sale.SalesTransDtlID,
-            Position: sale.PositionName?.trim() || '',
-            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
-            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
-            AgentName: sale.AgentName?.trim() || '',
-            CommissionRate: sale.CommissionRate
-        }
-    })
+    const details = await mapSalesCommissionDetails(result.data)
 
     const data = result.data[0]
 
@@ -433,38 +635,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         }
     }
 
-    const detailArray = details.data.map((sale: VwSalesTransactions) => {
-        return {
-            SalesTranDtlId: sale.SalesTransDtlID,
-            Position: sale.PositionName?.trim() || '',
-            AgentID: sale.AgentID,
-            AgentName: sale.AgentName?.trim() || '',
-            CommissionRate: sale.CommissionRate
-        }
-    })
-
-    let brokerId = null
-
-    const brokerResult = details.data.find((sale: VwSalesTransactions) => sale.PositionName?.toLowerCase() === 'broker');
-
-    if(brokerResult && brokerResult.AgentName){
-        const brokerData = await getBrokers({ name: brokerResult.AgentName })
-
-        if(brokerData){
-            brokerId = brokerData.data[0]?.BrokerID || null
-        }
-    }
-
-    const detailsNew = details.data.map((sale: VwSalesTransactions) => {
-        return {
-            SalesTranDtlId: sale.SalesTransDtlID,
-            Position: sale.PositionName?.trim() || '',
-            AgentID: (sale.AgentID == 0 || !sale.AgentID) ? null: sale.AgentID,
-            BrokerID: (sale.AgentID == 0 || !sale.AgentID) ? brokerId : null,
-            AgentName: sale.AgentName?.trim() || '',
-            CommissionRate: sale.CommissionRate
-        }
-    })
+    const detailsNew = await mapSalesCommissionDetails(details.data)
 
     let updatedByName = ''
     if(details.data[0].LastUpdateby){
@@ -566,6 +737,7 @@ export const addPendingSalesService = async (
 ): QueryResult<any> => {
 
     console.log("commrates", data.commissionRates)
+    console.log(data.property)
 
     if(!user.agentUserId && !user.webUserId){
         return {
@@ -735,6 +907,7 @@ export const addPendingSalesService = async (
     const project = await getProjectById(data.property.projectID)
 
     if(!project.success){
+        console.log(project)
         return {
             success: false,
             data: {},
@@ -786,47 +959,20 @@ export const addPendingSalesService = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
-    const validCommissions = []
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
-    const modifiedCommissionRates = data.commissionRates?.map((commission: any) => {
+    if(!normalizedCommissions.success){
         return {
-            agentName: commission.agentName || undefined,
-            agentId: Number(commission.agentId) || undefined,
-            commissionRate: commission.commissionRate,
-            position: commission.position
-        }
-    })
-
-    console.log('modified comm rate', modifiedCommissionRates)
-
-    for(const commission of modifiedCommissionRates || []){
-
-        console.log("comm loop", commission)
-
-        if(commission.agentId || commission.agentName){
-            if(commission.position.toLowerCase() == 'broker') {
-                if(commission.agentName){
-                    const findAgent = await getAgents({ name: commission.agentName })
-
-                    if(findAgent.success && findAgent.data.results[0]){
-                        commission.agentId = Number(findAgent.data.results[0].AgentID)
-                    }
-                }
-
-                if(commission.agentId){
-                    const agent = await getAgent(Number(commission.agentId))
-                    
-                    if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
-                    }
-                }
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
             }
-
-
-            validCommissions.push(commission)
         }
-        
     }
+
+    const validCommissions = normalizedCommissions.data
 
     if(role !== 'SALES PERSON' && validCommissions.length === 0){
         return {
@@ -869,6 +1015,7 @@ export const addPendingSalesService = async (
     if(!result.success){
         //logger('addPendingSalesService', {data: data})
         logger('addPendingSalesService', {error: result.error})
+        console.log(result.error)
         return {
             success: false,
             data: {},
@@ -1132,44 +1279,20 @@ export const addPendingSalesServiceR2 = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
-    const validCommissions = []
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
-    const modifiedCommissionRates = data.commissionRates?.map((commission: any) => {
+    if(!normalizedCommissions.success){
         return {
-            agentName: commission.agentName || undefined,
-            agentId: Number(commission.agentId) || undefined,
-            commissionRate: commission.commissionRate,
-            position: commission.position
-        }
-    })
-
-
-    for(const commission of modifiedCommissionRates || []){
-
-        if(commission.agentId || commission.agentName){
-            if(commission.position.toLowerCase() == 'broker') {
-                if(commission.agentName){
-                    const findAgent = await getAgents({ name: commission.agentName })
-
-                    if(findAgent.success && findAgent.data.results[0]){
-                        commission.agentId = Number(findAgent.data.results[0].AgentID)
-                    }
-                }
-
-                if(commission.agentId){
-                    const agent = await getAgent(Number(commission.agentId))
-                    
-                    if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName?.trim()}, ${agent.data.FirstName?.trim()} ${agent.data.MiddleName?.trim()}`).trim()
-                    }
-                }
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
             }
-
-
-            validCommissions.push(commission)
         }
-        
     }
+
+    const validCommissions = normalizedCommissions.data
 
     if(role !== 'SALES PERSON' && validCommissions.length === 0){
         return {
@@ -1550,7 +1673,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         }
     }
 
-    let resultCopy = {}
+    let resultCopy = { ...result.data }
     if (result.data.Images && result.data.Images.length > 0) {
         const imageCopies = result.data.Images
         const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
@@ -1564,48 +1687,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         )
         resultCopy = { ...result.data, Images: images }
     }
-
-    let brokerId = null
-
-    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
-
-    if(brokerResult && brokerResult.AgentName){
-        const brokerData = await getBrokers({ name: brokerResult.AgentName })
-
-        if(brokerData){
-            brokerId = brokerData.data[0]?.BrokerID || null
-        }
-    }
-
-    // build new details array
-
-    const detailsArray = []
-
-    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
-    if(broker){
-        detailsArray.push({
-            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
-            PositionName: "BROKER",
-            PositionID: broker.PositionID,
-            AgentName: broker.AgentName,
-            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
-            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
-            CommissionRate: broker.CommissionRate,
-            PendingSalesTranCode: broker.PendingSalesTranCode,
-            WTaxRate: broker.WTaxRate,
-            VATRate: broker.VATRate,
-            Commission: broker.Commission
-        })
-    }
-
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
 
 
     let updatedByName = ''
@@ -2127,12 +2209,7 @@ export const editPendingSaleService = async (
             receipt?: Express.Multer.File,
             agreement?: Express.Multer.File,
         },
-        commissionRates?: {
-            commissionRate: number,
-            agentId?: number,
-            agentName?: string,
-            position: CommissionDetailPositions
-        }[]
+        commissionRates?: AddPendingSaleDetail[]
     }
 ) => {
 
@@ -2306,37 +2383,20 @@ export const editPendingSaleService = async (
         }
     }
 
-     const validCommissions = []
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
-    for(const commission of data.commissionRates || []){
-        console.log('commissions', commission)
-        if(commission.agentId || commission.agentName){
-            if(commission.position.toLowerCase() == 'broker') {
-                if(commission.agentName){
-
-                    
-                    const findAgent = await getAgents({ name: commission.agentName })
-                    console.log(commission.agentName)
-                    console.log(findAgent)
-                    if(findAgent.success && findAgent.data.results[0]){
-                        commission.agentId = findAgent.data.results[0].AgentID
-                    }
-                }
-
-                if(commission.agentId){
-                    const agent = await getAgent(commission.agentId)
-                    
-                    if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
-                    }
-                }
+    if(!normalizedCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
             }
-
-
-            validCommissions.push(commission)
         }
-        
     }
+
+    const validCommissions = normalizedCommissions.data
 
     const updatedData = {
         ...data,
@@ -2346,7 +2406,7 @@ export const editPendingSaleService = async (
             receipt: receiptMetadata,
             agreement: agreementMetadata
         },
-        commissionRates: validCommissions
+        ...(data.commissionRates !== undefined && { commissionRates: validCommissions })
     }
 
     const updatePendingSale = await editPendingSale(
@@ -2411,12 +2471,7 @@ export const editPendingSaleServiceR2 = async (
             receipt?: Express.Multer.File,
             agreement?: Express.Multer.File,
         },
-        commissionRates?: {
-            commissionRate: number,
-            agentId?: number,
-            agentName?: string,
-            position: CommissionDetailPositions
-        }[]
+        commissionRates?: AddPendingSaleDetail[]
     }
 ) => {
 
@@ -2565,43 +2620,26 @@ export const editPendingSaleServiceR2 = async (
         
     }
 
-     const validCommissions = []
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
-    for(const commission of data.commissionRates || []){
-        console.log('commissions', commission)
-        if(commission.agentId || commission.agentName){
-            if(commission.position.toLowerCase() == 'broker') {
-                if(commission.agentName){
-
-                    
-                    const findAgent = await getAgents({ name: commission.agentName })
-                    console.log(commission.agentName)
-                    console.log(findAgent)
-                    if(findAgent.success && findAgent.data.results[0]){
-                        commission.agentId = findAgent.data.results[0].AgentID
-                    }
-                }
-
-                if(commission.agentId){
-                    const agent = await getAgent(commission.agentId)
-                    
-                    if(agent.success && agent.data){
-                        commission.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
-                    }
-                }
+    if(!normalizedCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
             }
-
-
-            validCommissions.push(commission)
         }
-        
     }
+
+    const validCommissions = normalizedCommissions.data
 
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
         ...data.divisionID && {divisionID: data.divisionID},
-        commissionRates: validCommissions
+        ...(data.commissionRates !== undefined && { commissionRates: validCommissions })
     }
 
     const updatePendingSale = await editPendingSaleR2(
@@ -2710,7 +2748,7 @@ export const editPendingSaleServiceR2 = async (
 export const editPendingSalesDetailsService = async (
     agentUserId: number,
     pendingSalesId: number,
-    data: EditPendingSaleDetail[]
+    commissionRates?: AddPendingSaleDetail[]
 ): QueryResult<any> => {
 
     const pendingSale = await getPendingSaleById(pendingSalesId)
@@ -2766,71 +2804,29 @@ export const editPendingSalesDetailsService = async (
         }
     }
 
-    // validate objects
-    const validEdits: EditPendingSaleDetail[] = [];
+    let validCommissions: AddPendingSaleDetail[] | undefined = undefined
 
-    const currentPendingSale = await getPendingSaleById(pendingSalesId)
+    if(commissionRates !== undefined){
+        const normalizedCommissions = await getValidatedCommissionRates(commissionRates)
 
-    if(!currentPendingSale.success){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: 'No sales found',
-                code: 404
-            }
-        }
-    }
-
-    const pendingDetailsMap = new Map<number, typeof currentPendingSale.data.Details[0]>()
-
-    for (const detail of currentPendingSale.data.Details) {
-        pendingDetailsMap.set(detail.AgentPendingSalesDtlID, detail)
-    }
-
-    for (const detail of data) {
-        if (!detail.pendingSalesDtlId) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
-        if (!detail.commissionRate) return { success: false, data: {}, error: { message: 'Commission Rate not found', code: 400 } };
-        
-        const currentDetail = pendingDetailsMap.get(detail.pendingSalesDtlId)
-
-        if(!currentDetail) return { success: false, data: {}, error: { message: 'Pending Sales Detail ID not found', code: 400 } };
-
-        if(detail.agentId || detail.agentName){
-            if(currentDetail.PositionName.toLowerCase() == 'broker') {
-                if(detail.agentName){
-                
-                    const findAgent = await getAgents({ name: detail.agentName })
-                    console.log(detail.agentName)
-                    console.log(findAgent)
-                    if(findAgent.success && findAgent.data.results[0]){
-                        detail.agentId = findAgent.data.results[0].AgentID
-                    }
-                }
-
-                if(detail.agentId){
-                    const agent = await getAgent(detail.agentId)
-                    
-                    if(agent.success && agent.data){
-                        detail.agentName = (`${agent.data.LastName}, ${agent.data.FirstName} ${agent.data.MiddleName}`).trim()
-                    }
+        if(!normalizedCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                    code: normalizedCommissions.error?.code || 400
                 }
             }
-
-            validEdits.push({
-                pendingSalesDtlId: detail.pendingSalesDtlId,
-                ...(detail.agentId && { agentId: detail.agentId }),
-                ...(detail.agentName && { agentName: detail.agentName }),
-                position: detail.position,
-                commissionRate: detail.commissionRate,
-            });
         }
+
+        validCommissions = normalizedCommissions.data
     }
 
-    const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, validEdits);
+    const result = await editPendingSalesDetails(agentData.data.AgentID, pendingSalesId, validCommissions);
 
     if(!result.success){
-        logger('editPendingSalesDetailsService', {data: data})
+        logger('editPendingSalesDetailsService', {commissionRates: commissionRates})
         logger('editPendingSalesDetailsService', {error: result.error})
         return {
             success: false,
@@ -2880,12 +2876,7 @@ export const editSalesTranService = async (
             receipt?: Express.Multer.File,
             agreement?: Express.Multer.File,
         },
-        commissionRates?: {
-            commissionRate: number,
-            agentId?: number,
-            agentName?: string,
-            position: CommissionDetailPositions
-        }[]
+        commissionRates?: AddPendingSaleDetail[]
     }
 ) => {
 
@@ -2950,6 +2941,19 @@ export const editSalesTranService = async (
         }
     }
 
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+
+    if(!normalizedCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
+            }
+        }
+    }
+
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
@@ -2958,7 +2962,7 @@ export const editSalesTranService = async (
             receipt: receiptMetadata,
             agreement: agreementMetadata
         },
-        commissionRates: data.commissionRates || []
+        ...(data.commissionRates !== undefined && { commissionRates: normalizedCommissions.data })
     }
 
     const updateSalesTran = await editSalesTransaction(
@@ -3335,6 +3339,17 @@ export const rejectPendingSaleService = async ( user: { agentUserId?: number, we
     }
 
     if(pendingSale.data.ApprovalStatus == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'This sale has already been rejected.',
+                code: 400
+            }
+        }
+    }
+
+    if(pendingSale.data.IsRejected == 1){
         return {
             success: false,
             data: {},
@@ -3808,7 +3823,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         }
     }
 
-    let resultCopy = {}
+    let resultCopy = { ...result.data }
     if (result.data.Images && result.data.Images.length > 0) {
         const imageCopies = result.data.Images
         const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
@@ -3822,48 +3837,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         )
         resultCopy = { ...result.data, Images: images }
     }
-
-    let brokerId = null
-
-    const brokerResult = result.data.Details.find((sale: AgentPendingSalesDetail) => sale.PositionName?.toLowerCase() === 'broker');
-
-    if(brokerResult && brokerResult.AgentName){
-        const brokerData = await getBrokers({ name: brokerResult.AgentName })
-
-        if(brokerData){
-            brokerId = brokerData.data[0]?.BrokerID || null
-        }
-    }
-
-    // build new details array
-
-    const detailsArray = []
-
-    const broker = result.data.Details.find((detail: AgentPendingSalesDetail) => detail.PositionName?.toLowerCase() === 'broker');
-    if(broker){
-        detailsArray.push({
-            AgentPendingSalesDtlID: broker.AgentPendingSalesDtlID,
-            PositionName: "BROKER",
-            PositionID: broker.PositionID,
-            AgentName: broker.AgentName,
-            AgentID: (broker.AgentID == 0 || !broker.AgentID) ? null: broker.AgentID,
-            BrokerID: (broker.AgentID == 0 || !broker.AgentID) ? brokerId : null,
-            CommissionRate: broker.CommissionRate,
-            PendingSalesTranCode: broker.PendingSalesTranCode,
-            WTaxRate: broker.WTaxRate,
-            VATRate: broker.VATRate,
-            Commission: broker.Commission
-        })
-    }
-
-    const details = result.data.Details.map((detail: AgentPendingSalesDetail) => {
-        if(detail.PositionName?.toLowerCase() !== 'broker'){
-            detailsArray.push({
-                ...detail,
-                BrokerID: null
-            })
-        }
-    })
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
 
     
 
@@ -4774,7 +4748,9 @@ export const getWebPersonalSalesService = async (
 // Sales Distribution List
 
 export const getSalesDistributionListService = async(showInactive: boolean = false): QueryResult<Selectable<TblDistribution>[]> => {
-    const result = await getDistributionList(showInactive);
+    const result = showInactive
+        ? await getDistributionList(true)
+        : await getActiveDistributionTemplateService()
 
     if(!result.success){
         return {

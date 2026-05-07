@@ -1,4 +1,4 @@
-import { CommissionDetailPositions } from "./commission.types";
+import { CommissionRateInput } from "./commission.types";
 import { IImageR2, ITypedImageBase64 } from "./image.types";
 
 export interface AgentPendingSalesDetail {
@@ -8,6 +8,7 @@ export interface AgentPendingSalesDetail {
     BrokerID?: number | null;
     Commission: number;
     CommissionRate: number;
+    DistributionID: number | null;
     PendingSalesTranCode: string;
     PositionID: number;
     PositionName: string;
@@ -165,6 +166,7 @@ export interface AgentPendingSalesWithDetails {
         AgentPendingSalesDtlID: number;
         Commission: number;
         CommissionRate: number;
+        DistributionID: number | null;
         PendingSalesTranCode: string;
         PositionID: number;
         PositionName: string;
@@ -174,20 +176,7 @@ export interface AgentPendingSalesWithDetails {
     Images?: ITypedImageBase64[]
 }
 
-export interface EditPendingSaleDetail {
-    pendingSalesDtlId: number,
-    agentId?: number,
-    agentName?: string,
-    position: string,
-    commissionRate: number,
-}
-
-export interface AddPendingSaleDetail {
-    position: CommissionDetailPositions
-    agentId?: number,
-    agentName?: string,
-    commissionRate: number,
-}
+export interface AddPendingSaleDetail extends CommissionRateInput {}
 
 
 export interface FnDivisionSales {
