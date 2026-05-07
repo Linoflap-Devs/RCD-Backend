@@ -315,6 +315,7 @@ export const getDivisionHierarchyService = async (agentUserId: number): QueryRes
         lastName: item.LastName?.trim() || '',
         middleName: item.MiddleName?.trim() || '',
         position: item.Position?.trim() || '',
+        positionId: item.PositionID,
         referredById: item.ReferredByID || null,
     }))
 
