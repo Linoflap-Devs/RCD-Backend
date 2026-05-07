@@ -147,3 +147,17 @@ export const createPendingSale = async (data: Partial<AgentPendingSale>): QueryR
         }
     }
 }
+
+export const addDistributionList = async (distributionCode: string, distribution: string, level: number, positionId?: number) => {
+    const result = await db.insertInto('Tbl_Distribution')
+        .values({
+            DistributionCode: distributionCode,
+            Distribution: distribution,
+            Level: level,
+            PositionID: positionId || 0,
+        })
+        .outputAll('inserted')
+        .executeTakeFirstOrThrow()
+
+    return result
+}
