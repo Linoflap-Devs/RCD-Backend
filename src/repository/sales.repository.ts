@@ -48,7 +48,7 @@ async function getActiveDistributionTemplateForWrite(trx: Transaction<DB>) {
         .leftJoin('Tbl_Position', 'Tbl_Distribution.PositionID', 'Tbl_Position.PositionID')
         .selectAll('Tbl_Distribution')
         .select('Tbl_Position.Position')
-        .where('IsActive', '=', 1)
+        .where('Tbl_Distribution.IsActive', '=', 1)
         .orderBy('Level', 'asc')
         .execute();
 }
