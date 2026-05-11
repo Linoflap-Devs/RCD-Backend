@@ -3981,7 +3981,7 @@ export const getDistributionList = async (showInactive: boolean = false): QueryR
         let baseQuery = await db.selectFrom('Tbl_Distribution').leftJoin('Tbl_Position', 'Tbl_Distribution.PositionID', 'Tbl_Position.PositionID')
 
         if(!showInactive){
-            baseQuery = baseQuery.where('IsActive', '=', 1)
+            baseQuery = baseQuery.where('Tbl_Distribution.IsActive', '=', 1)
         }
 
         const result = await baseQuery.selectAll('Tbl_Distribution').select('Tbl_Position.Position')
