@@ -45,7 +45,9 @@ type ExistingCommissionDetailRow = {
 
 async function getActiveDistributionTemplateForWrite(trx: Transaction<DB>) {
     return trx.selectFrom('Tbl_Distribution')
-        .selectAll()
+        .leftJoin('Tbl_Position', 'Tbl_Distribution.PositionID', 'Tbl_Position.PositionID')
+        .selectAll('Tbl_Distribution')
+        .select('Tbl_Position.Position')
         .where('IsActive', '=', 1)
         .orderBy('Level', 'asc')
         .execute();
@@ -3976,13 +3978,13 @@ const shiftLevelsDown = async (fromLevel: number, trx: Transaction<DB>) => {
 
 export const getDistributionList = async (showInactive: boolean = false): QueryResult<Selectable<TblDistribution>[]> => {
     try {
-        let baseQuery = await db.selectFrom('Tbl_Distribution')
+        let baseQuery = await db.selectFrom('Tbl_Distribution').leftJoin('Tbl_Position', 'Tbl_Distribution.PositionID', 'Tbl_Position.PositionID')
 
         if(!showInactive){
             baseQuery = baseQuery.where('IsActive', '=', 1)
         }
 
-        const result = await baseQuery.selectAll()
+        const result = await baseQuery.selectAll('Tbl_Distribution').select('Tbl_Position.Position')
             .orderBy('Level', 'desc')
             .execute()
         
@@ -4008,8 +4010,10 @@ export const getDistributionList = async (showInactive: boolean = false): QueryR
 export const getActiveDistributionTemplate = async (): QueryResult<Selectable<TblDistribution>[]> => {
     try {
         const result = await db.selectFrom('Tbl_Distribution')
-            .selectAll()
-            .where('IsActive', '=', 1)
+            .leftJoin('Tbl_Position', 'Tbl_Distribution.PositionID', 'Tbl_Position.PositionID')
+            .selectAll('Tbl_Distribution')
+            .select('Tbl_Position.Position')
+            .where('Tbl_Distribution.IsActive', '=', 1)
             .orderBy('Level', 'asc')
             .execute()
 

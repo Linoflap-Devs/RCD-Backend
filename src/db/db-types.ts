@@ -660,6 +660,7 @@ export interface TblDistribution {
   Level: number;
   PositionID: number;
   UpdateBy: number | null;
+  Position?: string
 }
 
 export interface TblDivision {
