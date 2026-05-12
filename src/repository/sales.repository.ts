@@ -998,126 +998,276 @@ export const getTotalDivisionSales = async (divisionId: number, filters?: { mont
     }
 }
 
+// export const getDivisionSales = async (
+//     divisionId: number, 
+//     filters?: {
+//         amount?: number,  
+//         agentId?: number, 
+//         isUnique?: boolean, 
+//         month?: number,
+//         year?: number,
+//     }, 
+//     pagination?: {
+//         page?: number, 
+//         pageSize?: number
+//     }
+// ): QueryResult<{ totalPages: number, results: VwSalesTransactions[]}> => {
+//     try {
+
+//         const page = pagination?.page ?? 1;
+//         const pageSize = pagination?.pageSize ?? (filters?.amount ?? undefined); // Fallback to amount for backward compatibility
+//         const offset = pageSize ? (page - 1) * pageSize : 0;
+
+//         let result = await db.selectFrom('Vw_SalesTransactions')
+//             .selectAll()
+//             .where('DivisionID', '=', divisionId)
+//             .where('SalesStatus', '<>', 'ARCHIVED')
+//             .where('AgentName', '<>', '')
+
+//         let totalCountResult = await db
+//             .selectFrom("Vw_SalesTransactions")
+//             .select(({ fn }) => [fn.countAll<number>().as("count")])
+//             .where("DivisionID", "=", divisionId)
+//             .where("SalesStatus", "<>", "ARCHIVED")
+//             .where("AgentName", "<>", "")
+
+
+//         if(filters && filters.agentId){
+//             logger('getDivisionSales | Filtering by agentId', {agentId: filters.agentId})
+//             result = result.where('AgentID', '=', filters.agentId)
+//             totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
+//         }
+
+//         if(filters && filters.month){
+
+//             const year = filters.year || new Date().getFullYear();
+//             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+//             const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+//             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+//             const monthStart = startOfDay(firstDayManila);
+//             const monthEnd = endOfDay(lastDayManila);
+            
+//             const firstDay = new Date(monthStart.getTime());
+//             const lastDay = new Date(monthEnd.getTime());
+
+//             // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
+//             // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
+//             logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
+//             result = result.where('ReservationDate', '>', firstDay)
+//             result = result.where('ReservationDate', '<', lastDay)
+//             totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
+//             totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
+//         }
+
+//         result = result.orderBy('ReservationDate', 'desc')
+        
+//         if(pagination && pagination.page && pagination.pageSize){
+//             result = result.offset(offset).fetch(pagination.pageSize)
+//         }
+        
+//         const queryResult = await result.execute();
+//         const countResult = await totalCountResult.execute();
+//         if(!result){
+//             throw new Error('No sales found.')
+//         }
+
+//         const totalCount = countResult ? Number(countResult[0].count) : 0;
+//         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+//         console.log('totalPages', totalPages)
+        
+//         let filteredResult = queryResult
+
+//         // Filter to get unique ProjectName records (keeps first occurrence)
+//         if(filters && filters.isUnique  && filters.isUnique === true){
+//             const uniqueProjects = new Map();
+//             filteredResult = queryResult.filter(record => {
+//                 if (!uniqueProjects.has(record.ProjectName)) {
+//                     uniqueProjects.set(record.ProjectName, true);
+//                     return true;
+//                 }
+//                 return false;
+//             })
+//         }
+
+//         if(filters && filters.amount){
+//             const amount = filters.amount
+//             filteredResult = filteredResult.slice(0, amount)
+//         }
+        
+        
+//         return {    
+//             success: true,
+//             data: {
+//                 totalPages: totalPages,
+//                 results: filteredResult
+//             }
+//         }
+//     }
+
+//     catch(err: unknown){
+//         const error = err as Error;
+//         return {
+//             success: false,
+//             data: {} as {totalPages: number, results: VwSalesTransactions[]},
+//             error: {
+//                 code: 500,
+//                 message: error.message
+//             }
+//         }
+//     }
+// }
+
 export const getDivisionSales = async (
-    divisionId: number, 
+    divisionId: number,
     filters?: {
-        amount?: number,  
-        agentId?: number, 
-        isUnique?: boolean, 
+        amount?: number,
+        agentId?: number,
+        isUnique?: boolean,
         month?: number,
         year?: number,
-    }, 
+    },
     pagination?: {
-        page?: number, 
+        page?: number,
         pageSize?: number
     }
-): QueryResult<{ totalPages: number, results: VwSalesTransactions[]}> => {
+): QueryResult<{ totalPages: number, results: VwSalesTransactions[] }> => {
     try {
-
         const page = pagination?.page ?? 1;
-        const pageSize = pagination?.pageSize ?? (filters?.amount ?? undefined); // Fallback to amount for backward compatibility
+        const pageSize = pagination?.pageSize ?? (filters?.amount ?? undefined);
         const offset = pageSize ? (page - 1) * pageSize : 0;
 
-        let result = await db.selectFrom('Vw_SalesTransactions')
-            .selectAll()
-            .where('DivisionID', '=', divisionId)
-            .where('SalesStatus', '<>', 'ARCHIVED')
-            .where('AgentName', '<>', '')
+        let result = db
+            .selectFrom('Vw_SalesTransactions as vst')
+            .selectAll('vst')
+            .where('vst.DivisionID', '=', divisionId)
+            .where('vst.SalesStatus', '<>', 'ARCHIVED')
+            .where('vst.AgentName', '<>', '');
 
-        let totalCountResult = await db
-            .selectFrom("Vw_SalesTransactions")
-            .select(({ fn }) => [fn.countAll<number>().as("count")])
-            .where("DivisionID", "=", divisionId)
-            .where("SalesStatus", "<>", "ARCHIVED")
-            .where("AgentName", "<>", "")
+        let totalCountResult = db
+            .selectFrom('Vw_SalesTransactions as vst')
+            .select((eb) => [eb.fn.countAll<number>().as('count')])
+            .where('vst.DivisionID', '=', divisionId)
+            .where('vst.SalesStatus', '<>', 'ARCHIVED')
+            .where('vst.AgentName', '<>', '');
 
-
-        if(filters && filters.agentId){
-            logger('getDivisionSales | Filtering by agentId', {agentId: filters.agentId})
-            result = result.where('AgentID', '=', filters.agentId)
-            totalCountResult = totalCountResult.where('AgentID', '=', filters.agentId)
+        if (filters?.agentId) {
+            result = result.where('vst.AgentID', '=', filters.agentId);
+            totalCountResult = totalCountResult.where('vst.AgentID', '=', filters.agentId);
         }
 
-        if(filters && filters.month){
-
+        if (filters?.month) {
             const year = filters.year || new Date().getFullYear();
             const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
-            const lastDayOfMonth = new Date(year, filters.month, 0).getDate(); // Get the last day number
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate();
             const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
-        
+
             const monthStart = startOfDay(firstDayManila);
             const monthEnd = endOfDay(lastDayManila);
-            
+
             const firstDay = new Date(monthStart.getTime());
             const lastDay = new Date(monthEnd.getTime());
 
-            // const firstDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month - 1, 1)
-            // const lastDay = new Date(filters.year ?? (new Date).getFullYear(), filters.month, 1)
-            logger('getDivisionSales | Filtering by month', {firstDay, lastDay})
-            result = result.where('ReservationDate', '>', firstDay)
-            result = result.where('ReservationDate', '<', lastDay)
-            totalCountResult = totalCountResult.where('ReservationDate', '>', firstDay)
-            totalCountResult = totalCountResult.where('ReservationDate', '<', lastDay)
+            result = result
+                .where('vst.ReservationDate', '>', firstDay)
+                .where('vst.ReservationDate', '<', lastDay);
+
+            totalCountResult = totalCountResult
+                .where('vst.ReservationDate', '>', firstDay)
+                .where('vst.ReservationDate', '<', lastDay);
         }
 
-        result = result.orderBy('ReservationDate', 'desc')
-        
-        if(pagination && pagination.page && pagination.pageSize){
-            result = result.offset(offset).fetch(pagination.pageSize)
-        }
-        
-        const queryResult = await result.execute();
-        const countResult = await totalCountResult.execute();
-        if(!result){
-            throw new Error('No sales found.')
-        }
+        if (filters?.isUnique) {
+            const rankedSales = result
+                .select((eb) => [
+                    eb.fn
+                        .agg<number>('row_number', [])
+                        .over((ob) =>
+                            ob
+                                .partitionBy('vst.SalesTranID')
+                                .orderBy('vst.ReservationDate', 'desc')
+                                .orderBy('vst.SalesTransDtlID', 'desc')
+                        )
+                        .as('rn'),
+                ])
+                .as('rankedSales');
 
-        const totalCount = countResult ? Number(countResult[0].count) : 0;
-        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+            let uniqueResult = db
+                .selectFrom(rankedSales)
+                .selectAll()
+                .where('rn', '=', 1)
+                .orderBy('ReservationDate', 'desc')
+                .orderBy('SalesTransDtlID', 'desc');
 
-        console.log('totalPages', totalPages)
-        
-        let filteredResult = queryResult
-
-        // Filter to get unique ProjectName records (keeps first occurrence)
-        if(filters && filters.isUnique  && filters.isUnique === true){
-            const uniqueProjects = new Map();
-            filteredResult = queryResult.filter(record => {
-                if (!uniqueProjects.has(record.ProjectName)) {
-                    uniqueProjects.set(record.ProjectName, true);
-                    return true;
-                }
-                return false;
-            })
-        }
-
-        if(filters && filters.amount){
-            const amount = filters.amount
-            filteredResult = filteredResult.slice(0, amount)
-        }
-        
-        
-        return {
-            success: true,
-            data: {
-                totalPages: totalPages,
-                results: filteredResult
+            if (pageSize) {
+                uniqueResult = uniqueResult.offset(offset).fetch(pageSize);
             }
-        }
-    }
 
-    catch(err: unknown){
+            const queryResult = await uniqueResult.execute();
+
+            const countResult = await db
+                .selectFrom(rankedSales)
+                .select((eb) => [eb.fn.countAll<number>().as('count')])
+                .where('rn', '=', 1)
+                .executeTakeFirst();
+
+            const totalCount = Number(countResult?.count ?? 0);
+            const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+            let filteredResult = queryResult.map(({ rn, ...sale }) => sale as VwSalesTransactions);
+
+            if (filters?.amount) {
+                filteredResult = filteredResult.slice(0, filters.amount);
+            }
+
+            return {
+                success: true,
+                data: {
+                    totalPages,
+                    results: filteredResult
+                }
+            };
+        } else {
+            let normalResult = result.orderBy('vst.ReservationDate', 'desc');
+
+            if (pageSize) {
+                normalResult = normalResult.offset(offset).fetch(pageSize);
+            }
+
+            const queryResult = await normalResult.execute();
+            const countResult = await totalCountResult.executeTakeFirst();
+
+            const totalCount = Number(countResult?.count ?? 0);
+            const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+            let filteredResult = queryResult;
+
+            if (filters?.amount) {
+                filteredResult = filteredResult.slice(0, filters.amount);
+            }
+
+            return {
+                success: true,
+                data: {
+                    totalPages,
+                    results: filteredResult
+                }
+            };
+        }
+    } catch (err: unknown) {
         const error = err as Error;
         return {
             success: false,
-            data: {} as {totalPages: number, results: VwSalesTransactions[]},
+            data: {} as { totalPages: number, results: VwSalesTransactions[] },
             error: {
                 code: 500,
                 message: error.message
             }
-        }
+        };
     }
-}
+};
+
 
 type SortOption = {
     field: 'Division' | 'CurrentMonth'

@@ -272,7 +272,8 @@ export const getUserDivisionSalesService = async (userId: number, filters?: {mon
     }
 
     logger('getUserDivisionSalesService', {userId: userId, agentId: agent.data.AgentID, divisionId: agent.data.DivisionID})
-    const result = await getDivisionSales(Number(agent.data.DivisionID), filters, pagination);
+    
+    const result = await getDivisionSales(Number(agent.data.DivisionID), { ...filters, isUnique: true}, pagination);
 
     if(!result.success){
         return {
@@ -285,6 +286,8 @@ export const getUserDivisionSalesService = async (userId: number, filters?: {mon
         }
     }
 
+    console.log(filters)
+    console.log(result.data)
 
     const sales = result.data.results.map((sale: VwSalesTransactions) => {
         return {
@@ -292,7 +295,7 @@ export const getUserDivisionSalesService = async (userId: number, filters?: {mon
             salesTransDtlId: sale.SalesTransDtlID,
             projectName: sale.ProjectName,
             projectCode: sale.SalesTranCode,
-            agentName: sale.AgentName,
+            agentName: sale.SellerName,
             reservationDate: sale.ReservationDate
         }
     })
