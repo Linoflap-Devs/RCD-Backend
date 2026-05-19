@@ -1037,9 +1037,9 @@ export const editPendingSalesController = async (req: Request, res: Response) =>
     }
 
     const { pendingSalesId } = req.params
-    const { edit = [] } = req.body
+    const { commissionRates } = req.body
 
-    const result = await editPendingSalesDetailsService(session.userID, Number(pendingSalesId), edit)
+    const result = await editPendingSalesDetailsService(session.userID, Number(pendingSalesId), commissionRates)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit sales', data: {}})

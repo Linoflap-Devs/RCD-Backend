@@ -137,6 +137,7 @@ export interface TblAgentPendingSalesDtl {
   AgentPendingSalesDtlID: Generated<number>;
   Commission: number;
   CommissionRate: number;
+  DistributionID: number | null;
   PendingSalesTranCode: string;
   PositionID: number;
   PositionName: string;
@@ -659,6 +660,7 @@ export interface TblDistribution {
   Level: number;
   PositionID: number;
   UpdateBy: number | null;
+  Position?: string
 }
 
 export interface TblDivision {
@@ -851,6 +853,7 @@ export interface TblSalesTransDtl {
   AgentName: string | null;
   Commission: number;
   CommissionRate: number;
+  DistributionID: number | null;
   PositionID: number;
   PositionName: string;
   SalesTranCode: string;
@@ -1572,6 +1575,7 @@ export interface VwSalesTransactions {
   DevCommType: string | null;
   DeveloperID: number | null;
   DeveloperName: string | null;
+  DistributionID: number | null;
   Division: string;
   DivisionID: number | null;
   DownPayment: number | null;
