@@ -17,7 +17,7 @@ router.route('/targets/:salesTargetId').get([validateEmployeeSession], getSalesT
 router.route('/targets/:salesTargetId').patch([validateEmployeeSession, validate(editSalesTargetSchema)], editSalesTargetController);
 router.route('/targets/:salesTargetId').delete([validateEmployeeSession], deleteSalesTargetController);
 
-router.route('/distribution').get([validateAgentEmployeeSession, validateRole(['AD','BH', 'SA', 'SP', 'UM', 'SD'])], getDistributionListController);
+router.route('/distribution').get([validateAgentEmployeeSession, validateRole(['AD','BH', 'SA', 'SP', 'UM', 'SD', 'BR'])], getDistributionListController);
 router.route('/distribution').post([validateEmployeeSession, validateRole(['AD', 'SA']), validate(addSalesDistributionSchema)], addDistributionListController);
 router.route('/distribution/:distributionId').patch([validateEmployeeSession, validateRole(['AD', 'SA']), validate(editSalesDistributionSchema)], editDistributionListController);
 router.route('/distribution/:distributionId').delete([validateEmployeeSession, validateRole(['AD', 'SA'])], deleteDistributionListController);
