@@ -568,7 +568,7 @@ export const getDivisionAgentLastRequestService = async (
     }
 }
 
-export const addDivisionRequestService = async ( userId: number, divisionId: number, unitManagerId: number ): QueryResult<ITblDivisionRequests> => {
+export const addDivisionRequestService = async ( userId: number, unitManagerId: number ): QueryResult<ITblDivisionRequests> => {
 
     const agentData = await findAgentDetailsByUserId(userId)
 
@@ -591,7 +591,7 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         }
     }
 
-    if(agentData.data.ReferredByID || agentData.data.DivisionID){
+    if(agentData.data.ReferredByID && agentData.data.DivisionID){
         return {
             success: false,
             data: {} as ITblDivisionRequests,
@@ -649,20 +649,20 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         }
     }
 
-    if(Number(umData.data.DivisionID) != divisionId){
-        return {
-            success: false,
-            data: {} as ITblDivisionRequests,
-            error: {
-                message: 'Unit manager does not belong to the given division',
-                code: 400
-            }
-        }
-    }
+    // if(Number(umData.data.DivisionID) != divisionId){
+    //     return {
+    //         success: false,
+    //         data: {} as ITblDivisionRequests,
+    //         error: {
+    //             message: 'Unit manager does not belong to the given division',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
     const result = await addDivisionRequest({
         AgentID: agentData.data.AgentID,
-        DivisionID: divisionId,
+        DivisionID: Number(umData.data.DivisionID),
         UnitManagerID: umData.data.AgentID
     })
 

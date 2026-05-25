@@ -342,12 +342,11 @@ export const addDivisionRequestController = async (req: Request, res: Response) 
     }
 
     const {
-        divisionId,
         unitManagerId
     } = req.body
 
 
-    const result = await addDivisionRequestService(session.userID, Number(divisionId), Number(unitManagerId))
+    const result = await addDivisionRequestService(session.userID, Number(unitManagerId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({
