@@ -99,6 +99,7 @@ const normalizeCommissionRatesAgainstTemplate = async (
             distributionCode: templateRow.DistributionCode || undefined,
             agentName: commission.agentName || undefined,
             agentId: Number(commission.agentId) || undefined,
+            brokerId: Number(commission.brokerId) || undefined,
             commissionRate: Number(commission.commissionRate) || 0
         })
     }
@@ -116,7 +117,7 @@ const normalizeCommissionRatesAgainstTemplate = async (
 
     for(const commission of modifiedCommissionRates){
         if(commission.agentId || commission.agentName){
-            if(normalizeDistributionValue(commission.distributionCode) === 'BROKER') {
+            if(normalizeDistributionValue(commission.distributionCode) === 'BR') {
                 if(commission.agentName){
                     const findAgent = await getAgents({ name: commission.agentName })
 
@@ -133,6 +134,25 @@ const normalizeCommissionRatesAgainstTemplate = async (
                     }
                 }
             }
+        }
+        if(commission.brokerId){
+            const code = templateIdMap.get(Number(commission.distributionId))
+            
+            if(normalizeDistributionValue(commission.distributionCode) === code?.DistributionCode) {
+                const findBroker = await getBrokers({ brokerId: commission.brokerId })
+
+                if(!findBroker.success){
+                    console.error(`Failed to find broker with ID ${commission.brokerId}:`, findBroker.error)
+                }
+
+                console.log('Broker lookup result for ID', commission.brokerId, findBroker)
+
+                if(findBroker.success && findBroker.data[0]){
+                    commission.agentName = findBroker.data[0].RepresentativeName ? findBroker.data[0].RepresentativeName.trim() : undefined
+                }
+
+                commission.agentId = findBroker.data[0] ? Number(findBroker.data[0].BrokerID) : undefined
+             }
         }
     }
 
@@ -962,6 +982,31 @@ export const addPendingSalesService = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
+    // Filter commission rates based on division
+    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : 0
+
+
+
+    if (effectiveDivID == 0) {
+        // Broker Transaction: Only keep hands-off broker rates
+        data.commissionRates = (data.commissionRates || []).filter(rate => !!rate.brokerId);
+
+        // Validation: Must have exactly one broker rate
+        if (data.commissionRates.length !== 1) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
+                    code: 400
+                }
+            }
+        }
+    } else {
+        // Standard Transaction: Ignore hands-off broker rates
+        data.commissionRates = (data.commissionRates || []).filter(rate => !rate.brokerId);
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -1202,13 +1247,24 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        if(!data.divisionID){
+        if(data.divisionID === undefined){
             return {
                 success: false,
                 data: {},
                 error: {
                     message: 'Division is required.',
                     code: 400
+                }
+            }
+        }
+
+        if(data.divisionID === 0 && webUserData.data.Role !== 'SALES ADMIN'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
                 }
             }
         }
@@ -1280,6 +1336,30 @@ export const addPendingSalesServiceR2 = async (
         }
 
         data.property.developerCommission = developer.data.data[0].CommRate
+    }
+
+    // Filter commission rates based on division
+    const effectiveDivID = data.divisionID === 0 ? 0 : data.divisionID;
+
+    console.log("effectiveDivID", effectiveDivID)
+    if (effectiveDivID == 0) {
+        // Broker Transaction: Only keep hands-off broker rates
+        data.commissionRates = (data.commissionRates || []).filter(rate => !!rate.brokerId);
+
+        // Validation: Must have exactly one broker rate
+        if (data.commissionRates.length !== 1) {
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
+                    code: 400
+                }
+            }
+        }
+    } else {
+        // Standard Transaction: Ignore hands-off broker rates
+        data.commissionRates = (data.commissionRates || []).filter(rate => !rate.brokerId);
     }
 
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
@@ -2386,6 +2466,31 @@ export const editPendingSaleService = async (
         }
     }
 
+    if (data.commissionRates !== undefined) {
+        // Filter commission rates based on division
+        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : (pendingSale.data.DivisionID || 0);
+
+        if (effectiveDivID === 0) {
+            // Broker Transaction: Only keep hands-off broker rates
+            data.commissionRates = data.commissionRates.filter(rate => !!rate.brokerId);
+
+            // Validation: Must have exactly one broker rate
+            if (data.commissionRates.length !== 1) {
+                return {
+                    success: false,
+                    data: {},
+                    error: {
+                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
+                        code: 400
+                    }
+                }
+            }
+        } else {
+            // Standard Transaction: Ignore hands-off broker rates
+            data.commissionRates = data.commissionRates.filter(rate => !rate.brokerId);
+        }
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -2623,6 +2728,31 @@ export const editPendingSaleServiceR2 = async (
         
     }
 
+    if (data.commissionRates !== undefined) {
+        // Filter commission rates based on division
+        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : (pendingSale.data.DivisionID || 0);
+
+        if (effectiveDivID === 0) {
+            // Broker Transaction: Only keep hands-off broker rates
+            data.commissionRates = data.commissionRates.filter(rate => !!rate.brokerId);
+
+            // Validation: Must have exactly one broker rate
+            if (data.commissionRates.length !== 1) {
+                return {
+                    success: false,
+                    data: {},
+                    error: {
+                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
+                        code: 400
+                    }
+                }
+            }
+        } else {
+            // Standard Transaction: Ignore hands-off broker rates
+            data.commissionRates = data.commissionRates.filter(rate => !rate.brokerId);
+        }
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -2810,6 +2940,29 @@ export const editPendingSalesDetailsService = async (
     let validCommissions: AddPendingSaleDetail[] | undefined = undefined
 
     if(commissionRates !== undefined){
+        // Filter commission rates based on division
+        const effectiveDivID = pendingSale.data.DivisionID || 0;
+
+        if (effectiveDivID === 0) {
+            // Broker Transaction: Only keep hands-off broker rates
+            commissionRates = commissionRates.filter(rate => !!rate.brokerId);
+
+            // Validation: Must have exactly one broker rate
+            if (commissionRates.length !== 1) {
+                return {
+                    success: false,
+                    data: {},
+                    error: {
+                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
+                        code: 400
+                    }
+                }
+            }
+        } else {
+            // Standard Transaction: Ignore hands-off broker rates
+            commissionRates = commissionRates.filter(rate => !rate.brokerId);
+        }
+
         const normalizedCommissions = await getValidatedCommissionRates(commissionRates)
 
         if(!normalizedCommissions.success){

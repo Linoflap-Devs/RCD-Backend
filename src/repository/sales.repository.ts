@@ -2254,8 +2254,9 @@ export const addPendingSale = async (
     }
 
     catch(err: unknown){
-        await trx.rollback().execute();
         const error = err as Error;
+        console.error("Error adding pending sale:", error.message);
+        await trx.rollback().execute();
         return {
             success: false,
             data: {} as IAgentPendingSale,

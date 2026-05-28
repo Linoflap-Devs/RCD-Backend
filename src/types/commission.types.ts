@@ -50,5 +50,6 @@ export interface CommissionRateInput {
     distributionCode?: string,
     agentId?: number,
     agentName?: string,
+    brokerId?: number,
     commissionRate: number,
 }
