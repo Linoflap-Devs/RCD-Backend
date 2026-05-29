@@ -8,6 +8,7 @@ import { TZDate } from "@date-fns/tz";
 import { sql, ExpressionBuilder, Selectable, Insertable, Transaction, Updateable } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
 import { IImage, IImageBase64, ITypedImageBase64 } from "../types/image.types";
+import { hasHandsOffBrokerId, isBrokerTransactionDivision, isHandsOffBrokerDistribution } from "../utils/broker-transaction";
 
 // UTILS
 function padRandomNumber(num: number, length: number): string {
@@ -29,6 +30,10 @@ type ResolvedCommissionDetailRow = {
     agentId: number;
     agentName: string;
     commissionRate: number;
+}
+
+type CommissionResolutionContext = {
+    divisionID?: number | null;
 }
 
 type ExistingCommissionDetailRow = {
@@ -55,7 +60,8 @@ async function getActiveDistributionTemplateForWrite(trx: Transaction<DB>) {
 
 async function resolveCommissionDetailRows(
     trx: Transaction<DB>,
-    commissionRates?: AddPendingSaleDetail[]
+    commissionRates?: AddPendingSaleDetail[],
+    context?: CommissionResolutionContext
 ): Promise<ResolvedCommissionDetailRow[]> {
     const templateRows = await getActiveDistributionTemplateForWrite(trx);
 
@@ -80,10 +86,27 @@ async function resolveCommissionDetailRows(
         throw new Error(`Unknown distributionId(s): ${unknownDistributionIds.join(', ')}`);
     }
 
+    const rowsForTransaction = isBrokerTransactionDivision(context?.divisionID)
+        ? templateRows.filter((row) => {
+            const commission = commissionMap.get(Number(row.DistributionID));
+            return commission && hasHandsOffBrokerId(commission);
+        })
+        : templateRows.filter((row) => !isHandsOffBrokerDistribution(row));
+
+    if(isBrokerTransactionDivision(context?.divisionID)){
+        if(rowsForTransaction.length !== 1){
+            throw new Error('Broker Transactions must resolve to exactly one active hands-off broker distribution row.');
+        }
+
+        if(!isHandsOffBrokerDistribution(rowsForTransaction[0])){
+            throw new Error('Broker Transaction commission rate must use the active hands-off broker distribution.');
+        }
+    }
+
     const agentIds = Array.from(
         new Set(
             (commissionRates || [])
-                .filter((commission) => commission.agentId && commission.agentId > 0)
+                .filter((commission) => !hasHandsOffBrokerId(commission) && commission.agentId && commission.agentId > 0)
                 .map((commission) => Number(commission.agentId))
         )
     );
@@ -100,15 +123,20 @@ async function resolveCommissionDetailRows(
         });
     }
 
-    return templateRows.map((templateRow) => {
+    return rowsForTransaction.map((templateRow) => {
         const commission = commissionMap.get(Number(templateRow.DistributionID));
-        const matchedAgent = commission?.agentId ? agentData.get(commission.agentId) : undefined;
+        const isHandsOffBrokerCommission = commission ? hasHandsOffBrokerId(commission) : false;
+        const matchedAgent = !isHandsOffBrokerCommission && commission?.agentId
+            ? agentData.get(commission.agentId)
+            : undefined;
 
         return {
             distributionId: Number(templateRow.DistributionID),
             positionName: templateRow.Distribution,
             positionId: templateRow.PositionID || 0,
-            agentId: commission?.agentId || 0,
+            agentId: isHandsOffBrokerCommission
+                ? Number(commission?.brokerId) || 0
+                : commission?.agentId || 0,
             agentName: matchedAgent
                 ? buildAgentDisplayName(matchedAgent)
                 : (commission?.agentName || ''),
@@ -120,9 +148,10 @@ async function resolveCommissionDetailRows(
 async function buildPendingSaleDetailRows(
     trx: Transaction<DB>,
     pendingSalesTranCode: string,
-    commissionRates?: AddPendingSaleDetail[]
+    commissionRates?: AddPendingSaleDetail[],
+    context?: CommissionResolutionContext
 ): Promise<Insertable<TblAgentPendingSalesDtl>[]> {
-    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates);
+    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates, context);
 
     return resolvedRows.map((row) => {
         return {
@@ -144,10 +173,12 @@ async function syncCommissionDetailRows<TExisting extends ExistingCommissionDeta
     trx: Transaction<DB>,
     existingRows: TExisting[],
     commissionRates: AddPendingSaleDetail[] | undefined,
+    context: CommissionResolutionContext | undefined,
     updateExistingRow: (existingRow: TExisting, resolvedRow: ResolvedCommissionDetailRow) => Promise<void>,
-    insertMissingRow: (resolvedRow: ResolvedCommissionDetailRow) => Promise<void>
+    insertMissingRow: (resolvedRow: ResolvedCommissionDetailRow) => Promise<void>,
+    deleteStaleRow?: (existingRow: TExisting) => Promise<void>
 ) {
-    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates);
+    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates, context);
     const unmatchedExistingRows = [...existingRows];
 
     for(const resolvedRow of resolvedRows){
@@ -163,6 +194,12 @@ async function syncCommissionDetailRows<TExisting extends ExistingCommissionDeta
         }
 
         await insertMissingRow(resolvedRow);
+    }
+
+    if(deleteStaleRow){
+        for(const staleRow of unmatchedExistingRows){
+            await deleteStaleRow(staleRow);
+        }
     }
 }
 
@@ -397,7 +434,7 @@ export const getSalesTrans = async (
             ])
             .where('SalesStatus', '<>', 'ARCHIVED')
 
-        if(filters && filters.divisionId) {
+        if(filters && filters.divisionId !== undefined) {
             result = result.where('DivisionID', '=', filters.divisionId)
             totalCountResult = totalCountResult.where('DivisionID', '=', filters.divisionId)
             totalSalesResult = totalSalesResult.where('DivisionID', '=', filters.divisionId)
@@ -941,6 +978,13 @@ export const getMultipleTotalPersonalSales = async (
 
 export const getTotalDivisionSales = async (divisionId: number, filters?: { month?: number, year?: number }): QueryResult<number> => {
     try {
+        if(isBrokerTransactionDivision(divisionId)){
+            return {
+                success: true,
+                data: 0
+            }
+        }
+
         let result = await db.selectFrom('vw_SalesTrans')
                 .select(({fn, val, ref}) => [
                     fn.sum(ref('NetTotalTCP')).as('TotalSales')
@@ -1134,6 +1178,16 @@ export const getDivisionSales = async (
     }
 ): QueryResult<{ totalPages: number, results: VwSalesTransactions[] }> => {
     try {
+        if(isBrokerTransactionDivision(divisionId)){
+            return {
+                success: true,
+                data: {
+                    totalPages: 0,
+                    results: []
+                }
+            }
+        }
+
         const page = pagination?.page ?? 1;
         const pageSize = pagination?.pageSize ?? (filters?.amount ?? undefined);
         const offset = pageSize ? (page - 1) * pageSize : 0;
@@ -1288,6 +1342,9 @@ export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: numb
         const result = await sql`
             SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
             FROM Fn_DivisionSalesV2(${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            WHERE Division IS NOT NULL
+            AND DivisionID > 0
+            AND DivisionID IS NOT NULL
             ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
         `.execute(db)
         
@@ -1613,7 +1670,17 @@ export const getPendingSales = async (
             .where('SalesStatus', '<>', 'ARCHIVED')
             .where('ApprovalStatus', 'not in', [5])
 
-        if(divisionId) {
+        if(divisionId !== undefined) {
+            if(isBrokerTransactionDivision(divisionId)){
+                return {
+                    success: true,
+                    data: {
+                        totalPages: 0,
+                        results: []
+                    }
+                }
+            }
+
             result = result.where('DivisionID', '=', divisionId)
             totalCountResult = totalCountResult.where('DivisionID', '=', divisionId)
         }
@@ -2219,7 +2286,8 @@ export const addPendingSale = async (
         const pendingSaleDetailRows = await buildPendingSaleDetailRows(
             trx,
             result.PendingSalesTranCode,
-            userRole !== 'SALES PERSON' ? data.commissionRates : undefined
+            userRole !== 'SALES PERSON' ? data.commissionRates : undefined,
+            { divisionID: data.divisionID }
         );
 
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
@@ -2406,7 +2474,8 @@ export const addPendingSaleR2 = async (
         const pendingSaleDetailRows = await buildPendingSaleDetailRows(
             trx,
             result.PendingSalesTranCode,
-            userRole !== 'SALES PERSON' ? data.commissionRates : undefined
+            userRole !== 'SALES PERSON' ? data.commissionRates : undefined,
+            { divisionID: data.divisionID }
         );
 
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
@@ -2740,6 +2809,7 @@ export const editPendingSale = async (
                 trx,
                 existingDetails,
                 data.commissionRates,
+                { divisionID: result.DivisionID },
                 async (existingRow, resolvedRow) => {
                     await trx.updateTable('Tbl_AgentPendingSalesDtl')
                         .set({
@@ -2767,6 +2837,11 @@ export const editPendingSale = async (
                             VATRate: 0,
                             Commission: 0
                         })
+                        .execute();
+                },
+                async (staleRow) => {
+                    await trx.deleteFrom('Tbl_AgentPendingSalesDtl')
+                        .where('AgentPendingSalesDtlID', '=', staleRow.AgentPendingSalesDtlID)
                         .execute();
                 }
             );
@@ -2916,6 +2991,7 @@ export const editPendingSaleR2 = async (
                 trx,
                 existingDetails,
                 data.commissionRates,
+                { divisionID: result.DivisionID },
                 async (existingRow, resolvedRow) => {
                     await trx.updateTable('Tbl_AgentPendingSalesDtl')
                         .set({
@@ -2943,6 +3019,11 @@ export const editPendingSaleR2 = async (
                             VATRate: 0,
                             Commission: 0
                         })
+                        .execute();
+                },
+                async (staleRow) => {
+                    await trx.deleteFrom('Tbl_AgentPendingSalesDtl')
+                        .where('AgentPendingSalesDtlID', '=', staleRow.AgentPendingSalesDtlID)
                         .execute();
                 }
             );
@@ -3000,6 +3081,7 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
                 trx,
                 existingDetails,
                 data,
+                { divisionID: existingSale.DivisionID },
                 async (existingRow, resolvedRow) => {
                     await trx.updateTable('Tbl_AgentPendingSalesDtl')
                         .set({
@@ -3027,6 +3109,11 @@ export const editPendingSalesDetails = async (agentId: number, pendingSalesId: n
                             VATRate: 0,
                             Commission: 0
                         })
+                        .execute();
+                },
+                async (staleRow) => {
+                    await trx.deleteFrom('Tbl_AgentPendingSalesDtl')
+                        .where('AgentPendingSalesDtlID', '=', staleRow.AgentPendingSalesDtlID)
                         .execute();
                 }
             );
@@ -3264,6 +3351,7 @@ export const editSalesTransaction = async (
                 trx,
                 existingDetails,
                 data.commissionRates,
+                { divisionID: data.divisionID !== undefined ? data.divisionID : existingSale.DivisionID },
                 async (existingRow, resolvedRow) => {
                     await trx.updateTable('Tbl_SalesTransDtl')
                         .set({
@@ -3291,6 +3379,11 @@ export const editSalesTransaction = async (
                             VATRate: 0,
                             Commission: 0
                         })
+                        .execute();
+                },
+                async (staleRow) => {
+                    await trx.deleteFrom('Tbl_SalesTransDtl')
+                        .where('SalesTransDtlID', '=', staleRow.SalesTransDtlID)
                         .execute();
                 }
             );
@@ -3515,7 +3608,7 @@ export const approvePendingSaleTransaction = async (userWebId: number, pendingSa
                 DateFiled: updatedPendingSale.DateFiled || null,
                 DevCommType: updatedPendingSale.DevCommType,
                 DeveloperID: updatedPendingSale.DeveloperID || null,
-                DivisionID: updatedPendingSale.DivisionID || null,
+                DivisionID: updatedPendingSale.DivisionID ?? null,
                 DownPayment: updatedPendingSale.DownPayment,
                 DPStartSchedule: updatedPendingSale.DPStartSchedule || null,
                 DPTerms: updatedPendingSale.DPTerms,
@@ -3854,7 +3947,7 @@ export const getDivisionSalesTotalsYearlyFn = async (sorts?: DivisionYearlyTotal
             })
         }
         
-        const whereConditions: any[] = []
+        const whereConditions: any[] = [sql`Division <> 'Broker Transaction'`]
         
         if (filters?.startYear !== undefined) {
             whereConditions.push(sql`Year >= ${sql.raw(filters.startYear.toString())}`)

@@ -21,9 +21,56 @@ import { format } from "date-fns";
 import { del } from "k6/http";
 import { Insertable, Selectable, Updateable } from "kysely";
 import { property } from "zod";
+import { hasHandsOffBrokerId, isBrokerTransactionDivision } from "../utils/broker-transaction";
 
 const normalizeDistributionValue = (value?: string | null): string => {
     return value?.trim().toUpperCase() || ''
+}
+
+type CommissionFilterResult = {
+    success: boolean,
+    data: AddPendingSaleDetail[],
+    error?: {
+        code: number,
+        message: string
+    }
+}
+
+const filterCommissionRatesForTransaction = (
+    commissionRates: AddPendingSaleDetail[] | undefined,
+    divisionID: number | null | undefined
+): CommissionFilterResult => {
+    const rates = commissionRates || []
+
+    if(isBrokerTransactionDivision(divisionID)){
+        const brokerRates = rates.filter(hasHandsOffBrokerId)
+
+        if(brokerRates.length !== 1){
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 400,
+                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.'
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: brokerRates
+        }
+    }
+
+    return {
+        success: true,
+        data: rates.filter(rate => !hasHandsOffBrokerId(rate))
+    }
+}
+
+const requiresExplicitDivision = (role?: string | null): boolean => {
+    return ['BRANCH HEAD', 'BRANCH SALES STAFF', 'SALES ADMIN']
+        .includes(normalizeDistributionValue(role))
 }
 
 const getActiveDistributionTemplateService = async (): QueryResult<Selectable<TblDistribution>[]> => {
@@ -190,6 +237,7 @@ type CommissionDetailReadRow = {
     CommissionRate: number | null,
     PositionName: string | null,
     DistributionID?: number | null,
+    DivisionID?: number | null,
 }
 
 const buildBrokerIdMap = async (details: CommissionDetailReadRow[]): Promise<Map<string, number>> => {
@@ -221,15 +269,18 @@ const buildBrokerIdMap = async (details: CommissionDetailReadRow[]): Promise<Map
     return brokerIdMap
 }
 
-const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[]) => {
+const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[], divisionID?: number | null) => {
     const brokerIdMap = await buildBrokerIdMap(details)
 
     return details.map((detail: AgentPendingSalesDetail) => {
         const positionName = detail.PositionName?.trim() || ''
-        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
-        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+        const isBrokerTransactionDetail = isBrokerTransactionDivision(divisionID)
+        const agentId = isBrokerTransactionDetail || detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = isBrokerTransactionDetail
+            ? (detail.AgentID == 0 || !detail.AgentID ? brokerIdMap.get(detail.AgentName?.trim() || '') || null : detail.AgentID)
+            : (!agentId && normalizeDistributionValue(positionName) === 'BROKER'
             ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
-            : null
+            : null)
 
         return {
             ...detail,
@@ -247,10 +298,13 @@ const mapSalesCommissionDetails = async (details: VwSalesTransactions[]) => {
 
     return details.map((detail: VwSalesTransactions) => {
         const positionName = detail.PositionName?.trim() || ''
-        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
-        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+        const isBrokerTransactionDetail = isBrokerTransactionDivision(detail.DivisionID)
+        const agentId = isBrokerTransactionDetail || detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = isBrokerTransactionDetail
+            ? (detail.AgentID == 0 || !detail.AgentID ? brokerIdMap.get(detail.AgentName?.trim() || '') || null : detail.AgentID)
+            : (!agentId && normalizeDistributionValue(positionName) === 'BROKER'
             ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
-            : null
+            : null)
 
         return {
             SalesTranDtlId: detail.SalesTransDtlID,
@@ -823,6 +877,17 @@ export const addPendingSalesService = async (
                 }
             }
         }
+
+        if(isBrokerTransactionDivision(data.divisionID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
+                }
+            }
+        }
         
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
@@ -877,13 +942,24 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(!data.divisionID){
+        if(data.divisionID === undefined && requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Division is required.',
+                    message: 'Division is required for Branch Head and Sales Admin users.',
                     code: 400
+                }
+            }
+        }
+
+        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
                 }
             }
         }
@@ -982,30 +1058,30 @@ export const addPendingSalesService = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
-    // Filter commission rates based on division
-    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : 0
+    const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
 
-
-
-    if (effectiveDivID == 0) {
-        // Broker Transaction: Only keep hands-off broker rates
-        data.commissionRates = (data.commissionRates || []).filter(rate => !!rate.brokerId);
-
-        // Validation: Must have exactly one broker rate
-        if (data.commissionRates.length !== 1) {
-            return {
-                success: false,
-                data: {},
-                error: {
-                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
-                    code: 400
-                }
+    if(!Number.isFinite(effectiveDivID)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Division is required.',
+                code: 400
             }
         }
-    } else {
-        // Standard Transaction: Ignore hands-off broker rates
-        data.commissionRates = (data.commissionRates || []).filter(rate => !rate.brokerId);
     }
+
+    const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+    if(!filteredCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: filteredCommissions.error
+        }
+    }
+
+    data.commissionRates = filteredCommissions.data
 
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
@@ -1038,7 +1114,7 @@ export const addPendingSalesService = async (
     const updatedData = {
         ...data,
         assignedUM: assignedUM || undefined,
-        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
+        divisionID: data.divisionID ?? Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID),
@@ -1195,6 +1271,17 @@ export const addPendingSalesServiceR2 = async (
                 }
             }
         }
+
+        if(isBrokerTransactionDivision(data.divisionID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
+                }
+            }
+        }
         
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
@@ -1247,18 +1334,18 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        if(data.divisionID === undefined){
+        if(data.divisionID === undefined && requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Division is required.',
+                    message: 'Division is required for Branch Head and Sales Admin users.',
                     code: 400
                 }
             }
         }
 
-        if(data.divisionID === 0 && webUserData.data.Role !== 'SALES ADMIN'){
+        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
             return {
                 success: false,
                 data: {},
@@ -1338,29 +1425,30 @@ export const addPendingSalesServiceR2 = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
-    // Filter commission rates based on division
-    const effectiveDivID = data.divisionID === 0 ? 0 : data.divisionID;
+    const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
 
-    console.log("effectiveDivID", effectiveDivID)
-    if (effectiveDivID == 0) {
-        // Broker Transaction: Only keep hands-off broker rates
-        data.commissionRates = (data.commissionRates || []).filter(rate => !!rate.brokerId);
-
-        // Validation: Must have exactly one broker rate
-        if (data.commissionRates.length !== 1) {
-            return {
-                success: false,
-                data: {},
-                error: {
-                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
-                    code: 400
-                }
+    if(!Number.isFinite(effectiveDivID)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Division is required.',
+                code: 400
             }
         }
-    } else {
-        // Standard Transaction: Ignore hands-off broker rates
-        data.commissionRates = (data.commissionRates || []).filter(rate => !rate.brokerId);
     }
+
+    const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+    if(!filteredCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: filteredCommissions.error
+        }
+    }
+
+    data.commissionRates = filteredCommissions.data
 
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
@@ -1393,7 +1481,7 @@ export const addPendingSalesServiceR2 = async (
     const updatedData = {
         ...data,
         assignedUM: assignedUM || undefined,
-        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
+        divisionID: data.divisionID ?? Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID),
@@ -1770,7 +1858,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         )
         resultCopy = { ...result.data, Images: images }
     }
-    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details, result.data.DivisionID)
 
 
     let updatedByName = ''
@@ -2402,10 +2490,6 @@ export const editPendingSaleService = async (
             }
         }
 
-        if(webUserData.data.Role !== 'SALES ADMIN'){
-            
-        }
-
         role = webUserData.data.Role
         webAgentData = webUserData.data
         user.webUserId = webUserData.data.UserWebID
@@ -2466,29 +2550,31 @@ export const editPendingSaleService = async (
         }
     }
 
-    if (data.commissionRates !== undefined) {
-        // Filter commission rates based on division
-        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : (pendingSale.data.DivisionID || 0);
+    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : pendingSale.data.DivisionID
 
-        if (effectiveDivID === 0) {
-            // Broker Transaction: Only keep hands-off broker rates
-            data.commissionRates = data.commissionRates.filter(rate => !!rate.brokerId);
-
-            // Validation: Must have exactly one broker rate
-            if (data.commissionRates.length !== 1) {
-                return {
-                    success: false,
-                    data: {},
-                    error: {
-                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
-                        code: 400
-                    }
-                }
+    if(isBrokerTransactionDivision(effectiveDivID) && role !== 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Only Sales Admin can edit Broker Transactions.',
+                code: 403
             }
-        } else {
-            // Standard Transaction: Ignore hands-off broker rates
-            data.commissionRates = data.commissionRates.filter(rate => !rate.brokerId);
         }
+    }
+
+    if (data.commissionRates !== undefined) {
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
     }
 
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
@@ -2509,7 +2595,7 @@ export const editPendingSaleService = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         images: {
             receipt: receiptMetadata,
             agreement: agreementMetadata
@@ -2689,10 +2775,6 @@ export const editPendingSaleServiceR2 = async (
             }
         }
 
-        if(webUserData.data.Role !== 'SALES ADMIN'){
-            
-        }
-
         role = webUserData.data.Role
         webAgentData = webUserData.data
         user.webUserId = webUserData.data.UserWebID
@@ -2728,29 +2810,31 @@ export const editPendingSaleServiceR2 = async (
         
     }
 
-    if (data.commissionRates !== undefined) {
-        // Filter commission rates based on division
-        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : (pendingSale.data.DivisionID || 0);
+    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : pendingSale.data.DivisionID
 
-        if (effectiveDivID === 0) {
-            // Broker Transaction: Only keep hands-off broker rates
-            data.commissionRates = data.commissionRates.filter(rate => !!rate.brokerId);
-
-            // Validation: Must have exactly one broker rate
-            if (data.commissionRates.length !== 1) {
-                return {
-                    success: false,
-                    data: {},
-                    error: {
-                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
-                        code: 400
-                    }
-                }
+    if(isBrokerTransactionDivision(effectiveDivID) && role !== 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Only Sales Admin can edit Broker Transactions.',
+                code: 403
             }
-        } else {
-            // Standard Transaction: Ignore hands-off broker rates
-            data.commissionRates = data.commissionRates.filter(rate => !rate.brokerId);
         }
+    }
+
+    if (data.commissionRates !== undefined) {
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
     }
 
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
@@ -2771,7 +2855,7 @@ export const editPendingSaleServiceR2 = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         ...(data.commissionRates !== undefined && { commissionRates: validCommissions })
     }
 
@@ -2940,28 +3024,30 @@ export const editPendingSalesDetailsService = async (
     let validCommissions: AddPendingSaleDetail[] | undefined = undefined
 
     if(commissionRates !== undefined){
-        // Filter commission rates based on division
-        const effectiveDivID = pendingSale.data.DivisionID || 0;
+        const effectiveDivID = pendingSale.data.DivisionID
 
-        if (effectiveDivID === 0) {
-            // Broker Transaction: Only keep hands-off broker rates
-            commissionRates = commissionRates.filter(rate => !!rate.brokerId);
-
-            // Validation: Must have exactly one broker rate
-            if (commissionRates.length !== 1) {
-                return {
-                    success: false,
-                    data: {},
-                    error: {
-                        message: 'Broker Transactions must have exactly one hands-off broker commission rate.',
-                        code: 400
-                    }
+        if(isBrokerTransactionDivision(effectiveDivID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can edit Broker Transactions.',
+                    code: 403
                 }
             }
-        } else {
-            // Standard Transaction: Ignore hands-off broker rates
-            commissionRates = commissionRates.filter(rate => !rate.brokerId);
         }
+
+        const filteredCommissions = filterCommissionRatesForTransaction(commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        commissionRates = filteredCommissions.data
 
         const normalizedCommissions = await getValidatedCommissionRates(commissionRates)
 
@@ -3097,6 +3183,21 @@ export const editSalesTranService = async (
         }
     }
 
+    if(data.commissionRates !== undefined){
+        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : sale.DivisionID
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -3113,7 +3214,7 @@ export const editSalesTranService = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         images: {
             receipt: receiptMetadata,
             agreement: agreementMetadata
@@ -3993,7 +4094,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         )
         resultCopy = { ...result.data, Images: images }
     }
-    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details, result.data.DivisionID)
 
     
 

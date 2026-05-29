@@ -339,6 +339,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         reservationDate,
         salesBranchID,
         sectorID,
+        divisionID,
         buyersName,
         address,
         phoneNumber,
@@ -389,6 +390,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         }, 
         {
         reservationDate,
+        divisionID,
         salesBranchID,
         sectorID,
         buyer: {
@@ -451,6 +453,7 @@ export const addPendingSaleControllerR2 = async (req: Request, res: Response) =>
         reservationDate,
         salesBranchID,
         sectorID,
+        divisionID,
         buyersName,
         address,
         phoneNumber,
@@ -501,6 +504,7 @@ export const addPendingSaleControllerR2 = async (req: Request, res: Response) =>
         }, 
         {
         reservationDate,
+        divisionID,
         salesBranchID,
         sectorID,
         buyer: {
