@@ -22,6 +22,7 @@ import { del } from "k6/http";
 import { Insertable, Selectable, Updateable } from "kysely";
 import { property } from "zod";
 import { hasHandsOffBrokerId, isBrokerTransactionDivision } from "../utils/broker-transaction";
+import { effect } from "zod/v3";
 
 const normalizeDistributionValue = (value?: string | null): string => {
     return value?.trim().toUpperCase() || ''
@@ -1060,7 +1061,10 @@ export const addPendingSalesService = async (
 
     const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
 
-    if(!Number.isFinite(effectiveDivID)){
+    console.log("effectiveDivID", effectiveDivID)
+    console.log(data.divisionID)
+
+    if(effectiveDivID < 0){
         return {
             success: false,
             data: {},
@@ -1427,7 +1431,10 @@ export const addPendingSalesServiceR2 = async (
 
     const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
 
-    if(!Number.isFinite(effectiveDivID)){
+    console.log("effectiveDivID", effectiveDivID)
+    console.log(data.divisionID)
+
+    if(effectiveDivID < 0){
         return {
             success: false,
             data: {},
