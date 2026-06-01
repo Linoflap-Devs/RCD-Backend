@@ -1,6 +1,6 @@
 import { endOfDay, format, startOfDay } from "date-fns";
 import { db } from "../db/db"
-import { DB, TblAgentPendingSalesDtl, TblDistribution, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, TblSalesTransDtl, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions } from "../db/db-types"
+import { DB, TblAgentPendingSalesDtl, TblDistribution, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, TblSalesTransDtl, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions, VwHandsOffTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
 import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, FnDivisionSales, FnDivisionSalesYearly, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
@@ -607,6 +607,211 @@ export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwS
         return {
             success: false,
             data: [] as VwSalesTransactions[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const getHandsOffSalesTrans = async (
+    filters?: {
+        salesTranId?: number,
+        salesDtlId?: number,
+        month?: number,
+        year?: number,
+        brokerId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number,
+        search?: string
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: VwHandsOffTransactions[]}> => {
+
+    try {
+        const page = pagination?.page ?? 1;
+        const pageSize = pagination?.pageSize ?? undefined;
+        const offset = pageSize ? (page - 1) * pageSize : 0;
+
+        let result = await db.selectFrom('Vw_HandsOffTransactions')
+            .selectAll()
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        let totalCountResult = await db
+            .selectFrom("Vw_HandsOffTransactions")
+            .select(({ fn }) => [fn.countAll<number>().as("count")])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        // Add totalSales query
+        let totalSalesResult = await db
+            .selectFrom("Vw_HandsOffTransactions")
+            .select(({ fn }) => [
+                fn.sum<number>('NetTotalTCP').as("totalSales")
+            ])
+            .where('SalesStatus', '<>', 'ARCHIVED')
+
+        if(filters && filters.salesTranId){
+            result = result.where('SalesTranID', '=', filters.salesTranId)
+            totalCountResult = totalCountResult.where('SalesTranID', '=', filters.salesTranId)
+            totalSalesResult = totalSalesResult.where('SalesTranID', '=', filters.salesTranId)
+        }
+
+        if(filters && filters.salesDtlId){
+            result = result.where('SalesTransDtlID', '=', filters.salesDtlId)
+            totalCountResult = totalCountResult.where('SalesTransDtlID', '=', filters.salesDtlId)
+            totalSalesResult = totalSalesResult.where('SalesTransDtlID', '=', filters.salesDtlId)
+        }
+
+        if(filters && filters.developerId){
+            result = result.where('DeveloperID', '=', filters.developerId)
+            totalCountResult = totalCountResult.where('DeveloperID', '=', filters.developerId)
+            totalSalesResult = totalSalesResult.where('DeveloperID', '=', filters.developerId)
+        }
+
+        if(filters && filters.brokerId){
+            result = result.where('AgentID', '=', filters.brokerId)
+            totalCountResult = totalCountResult.where('AgentID', '=', filters.brokerId)
+            totalSalesResult = totalSalesResult.where('AgentID', '=', filters.brokerId)
+        }
+
+        if(filters && filters.salesBranch){
+            result = result.where('SalesBranchID', '=', filters.salesBranch)
+            totalCountResult = totalCountResult.where('SalesBranchID', '=', filters.salesBranch)
+            totalSalesResult = totalSalesResult.where('SalesBranchID', '=', filters.salesBranch)
+        }
+
+        if(filters && filters.month){
+            const year = filters.year ? filters.year : new Date().getFullYear();
+            const firstDayManila = new TZDate(year, filters.month - 1, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayOfMonth = new Date(year, filters.month, 0).getDate();
+            const lastDayManila = new TZDate(year, filters.month - 1, lastDayOfMonth, 23, 59, 59, 999, 'Asia/Manila');
+        
+            const monthStart = startOfDay(firstDayManila);
+            const monthEnd = endOfDay(lastDayManila);
+            
+            const firstDay = new Date(monthStart.getTime());
+            const lastDay = new Date(monthEnd.getTime());
+
+            result = result.where('ReservationDateFormatted', '>', firstDay)
+            result = result.where('ReservationDateFormatted', '<', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '>', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '<', lastDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '>', firstDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '<', lastDay)
+        }
+
+        if(filters && filters.year && !filters.month){
+            const firstDayManila = new TZDate(filters.year, 0, 1, 0, 0, 0, 0, 'Asia/Manila');
+            const lastDayManila = new TZDate(filters.year, 11, 31, 23, 59, 59, 999, 'Asia/Manila');
+
+            const yearStart = startOfDay(firstDayManila);
+            const yearEnd = endOfDay(lastDayManila);
+                    
+            const firstDay = new Date(yearStart.getTime());
+            const lastDay = new Date(yearEnd.getTime());
+            
+            result = result.where('ReservationDateFormatted', '>=', firstDay)
+            result = result.where('ReservationDateFormatted', '<=', lastDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '>=', firstDay)
+            totalCountResult = totalCountResult.where('ReservationDateFormatted', '<=', lastDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '>=', firstDay)
+            totalSalesResult = totalSalesResult.where('ReservationDateFormatted', '<=', lastDay)
+        }
+
+        if(filters && filters.search) {
+            const searchTerm = `%${filters.search}%`;
+            const searchAsNumber = Number(filters.search);
+            const isValidNumber = !isNaN(searchAsNumber) && filters.search.trim() !== '';
+            
+            result = result.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+            
+            totalCountResult = totalCountResult.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+
+            totalSalesResult = totalSalesResult.where(({ or, eb }) => 
+                or([
+                    eb('SalesTranCode', 'like', searchTerm),
+                    eb('DeveloperName', 'like', searchTerm),
+                    eb('ProjectName', 'like', searchTerm),
+                    eb('SalesStatus', 'like', searchTerm),
+                    ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
+                ])
+            );
+        }
+
+        result = result.orderBy('ReservationDateFormatted', 'desc')
+        
+        if(pagination && pagination.page && pagination.pageSize){
+            result = result.offset(offset).fetch(pagination.pageSize)
+        }
+        
+        const queryResult = await result.execute();
+        const countResult = await totalCountResult.execute();
+        const salesResult = await totalSalesResult.execute();
+        
+        if(!result){
+            throw new Error('No sales found.')
+        }
+
+        const totalCount = countResult ? Number(countResult[0].count) : 0;
+        const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+        const totalSales = salesResult && salesResult[0]?.totalSales 
+            ? Number(salesResult[0].totalSales) 
+            : 0;
+
+        console.log('totalPages', totalPages)
+        
+        let filteredResult = queryResult
+
+        // Filter to get unique ProjectName records (keeps first occurrence)
+        if(filters && filters.isUnique && filters.isUnique === true){
+            const uniqueProjects = new Map();
+            filteredResult = queryResult.filter(record => {
+                if (!uniqueProjects.has(record.SalesTranCode)) {
+                    uniqueProjects.set(record.SalesTranCode, true);
+                    return true;
+                }
+                return false;
+            })
+        }
+        
+        return {
+            success: true,
+            data: {
+                totalResults: totalCount,
+                totalPages: totalPages,
+                totalSales: totalSales,
+                results: filteredResult
+            }
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwHandsOffTransactions[]},
             error: {
                 code: 500,
                 message: error.message

@@ -1,5 +1,5 @@
-import { TblDistribution, VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { TblDistribution, VwAgents, VwHandsOffTransactions, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
+import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getHandsOffSalesTrans, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
@@ -294,10 +294,10 @@ const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[], d
     })
 }
 
-const mapSalesCommissionDetails = async (details: VwSalesTransactions[]) => {
+const mapSalesCommissionDetails = async (details: (Omit<VwSalesTransactions, 'Division'> & {Division: string | null})[]) => {
     const brokerIdMap = await buildBrokerIdMap(details)
 
-    return details.map((detail: VwSalesTransactions) => {
+    return details.map((detail: Omit<VwSalesTransactions, 'Division'> & {Division: string | null}) => {
         const positionName = detail.PositionName?.trim() || ''
         const isBrokerTransactionDetail = isBrokerTransactionDivision(detail.DivisionID)
         const agentId = isBrokerTransactionDetail || detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
@@ -769,6 +769,210 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         data: sales
     }
 
+}
+
+export const getWebHandsOffTransService = async (
+    userId: number,
+    filters?: {
+        month?: number,
+        year?: number,
+        brokerId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number,
+        search?: string,
+        showSales?: boolean
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]},
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getHandsOffSalesTrans(
+        {
+            ...filters,
+            salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined,
+            search: filters?.search ? filters.search : undefined,
+            isUnique: true
+        },
+        pagination
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+    
+    const obj = result.data.results.map((sale: VwHandsOffTransactions) => {
+        return {
+            SalesTranID: sale.SalesTranID,
+            DeveloperName: sale.DeveloperName?.trim() || '',
+            Division: null,
+            DivisionID: null,
+            ProjectName: sale.ProjectName?.trim() || '',
+            SalesStatus: sale.SalesStatus?.trim() || '',
+            SalesTranCode: sale.SalesTranCode?.trim() || '',
+            ReservationDate: sale.ReservationDate,
+            NetTotalTCP: sale.NetTotalTCP,
+            SellerName: sale.SellerName?.trim() || '',
+        }
+    })
+
+    return {
+        success: true,
+        data: {
+            totalResults: result.data.totalResults,
+            totalPages: result.data.totalPages,
+            totalSales: result.data.totalSales,
+            results: obj
+        }
+    }
+}
+
+export const getWebHandsOffTransDtlService = async (userId: number, salesTranId: number) => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getHandsOffSalesTrans({ salesTranId: salesTranId });
+
+     if(!result.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: result.error?.code || 500,
+                message: 'No sales found.'
+            }
+        }
+     }
+
+    if((userData.data.Role !== 'SALES ADMIN') && (userData.data.BranchID !== result.data.results[0]?.SalesBranchID)){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    console.log('Sales Transaction Detail Result:', result.data.results)
+
+    let images: IImageBase64[] = []
+    if(result.data && result.data.results[0].SalesTransDtlID){
+        const data = await getSaleImagesByTransactionDetail(result.data.results[0].SalesTransDtlID);
+
+        if(data.success){
+            images = data.data
+        }
+    }
+    else {
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    const details = await mapSalesCommissionDetails(result.data.results.map((val: VwHandsOffTransactions) => {
+        return {
+            ...val,
+            ReservationDate: val.ReservationDate ? new Date(val.ReservationDate) : null
+        }
+    }))
+
+    const data = result.data.results[0]
+
+    let updatedByName = ''
+    if(data.LastUpdateby){
+        const response = await findEmployeeUserById(data.LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+    
+
+    const obj = {
+        SalesTransId: data.SalesTranID,
+        SalesTranCode: data.SalesTranCode,
+        DivisionID: data.DivisionID,
+        DateFiled: data.DateFiled,
+        ReservationDate: data.ReservationDate,
+        BuyersName: data.BuyersName,
+        BuyersAddress: data.BuyersAddress,
+        BuyersOccupation: data.BuyersOccupation,
+        BuyersContactNumber: data.BuyersContactNumber,
+        ProjectID: data.ProjectID,
+        ProjectLocationID: data.ProjectLocationID,
+        DeveloperID: data.DeveloperID,
+        FinancingScheme: data.FinancingScheme,
+        Block: data.Block,
+        Lot: data.Lot,
+        Phase: data.Phase,
+        LotArea: data.LotArea,
+        FloorArea: data.FloorArea,
+        NetTotalTCP: data.NetTotalTCP,
+        MiscFee: data.MiscFee,
+        DownPayment: data.DownPayment,
+        MonthlyDP: data.MonthlyDP,
+        DPStartSchedule: data.DPStartSchedule,
+        DPTerms: data.DPTerms,
+        SalesStatus: data.SalesStatus,
+        LastUpdateby: updatedByName,
+        LastUpdate: data.LastUpdate,
+        SalesBranchID: data.SalesBranchID,
+        DevCommType: data.DevCommType,
+        ProjectName: data.ProjectName,
+        DeveloperName: data.DeveloperName,
+        Division: null,
+        SalesSectorID: data.SalesSectorID,
+        SectorName: data.SectorName,
+        ProjectTypeName: data.ProjectTypeName,
+        SellerName: data.SellerName?.trim() || '',
+    }
+
+    return {
+        success: true,
+        data: {
+            ...obj,
+            Details: details,
+            Images: images
+        }
+    }
 }
 
 export const addPendingSalesService = async (

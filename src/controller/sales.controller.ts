@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebHandsOffTransDtlService, getWebHandsOffTransService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -160,6 +160,65 @@ export const getWebSalesTransDtlController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const getWebHandsOffTransController = async ( req: Request, res: Response ) => {
+    const session = req.session
+
+    
+    const { page, pageSize, month, year, developerId, search } = req.query
+
+    if(!session){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    const result = await getWebHandsOffTransService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined,
+        search: search ? search.toString() : undefined,
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({ success: false, message: result.error?.message || 'Failed to get sales transactions', data: {} })
+        return
+    }
+
+    return res.status(200).json({ success: true, message: 'List of hands-off sales transactions.', data: result.data })
+}
+
+export const getWebHandsOffTransDtlController = async ( req: Request, res: Response ) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    const { salesTransactionId } = req.params 
+
+    const result = await getWebHandsOffTransDtlService(session.userID, Number(salesTransactionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({ success: false, message: result.error?.message || 'Failed to get sales transaction details', data: {} })
+        return
+    }
+
+    return res.status(200).json({ success: true, message: 'Hands-off Sales transaction details', data: result.data })
 }
 
 export const getPendingSalesController = async (req: Request, res: Response) => {
