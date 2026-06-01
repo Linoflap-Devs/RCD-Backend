@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebHandsOffTransDtlService, getWebHandsOffTransService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editHandsOffTranService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebHandsOffTransDtlService, getWebHandsOffTransService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
 
@@ -1085,6 +1085,119 @@ export const editSalesTransactionController = async (req: Request, res: Response
 
     return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
 }
+
+export const editHandsOffSalesTransactionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    const {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        buyersName,
+        address,
+        phoneNumber,
+        occupation,
+        projectID,
+        blkFlr,
+        lotUnit,
+        phase,
+        lotArea,
+        flrArea,
+        developerID,
+        developerCommission,
+        netTCP,
+        miscFee,
+        financingScheme,
+        downpayment,
+        dpTerms,
+        monthlyPayment,
+        dpStartDate,
+        sellerName,
+        commissionRates
+    } = req.body
+
+    const { 
+        salesTransactionId
+    } = req.params
+
+    let parsedCommissionRates = [];
+    if (commissionRates) {
+        try {
+            console.log('commissionRates', commissionRates);
+            parsedCommissionRates = JSON.parse(commissionRates);
+            console.log('parsedCommissionRates', parsedCommissionRates);
+        } catch (error) {
+            // Try parsing double-escaped JSON
+            try {
+                const unescaped = commissionRates.replace(/\\\"/g, '"');
+                console.log('unescaped', unescaped);
+                parsedCommissionRates = JSON.parse(unescaped);
+                console.log('parsedCommissionRates after unescape', parsedCommissionRates);
+            } catch (innerError) {
+                res.status(400).json({
+                    success: false, 
+                    message: 'Invalid commissionRates format', 
+                    data: {}
+                });
+                return;
+            }
+        }
+    }
+
+    const result = await editHandsOffTranService(
+        session.userID, 
+        {
+            salesTranId: Number(salesTransactionId),
+            reservationDate,
+            salesBranchID,
+            sectorID,
+            buyersName,
+            address,
+            phoneNumber,
+            occupation,
+            projectID,
+            blkFlr,
+            lotUnit,
+            phase,
+            lotArea,
+            flrArea,
+            developerCommission,
+            netTCP,
+            miscFee,
+            financingScheme,
+            downpayment,
+            dpTerms,
+            monthlyPayment,
+            dpStartDate,
+            sellerName,
+            images: {
+                receipt: images?.receipt ? images.receipt[0] : undefined,
+                agreement: images?.agreement ? images.agreement[0] : undefined
+            },
+            commissionRates: parsedCommissionRates.length > 0 ? parsedCommissionRates : undefined,
+        }
+)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
+}
+
 
 export const editPendingSalesController = async (req: Request, res: Response) => {
     const session = req.session

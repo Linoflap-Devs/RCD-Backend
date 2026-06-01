@@ -65,7 +65,8 @@ export const editImage = async (imageId: number, imageData: IImage): QueryResult
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
-            ImageID: result.ImageID
+            ImageID: result.ImageID, 
+            ImageType: result.Filename.includes('receipt') ? 'receipt' : result.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {

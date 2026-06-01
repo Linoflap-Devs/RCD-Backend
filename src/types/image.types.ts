@@ -17,11 +17,14 @@ export interface IImageR2 {
 }
 
 export interface IImageBase64 {
+    ImageID: number,
     FileName: string,
     ContentType: string,
     FileExt: string,
     FileSize: number,
-    FileContent: string
+    FileContent: string,
+    ImageType: string,
+    StorageKey?: string,
 }
 
 export interface ITypedImageBase64 {
