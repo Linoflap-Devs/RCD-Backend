@@ -2470,6 +2470,8 @@ export const editPendingSaleServiceR2 = async (
 
     // validations
 
+    console.log(data.commissionRates)
+
     const pendingSale = await getPendingSaleById(data.pendingSalesId)
 
     if(!pendingSale.success && !pendingSale.data){

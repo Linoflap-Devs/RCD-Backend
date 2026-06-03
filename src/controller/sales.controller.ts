@@ -785,7 +785,7 @@ export const editPendingSalesControllerV2 = async (req: Request, res: Response) 
                 receipt: images?.receipt ? images.receipt[0] : undefined,
                 agreement: images?.agreement ? images.agreement[0] : undefined
             },
-            commissionRates: parsedCommissionRates ? parsedCommissionRates : [],
+            commissionRates: parsedCommissionRates && commissionRates ? parsedCommissionRates : undefined,
         }
     )
 
