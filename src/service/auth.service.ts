@@ -23,6 +23,7 @@ import { send } from "process";
 import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
 import { r2UploadAgentAvatar, r2UploadBrokerAvatar, r2UploadBrokerGovId, r2UploadBrokerGovSelfie, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
 import { editImage } from "../repository/images.repository";
+import { getDivisions } from "../repository/division.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -489,7 +490,7 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, hasUMDivision?: boolean}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, divDirectorId?: number | null, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
@@ -561,7 +562,19 @@ export const loginAgentService = async (email: string, password: string): QueryR
         }
     }
 
+    let divisionDirectorId = null
+
     const isSalesPerson = agentDetails.data.Position == 'SALES PERSON' ? true : false
+
+    if(agentDetails.data.DivisionID){
+        const divisionDetails = await getDivisions({ divisionIds: [Number(agentDetails.data.DivisionID)]})
+
+        if(!divisionDetails.success || divisionDetails.data.length == 0){
+            logger(( divisionDetails.error?.message || 'Failed to find division details.'), {email: email, divisionId: agentDetails.data.DivisionID})
+        }
+
+        divisionDirectorId = divisionDetails.data[0].DirectorID
+    }
 
     return {
         success: true,
@@ -572,6 +585,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
             unitManagerId: agentDetails.data.ReferredByID || undefined,
+            divDirectorId: divisionDirectorId,
             ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
