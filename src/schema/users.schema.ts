@@ -47,6 +47,7 @@ export const registerInviteSchema = z.object({
     firstName: z.string().max(150),
     middleName: z.string().max(50).optional(),
     lastName: z.string().max(50),
+    contactNumber: z.coerce.string().max(20).optional(), 
     gender: z.enum(['Male', 'Female']),  
     birthdate: z.coerce.date(),
     address: z.string().max(255),

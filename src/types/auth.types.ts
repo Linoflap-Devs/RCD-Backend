@@ -171,6 +171,7 @@ export interface IAgentInvite {
     address: string,
     email: string,
     password: string,
+    contactNumber?: string | null,
     referredCode?: string | null,
     referredById?: number | null,
     divisionId?: number | null,
