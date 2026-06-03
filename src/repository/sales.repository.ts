@@ -2219,7 +2219,7 @@ export const addPendingSale = async (
         const pendingSaleDetailRows = await buildPendingSaleDetailRows(
             trx,
             result.PendingSalesTranCode,
-            userRole !== 'SALES PERSON' ? data.commissionRates : undefined
+            data.commissionRates || [],
         );
 
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')
@@ -2405,7 +2405,7 @@ export const addPendingSaleR2 = async (
         const pendingSaleDetailRows = await buildPendingSaleDetailRows(
             trx,
             result.PendingSalesTranCode,
-            userRole !== 'SALES PERSON' ? data.commissionRates : undefined
+            data.commissionRates || [],
         );
 
         const salesDetails = await trx.insertInto('Tbl_AgentPendingSalesDtl')

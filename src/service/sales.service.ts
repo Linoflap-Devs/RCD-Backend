@@ -988,7 +988,9 @@ export const addPendingSalesService = async (
         }
     }
 
-    
+    console.log("from data", data.commissionRates)
+    console.log("from normalized", normalizedCommissions)
+    console.log('from valid', validCommissions)
 
     const updatedData = {
         ...data,
