@@ -15,7 +15,7 @@ import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
 import { getBrokers } from "../repository/brokers.repository";
-import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
+import { getPresignedUrl, getPresignedUrls, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
 import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "../repository/images.repository";
 import { format } from "date-fns";
 import { del } from "k6/http";
@@ -893,10 +893,20 @@ export const getWebHandsOffTransDtlService = async (userId: number, salesTranId:
 
     let images: IImageBase64[] = []
     if(result.data && result.data.results[0].SalesTransDtlID){
-        const data = await getSaleImagesByTransactionDetail(result.data.results[0].SalesTransDtlID);
+        const data = await getSaleImagesBySalesTransId(result.data.results[0].SalesTranID);
 
         if(data.success){
-            images = data.data
+            const filter = data.data.map(image => ({ ...image, StorageKey: image.StorageKey ? image.StorageKey : null}))
+
+            const urls = await getPresignedUrls(filter.map(image => image.StorageKey))
+
+            const imageMap = data.data.map((c) => ({
+                ...c,
+                FileContent: '',
+                URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
+            }))
+
+            images = imageMap
         }
     }
     else {

@@ -13,7 +13,8 @@ export interface IImageR2 {
     FileExt: string,
     FileSize: number,
     FileContent: Buffer | null,
-    StorageKey: string | null
+    StorageKey: string | null,
+    URL?: string | null
 }
 
 export interface IImageBase64 {
