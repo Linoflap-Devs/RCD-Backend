@@ -993,7 +993,7 @@ export const addPendingSalesService = async (
     data: {
         reservationDate: Date,
         salesBranchID: number,
-        sectorID: number, 
+        sectorID: number,
         divisionID?: number,
         buyer: {
             buyersName: string,
@@ -1059,7 +1059,7 @@ export const addPendingSalesService = async (
     let assignedUM = undefined
 
     if(user.agentUserId){
-        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+        const agentData = await findAgentBasicDetailsByUserId(user.agentUserId)
         if(!agentData.success){
             return {
                 success: false,
@@ -1217,8 +1217,10 @@ export const addPendingSalesService = async (
         }
     }
     
-
-    const project = await getProjectById(data.property.projectID)
+    const [project, normalizedCommissions] = await Promise.all([
+        getProjectById(data.property.projectID),
+        getValidatedCommissionRates(data.commissionRates)
+    ])
 
     if(!project.success){
         console.log(project)
@@ -1369,14 +1371,12 @@ export const addPendingSalesService = async (
     }
 
     console.log(result.success, webAgentData.Role)
-
     if(webAgentData && webAgentData.Role === 'SALES ADMIN' && result.success){
         console.log('starting approval')
         const approval = await approvePendingSaleTransaction(webAgentData.UserWebID, result.data.AgentPendingSalesID)
 
         console.log(approval)
     }
-
     return {
         success: true,
         data: result.data
@@ -1456,7 +1456,7 @@ export const addPendingSalesServiceR2 = async (
     let assignedUM = undefined
 
     if(user.agentUserId){
-        const agentData = await findAgentDetailsByUserId(user.agentUserId)
+        const agentData = await findAgentBasicDetailsByUserId(user.agentUserId)
         if(!agentData.success){
             return {
                 success: false,
@@ -1611,9 +1611,11 @@ export const addPendingSalesServiceR2 = async (
             }
         }
     }
-    
 
-    const project = await getProjectById(data.property.projectID)
+    const [project, normalizedCommissions] = await Promise.all([
+        getProjectById(data.property.projectID),
+        getValidatedCommissionRates(data.commissionRates)
+    ])
 
     if(!project.success){
         return {
@@ -1736,55 +1738,46 @@ export const addPendingSalesServiceR2 = async (
     console.log(result.success, webAgentData.Role)
 
     // upload images
+    const imageUploadPromises: Promise<{ id: number; type: string } | null>[] = []
 
-    
-    const imageIds: {id: number, type: string}[] = []
-
-    if( data.images && data.images.receipt){
-        console.log('receipt')
+    if(data.images && data.images.receipt){
         const receipt = data.images.receipt;
-        const receiptMetadata: IImageR2 = {
-            FileName: `${result.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
-            ContentType: receipt.mimetype,
-            FileExt: path.extname(receipt.originalname),
-            FileSize: receipt.size,
-            FileContent: null,
-            StorageKey: null
-        }
-        const addDBImage = await addImage(receiptMetadata)
-
-        console.log(addDBImage)
-        
-        const r2Upload = await r2UploadReceipt(result.data.PendingSalesTranCode, data.images.receipt)
-
-        console.log(r2Upload)
-
-        const updateStorageKey = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
-
-        imageIds.push({id: addDBImage.data.ImageID, type: 'receipt'})
-
+        imageUploadPromises.push((async () => {
+            const receiptMetadata: IImageR2 = {
+                FileName: `${result.data.PendingSalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+                ContentType: receipt.mimetype,
+                FileExt: path.extname(receipt.originalname),
+                FileSize: receipt.size,
+                FileContent: null,
+                StorageKey: null
+            }
+            const addDBImage = await addImage(receiptMetadata)
+            const r2Upload = await r2UploadReceipt(result.data.PendingSalesTranCode, receipt)
+            await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+            return { id: addDBImage.data.ImageID, type: 'receipt' }
+        })());
     }
 
-    if( data.images && data.images.agreement){
-
+    if(data.images && data.images.agreement){
         const agreement = data.images.agreement
-        let agreementMetadata: IImageR2 = {
-            FileName: `${result.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
-            ContentType: agreement.mimetype,
-            FileExt: path.extname(agreement.originalname),
-            FileSize: agreement.size,
-            FileContent: null,
-            StorageKey: null
-        }
-
-        const addDBImage = await addImage(agreementMetadata)
-
-        const r2Upload = await r2UploadAgreement(result.data.PendingSalesTranCode, data.images.agreement)
-
-        const updateStorageKey = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
-
-        imageIds.push({id: addDBImage.data.ImageID, type: 'agreement'})
+        imageUploadPromises.push((async () => {
+            const agreementMetadata: IImageR2 = {
+                FileName: `${result.data.PendingSalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+                ContentType: agreement.mimetype,
+                FileExt: path.extname(agreement.originalname),
+                FileSize: agreement.size,
+                FileContent: null,
+                StorageKey: null
+            }
+            const addDBImage = await addImage(agreementMetadata)
+            const r2Upload = await r2UploadAgreement(result.data.PendingSalesTranCode, agreement)
+            await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey } as IImage)
+            return { id: addDBImage.data.ImageID, type: 'agreement' }
+        })());
     }
+
+    const uploadedImages = await Promise.all(imageUploadPromises)
+    const imageIds = uploadedImages.filter((img): img is { id: number; type: string } => img !== null)
 
     // bind images to sales
     if(imageIds.length > 0){
@@ -1797,7 +1790,6 @@ export const addPendingSalesServiceR2 = async (
 
         console.log(approval)
     }
-
     return {
         success: true,
         data: result.data
@@ -2891,6 +2883,8 @@ export const editPendingSaleServiceR2 = async (
 ) => {
 
     // validations
+
+    console.log(data.commissionRates)
 
     const pendingSale = await getPendingSaleById(data.pendingSalesId)
 

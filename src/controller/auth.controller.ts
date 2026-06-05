@@ -177,6 +177,7 @@ export const registerInviteController = async (req: Request, res: Response) => {
         birthdate,
         address,
         email,  
+        contactNumber,
         password,
         inviteToken
     } = req.body
@@ -187,6 +188,7 @@ export const registerInviteController = async (req: Request, res: Response) => {
         firstName,
         middleName,
         lastName,
+        contactNumber,
         gender,
         birthdate,
         address,
