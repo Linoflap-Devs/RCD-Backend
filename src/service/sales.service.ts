@@ -1,6 +1,6 @@
-import { TblDistribution, VwAgents, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
-import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentBasicDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { TblDistribution, VwAgents, VwHandsOffTransactions, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
+import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getHandsOffSalesTrans, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesBySalesTransId, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -15,15 +15,63 @@ import { getDevelopers } from "../repository/developers.repository";
 import { getAgent, getAgents } from "../repository/agents.repository";
 import { getDivisions } from "../repository/division.repository";
 import { getBrokers } from "../repository/brokers.repository";
-import { getPresignedUrl, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
+import { getPresignedUrl, getPresignedUrls, r2UploadAgreement, r2UploadReceipt } from "../utils/r2";
 import { addImage, deleteSaleTranImages, editImage, getSaleTranImages } from "../repository/images.repository";
 import { format } from "date-fns";
 import { del } from "k6/http";
 import { Insertable, Selectable, Updateable } from "kysely";
 import { property } from "zod";
+import { hasHandsOffBrokerId, isBrokerTransactionDivision } from "../utils/broker-transaction";
+import { effect } from "zod/v3";
 
 const normalizeDistributionValue = (value?: string | null): string => {
     return value?.trim().toUpperCase() || ''
+}
+
+type CommissionFilterResult = {
+    success: boolean,
+    data: AddPendingSaleDetail[],
+    error?: {
+        code: number,
+        message: string
+    }
+}
+
+const filterCommissionRatesForTransaction = (
+    commissionRates: AddPendingSaleDetail[] | undefined,
+    divisionID: number | null | undefined
+): CommissionFilterResult => {
+    const rates = commissionRates || []
+
+    if(isBrokerTransactionDivision(divisionID)){
+        const brokerRates = rates.filter(hasHandsOffBrokerId)
+
+        if(brokerRates.length !== 1){
+            return {
+                success: false,
+                data: [],
+                error: {
+                    code: 400,
+                    message: 'Broker Transactions must have exactly one hands-off broker commission rate.'
+                }
+            }
+        }
+
+        return {
+            success: true,
+            data: brokerRates
+        }
+    }
+
+    return {
+        success: true,
+        data: rates.filter(rate => !hasHandsOffBrokerId(rate))
+    }
+}
+
+const requiresExplicitDivision = (role?: string | null): boolean => {
+    return ['BRANCH HEAD', 'BRANCH SALES STAFF', 'SALES ADMIN']
+        .includes(normalizeDistributionValue(role))
 }
 
 const getActiveDistributionTemplateService = async (): QueryResult<Selectable<TblDistribution>[]> => {
@@ -99,6 +147,7 @@ const normalizeCommissionRatesAgainstTemplate = async (
             distributionCode: templateRow.DistributionCode || undefined,
             agentName: commission.agentName || undefined,
             agentId: Number(commission.agentId) || undefined,
+            brokerId: Number(commission.brokerId) || undefined,
             commissionRate: Number(commission.commissionRate) || 0
         })
     }
@@ -116,7 +165,7 @@ const normalizeCommissionRatesAgainstTemplate = async (
 
     for(const commission of modifiedCommissionRates){
         if(commission.agentId || commission.agentName){
-            if(normalizeDistributionValue(commission.distributionCode) === 'BROKER') {
+            if(normalizeDistributionValue(commission.distributionCode) === 'BR') {
                 if(commission.agentName){
                     const findAgent = await getAgents({ name: commission.agentName })
 
@@ -133,6 +182,25 @@ const normalizeCommissionRatesAgainstTemplate = async (
                     }
                 }
             }
+        }
+        if(commission.brokerId){
+            const code = templateIdMap.get(Number(commission.distributionId))
+            
+            if(normalizeDistributionValue(commission.distributionCode) === code?.DistributionCode) {
+                const findBroker = await getBrokers({ brokerId: commission.brokerId })
+
+                if(!findBroker.success){
+                    console.error(`Failed to find broker with ID ${commission.brokerId}:`, findBroker.error)
+                }
+
+                console.log('Broker lookup result for ID', commission.brokerId, findBroker)
+
+                if(findBroker.success && findBroker.data[0]){
+                    commission.agentName = findBroker.data[0].RepresentativeName ? findBroker.data[0].RepresentativeName.trim() : undefined
+                }
+
+                commission.agentId = findBroker.data[0] ? Number(findBroker.data[0].BrokerID) : undefined
+             }
         }
     }
 
@@ -170,6 +238,7 @@ type CommissionDetailReadRow = {
     CommissionRate: number | null,
     PositionName: string | null,
     DistributionID?: number | null,
+    DivisionID?: number | null,
 }
 
 const buildBrokerIdMap = async (details: CommissionDetailReadRow[]): Promise<Map<string, number>> => {
@@ -201,15 +270,18 @@ const buildBrokerIdMap = async (details: CommissionDetailReadRow[]): Promise<Map
     return brokerIdMap
 }
 
-const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[]) => {
+const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[], divisionID?: number | null) => {
     const brokerIdMap = await buildBrokerIdMap(details)
 
     return details.map((detail: AgentPendingSalesDetail) => {
         const positionName = detail.PositionName?.trim() || ''
-        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
-        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+        const isBrokerTransactionDetail = isBrokerTransactionDivision(divisionID)
+        const agentId = isBrokerTransactionDetail || detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = isBrokerTransactionDetail
+            ? (detail.AgentID == 0 || !detail.AgentID ? brokerIdMap.get(detail.AgentName?.trim() || '') || null : detail.AgentID)
+            : (!agentId && normalizeDistributionValue(positionName) === 'BROKER'
             ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
-            : null
+            : null)
 
         return {
             ...detail,
@@ -222,15 +294,18 @@ const mapPendingCommissionDetails = async (details: AgentPendingSalesDetail[]) =
     })
 }
 
-const mapSalesCommissionDetails = async (details: VwSalesTransactions[]) => {
+const mapSalesCommissionDetails = async (details: (Omit<VwSalesTransactions, 'Division'> & {Division: string | null})[]) => {
     const brokerIdMap = await buildBrokerIdMap(details)
 
-    return details.map((detail: VwSalesTransactions) => {
+    return details.map((detail: Omit<VwSalesTransactions, 'Division'> & {Division: string | null}) => {
         const positionName = detail.PositionName?.trim() || ''
-        const agentId = detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
-        const brokerId = !agentId && normalizeDistributionValue(positionName) === 'BROKER'
+        const isBrokerTransactionDetail = isBrokerTransactionDivision(detail.DivisionID)
+        const agentId = isBrokerTransactionDetail || detail.AgentID == 0 || !detail.AgentID ? null : detail.AgentID
+        const brokerId = isBrokerTransactionDetail
+            ? (detail.AgentID == 0 || !detail.AgentID ? brokerIdMap.get(detail.AgentName?.trim() || '') || null : detail.AgentID)
+            : (!agentId && normalizeDistributionValue(positionName) === 'BROKER'
             ? brokerIdMap.get(detail.AgentName?.trim() || '') || null
-            : null
+            : null)
 
         return {
             SalesTranDtlId: detail.SalesTransDtlID,
@@ -696,6 +771,220 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
 
 }
 
+export const getWebHandsOffTransService = async (
+    userId: number,
+    filters?: {
+        month?: number,
+        year?: number,
+        brokerId?: number,
+        createdBy?: number,
+        developerId?: number,
+        isUnique?: boolean,
+        salesBranch?: number,
+        search?: string,
+        showSales?: boolean
+    },
+    pagination?: {
+        page?: number, 
+        pageSize?: number
+    }
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]},
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getHandsOffSalesTrans(
+        {
+            ...filters,
+            salesBranch: userData.data.Role != 'SALES ADMIN' ? userData.data.BranchID : undefined,
+            search: filters?.search ? filters.search : undefined,
+            isUnique: true
+        },
+        pagination
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
+            error: {
+                code: 500,
+                message: 'No sales found.'
+            }
+        }
+    }
+    
+    const obj = result.data.results.map((sale: VwHandsOffTransactions) => {
+        return {
+            SalesTranID: sale.SalesTranID,
+            DeveloperName: sale.DeveloperName?.trim() || '',
+            Division: null,
+            DivisionID: null,
+            ProjectName: sale.ProjectName?.trim() || '',
+            SalesStatus: sale.SalesStatus?.trim() || '',
+            SalesTranCode: sale.SalesTranCode?.trim() || '',
+            ReservationDate: sale.ReservationDate,
+            NetTotalTCP: sale.NetTotalTCP,
+            SellerName: sale.SellerName?.trim() || '',
+        }
+    })
+
+    return {
+        success: true,
+        data: {
+            totalResults: result.data.totalResults,
+            totalPages: result.data.totalPages,
+            totalSales: result.data.totalSales,
+            results: obj
+        }
+    }
+}
+
+export const getWebHandsOffTransDtlService = async (userId: number, salesTranId: number) => {
+
+    const userData = await findEmployeeUserById(userId);
+
+    if(!userData.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 500,
+                message: 'No user found.'
+            }
+        }
+    }
+
+    const result = await getHandsOffSalesTrans({ salesTranId: salesTranId });
+
+     if(!result.success){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: result.error?.code || 500,
+                message: 'No sales found.'
+            }
+        }
+     }
+
+    if((userData.data.Role !== 'SALES ADMIN') && (userData.data.BranchID !== result.data.results[0]?.SalesBranchID)){
+        return {
+            success: false,
+            data: {} as VwSalesTrans,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    console.log('Sales Transaction Detail Result:', result.data.results)
+
+    let images: IImageBase64[] = []
+    if(result.data && result.data.results[0].SalesTransDtlID){
+        const data = await getSaleImagesBySalesTransId(result.data.results[0].SalesTranID);
+
+        if(data.success){
+            const filter = data.data.map(image => ({ ...image, StorageKey: image.StorageKey ? image.StorageKey : null}))
+
+            const urls = await getPresignedUrls(filter.map(image => image.StorageKey))
+
+            const imageMap = data.data.map((c) => ({
+                ...c,
+                FileContent: '',
+                URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
+            }))
+
+            images = imageMap
+        }
+    }
+    else {
+        return {
+            success: false,
+            data: {} as VwSalesTransactions,
+            error: {
+                code: 404,
+                message: 'No sales found.'
+            }
+        }
+    }
+
+    const details = await mapSalesCommissionDetails(result.data.results.map((val: VwHandsOffTransactions) => {
+        return {
+            ...val,
+            ReservationDate: val.ReservationDate ? new Date(val.ReservationDate) : null
+        }
+    }))
+
+    const data = result.data.results[0]
+
+    let updatedByName = ''
+    if(data.LastUpdateby){
+        const response = await findEmployeeUserById(data.LastUpdateby)
+        updatedByName = response.success ? response.data.EmpName : ''
+    }
+    
+
+    const obj = {
+        SalesTransId: data.SalesTranID,
+        SalesTranCode: data.SalesTranCode,
+        DivisionID: data.DivisionID,
+        DateFiled: data.DateFiled,
+        ReservationDate: data.ReservationDate,
+        BuyersName: data.BuyersName,
+        BuyersAddress: data.BuyersAddress,
+        BuyersOccupation: data.BuyersOccupation,
+        BuyersContactNumber: data.BuyersContactNumber,
+        ProjectID: data.ProjectID,
+        ProjectLocationID: data.ProjectLocationID,
+        DeveloperID: data.DeveloperID,
+        FinancingScheme: data.FinancingScheme,
+        Block: data.Block,
+        Lot: data.Lot,
+        Phase: data.Phase,
+        LotArea: data.LotArea,
+        FloorArea: data.FloorArea,
+        NetTotalTCP: data.NetTotalTCP,
+        MiscFee: data.MiscFee,
+        DownPayment: data.DownPayment,
+        MonthlyDP: data.MonthlyDP,
+        DPStartSchedule: data.DPStartSchedule,
+        DPTerms: data.DPTerms,
+        SalesStatus: data.SalesStatus,
+        LastUpdateby: updatedByName,
+        LastUpdate: data.LastUpdate,
+        SalesBranchID: data.SalesBranchID,
+        DevCommType: data.DevCommType,
+        ProjectName: data.ProjectName,
+        DeveloperName: data.DeveloperName,
+        Division: null,
+        SalesSectorID: data.SalesSectorID,
+        SectorName: data.SectorName,
+        ProjectTypeName: data.ProjectTypeName,
+        SellerName: data.SellerName?.trim() || '',
+    }
+
+    return {
+        success: true,
+        data: {
+            ...obj,
+            Details: details,
+            Images: images
+        }
+    }
+}
+
 export const addPendingSalesService = async (
     user: {
         agentUserId?: number,
@@ -803,6 +1092,17 @@ export const addPendingSalesService = async (
                 }
             }
         }
+
+        if(isBrokerTransactionDivision(data.divisionID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
+                }
+            }
+        }
         
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
@@ -857,13 +1157,24 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(!data.divisionID){
+        if(data.divisionID === undefined && requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Division is required.',
+                    message: 'Division is required for Branch Head and Sales Admin users.',
                     code: 400
+                }
+            }
+        }
+
+        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
                 }
             }
         }
@@ -964,6 +1275,36 @@ export const addPendingSalesService = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
+    const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
+
+    console.log("effectiveDivID", effectiveDivID)
+    console.log(data.divisionID)
+
+    if(effectiveDivID < 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Division is required.',
+                code: 400
+            }
+        }
+    }
+
+    const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+    if(!filteredCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: filteredCommissions.error
+        }
+    }
+
+    data.commissionRates = filteredCommissions.data
+
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+
     if(!normalizedCommissions.success){
         return {
             success: false,
@@ -988,14 +1329,12 @@ export const addPendingSalesService = async (
         }
     }
 
-    console.log("from data", data.commissionRates)
-    console.log("from normalized", normalizedCommissions)
-    console.log('from valid', validCommissions)
+    
 
     const updatedData = {
         ...data,
         assignedUM: assignedUM || undefined,
-        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
+        divisionID: data.divisionID ?? Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID),
@@ -1150,6 +1489,17 @@ export const addPendingSalesServiceR2 = async (
                 }
             }
         }
+
+        if(isBrokerTransactionDivision(data.divisionID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
+                }
+            }
+        }
         
         role = agentData.data.Position || ''
         mobileAgentData = agentData.data
@@ -1202,13 +1552,24 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        if(!data.divisionID){
+        if(data.divisionID === undefined && requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Division is required.',
+                    message: 'Division is required for Branch Head and Sales Admin users.',
                     code: 400
+                }
+            }
+        }
+
+        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can add Broker Transactions.',
+                    code: 403
                 }
             }
         }
@@ -1284,6 +1645,36 @@ export const addPendingSalesServiceR2 = async (
         data.property.developerCommission = developer.data.data[0].CommRate
     }
 
+    const effectiveDivID = data.divisionID ?? Number(mobileAgentData.DivisionID)
+
+    console.log("effectiveDivID", effectiveDivID)
+    console.log(data.divisionID)
+
+    if(effectiveDivID < 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Division is required.',
+                code: 400
+            }
+        }
+    }
+
+    const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+    if(!filteredCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: filteredCommissions.error
+        }
+    }
+
+    data.commissionRates = filteredCommissions.data
+
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+
     if(!normalizedCommissions.success){
         return {
             success: false,
@@ -1313,7 +1704,7 @@ export const addPendingSalesServiceR2 = async (
     const updatedData = {
         ...data,
         assignedUM: assignedUM || undefined,
-        divisionID: data.divisionID || Number(mobileAgentData.DivisionID),
+        divisionID: data.divisionID ?? Number(mobileAgentData.DivisionID),
         property: {
             ...data.property,
             developerID: Number(project.data.DeveloperID),
@@ -1680,7 +2071,7 @@ export const getPendingSalesDetailService = async (pendingSalesId: number): Quer
         )
         resultCopy = { ...result.data, Images: images }
     }
-    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details, result.data.DivisionID)
 
 
     let updatedByName = ''
@@ -2312,10 +2703,6 @@ export const editPendingSaleService = async (
             }
         }
 
-        if(webUserData.data.Role !== 'SALES ADMIN'){
-            
-        }
-
         role = webUserData.data.Role
         webAgentData = webUserData.data
         user.webUserId = webUserData.data.UserWebID
@@ -2376,6 +2763,33 @@ export const editPendingSaleService = async (
         }
     }
 
+    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : pendingSale.data.DivisionID
+
+    if(isBrokerTransactionDivision(effectiveDivID) && role !== 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Only Sales Admin can edit Broker Transactions.',
+                code: 403
+            }
+        }
+    }
+
+    if (data.commissionRates !== undefined) {
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -2394,7 +2808,7 @@ export const editPendingSaleService = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         images: {
             receipt: receiptMetadata,
             agreement: agreementMetadata
@@ -2576,10 +2990,6 @@ export const editPendingSaleServiceR2 = async (
             }
         }
 
-        if(webUserData.data.Role !== 'SALES ADMIN'){
-            
-        }
-
         role = webUserData.data.Role
         webAgentData = webUserData.data
         user.webUserId = webUserData.data.UserWebID
@@ -2615,6 +3025,33 @@ export const editPendingSaleServiceR2 = async (
         
     }
 
+    const effectiveDivID = data.divisionID !== undefined ? data.divisionID : pendingSale.data.DivisionID
+
+    if(isBrokerTransactionDivision(effectiveDivID) && role !== 'SALES ADMIN'){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'Only Sales Admin can edit Broker Transactions.',
+                code: 403
+            }
+        }
+    }
+
+    if (data.commissionRates !== undefined) {
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -2633,7 +3070,7 @@ export const editPendingSaleServiceR2 = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         ...(data.commissionRates !== undefined && { commissionRates: validCommissions })
     }
 
@@ -2802,6 +3239,31 @@ export const editPendingSalesDetailsService = async (
     let validCommissions: AddPendingSaleDetail[] | undefined = undefined
 
     if(commissionRates !== undefined){
+        const effectiveDivID = pendingSale.data.DivisionID
+
+        if(isBrokerTransactionDivision(effectiveDivID)){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Only Sales Admin can edit Broker Transactions.',
+                    code: 403
+                }
+            }
+        }
+
+        const filteredCommissions = filterCommissionRatesForTransaction(commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        commissionRates = filteredCommissions.data
+
         const normalizedCommissions = await getValidatedCommissionRates(commissionRates)
 
         if(!normalizedCommissions.success){
@@ -2879,12 +3341,12 @@ export const editSalesTranService = async (
 
     const pendingSale = await getSalesTransDetails(data.salesTranId)
 
-    if(!pendingSale.success && !pendingSale.data){
+    if(!pendingSale.success || !pendingSale.data || pendingSale.data.length == 0){
         return {
             success: false,
             data: {},
             error: {
-                message: 'No pending sale found.',
+                message: 'No sale found.',
                 code: 400
             }
         }
@@ -2936,6 +3398,23 @@ export const editSalesTranService = async (
         }
     }
 
+    console.log(sale)
+
+    if(data.commissionRates !== undefined && sale.DivisionID !== undefined) {
+        const effectiveDivID = data.divisionID !== undefined ? data.divisionID : sale.DivisionID !== undefined? sale.DivisionID : undefined
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, effectiveDivID)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
+    }
+
     const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
@@ -2952,7 +3431,7 @@ export const editSalesTranService = async (
     const updatedData = {
         ...data,
         ...project && {developerID: Number(project.DeveloperID)},
-        ...data.divisionID && {divisionID: data.divisionID},
+        ...(data.divisionID !== undefined && {divisionID: data.divisionID}),
         images: {
             receipt: receiptMetadata,
             agreement: agreementMetadata
@@ -2973,6 +3452,246 @@ export const editSalesTranService = async (
             error: {
                 message: updateSalesTran?.error?.message,
                 code: 400
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: updateSalesTran.data,
+    }
+}
+
+export const editHandsOffTranService = async (
+    userId: number,
+    data: {
+        salesTranId: number,
+        reservationDate?: Date,
+        salesBranchID?: number,
+        sectorID?: number,
+        buyersName?: string,
+        address?: string,
+        phoneNumber?: string,
+        occupation?: string,
+        projectID?: number,
+        blkFlr?: string,
+        lotUnit?: string,
+        phase?: string,
+        lotArea?: number,
+        flrArea?: number,
+        developerID?: number,
+        developerCommission?: number,
+        netTCP?: number,
+        miscFee?: number,
+        financingScheme?: string,
+        downpayment?: number,
+        dpTerms?: number,
+        monthlyPayment?: number
+        dpStartDate?: Date | null,
+        sellerName?: string,
+        images?: {
+            receipt?: Express.Multer.File,
+            agreement?: Express.Multer.File,
+        },
+        commissionRates?: AddPendingSaleDetail[]
+    }
+) => {
+
+    // validations
+
+    const [pendingSale, saleImages] = await Promise.all(
+        [
+            await getHandsOffSalesTrans({ salesTranId: data.salesTranId }),
+            await getSaleImagesBySalesTransId(data.salesTranId)
+        ]
+    )
+
+    if(!pendingSale.success || !pendingSale.data || pendingSale.data.results.length == 0){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No hands-off sale found.',
+                code: 400
+            }
+        }
+    }
+
+    const sale = pendingSale.data.results[0]
+    
+    let project: VwProjectDeveloper | undefined = undefined
+    
+    if(data.projectID){
+        let projectQuery = await getProjectById(data.projectID)
+        if(!projectQuery.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'No project found',
+                    code: 400
+                }
+            }
+        }
+
+        project = projectQuery.data
+        
+    }
+
+    
+    let receiptMetadata: IImage | undefined = undefined;
+    let receipt = data.images?.receipt;
+    if(receipt){
+        receiptMetadata = {
+            FileName: receipt.originalname,
+            ContentType: receipt.mimetype,
+            FileExt: path.extname(receipt.originalname),
+            FileSize: receipt.size,
+            FileContent: receipt.buffer
+        }
+    }
+
+    let agreementMetadata: IImage | undefined = undefined; 
+    let agreement = data.images?.agreement;
+    if(agreement){
+        agreementMetadata = {
+            FileName: agreement.originalname,
+            ContentType: agreement.mimetype,
+            FileExt: path.extname(agreement.originalname),
+            FileSize: agreement.size,
+            FileContent: agreement.buffer
+        }
+    }
+
+    console.log(sale)
+    console.log(data.commissionRates)
+
+    if(data.commissionRates !== undefined && sale.DivisionID !== undefined) {
+        const filteredCommissions = filterCommissionRatesForTransaction(data.commissionRates, 0)
+
+        if(!filteredCommissions.success){
+            return {
+                success: false,
+                data: {},
+                error: filteredCommissions.error
+            }
+        }
+
+        data.commissionRates = filteredCommissions.data
+    }
+
+    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+
+    if(!normalizedCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
+            }
+        }
+    }
+
+    const updatedData = {
+        ...data,
+        ...project && {developerID: Number(project.DeveloperID)},
+        images: {
+            receipt: receiptMetadata,
+            agreement: agreementMetadata
+        },
+        ...(data.commissionRates !== undefined && { commissionRates: normalizedCommissions.data })
+    }
+
+    const updateSalesTran = await editSalesTransaction(
+        userId,
+        data.salesTranId,
+        updatedData
+    )
+
+    if(!updateSalesTran.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: updateSalesTran?.error?.message,
+                code: 400
+            }
+        }
+    }
+
+    if(data.images && data.images.receipt){
+        let receiptImg: IImageR2 | undefined = {
+            FileName: `${pendingSale.data.results[0].SalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.receipt.mimetype,
+            FileExt: path.extname(data.images.receipt.originalname),
+            FileSize: data.images.receipt.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(receiptImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.results[0].SalesTranCode, data.images.receipt)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = saleImages.data.filter((i) => i.ImageType == 'receipt')
+
+        console.log('receipt existing', existing)
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
+            
+            console.log(deleteSalesTranImage)
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], undefined, data.salesTranId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(data.images && data.images.agreement){
+        let agreementImg: IImageR2 | undefined = {
+            FileName: `${pendingSale.data.results[0].SalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.agreement.mimetype,
+            FileExt: path.extname(data.images.agreement.originalname),
+            FileSize: data.images.agreement.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(agreementImg)
+
+        const r2Upload = await r2UploadReceipt(pendingSale.data.results[0].SalesTranCode, data.images.agreement)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = saleImages.data.filter((i) => i.ImageType == 'agreement')
+
+        if(existing){
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], undefined, data.salesTranId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
             }
         }
     }
@@ -3832,7 +4551,7 @@ export const getWebPendingSalesDetailService = async (userId: number, pendingSal
         )
         resultCopy = { ...result.data, Images: images }
     }
-    const detailsArray = await mapPendingCommissionDetails(result.data.Details)
+    const detailsArray = await mapPendingCommissionDetails(result.data.Details, result.data.DivisionID)
 
     
 

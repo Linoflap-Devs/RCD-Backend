@@ -2,7 +2,8 @@ import z from 'zod'
 
 export const addPendingSaleSchema = z.object({
     reservationDate: z.coerce.date(),
-    salesBranchID: z.coerce.number(),
+    divisionID: z.coerce.number().min(0).optional(),
+    salesBranchID: z.coerce.number().min(0),
     sectorID: z.coerce.number(),
     buyersName: z.string().max(255),
     address: z.string().max(255).optional(),

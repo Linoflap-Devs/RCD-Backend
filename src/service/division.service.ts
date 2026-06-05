@@ -8,7 +8,7 @@ import { agent } from "supertest"
 import { IAgent } from "../types/users.types"
 import { ITblAgentNullableID } from "../types/agent.types"
 
-export const getDivisionsService = async (): QueryResult<IDivision[]> => {
+export const getDivisionsService = async (showBrokerTransaction: boolean = false): QueryResult<IDivision[]> => {
     const result = await getDivisions()
 
     if(!result.success){
@@ -26,6 +26,18 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
         DirectorID: div.DirectorID,
         IsActive: div.IsActive
     }))
+
+    if(showBrokerTransaction){
+        obj.push({
+            DivisionID: 0,
+            DivisionName: 'Broker Transaction',
+            DivisionCode: 'BT',
+            DirectorID: 0,
+            IsActive: 1
+        })
+
+        obj.sort((a, b) => { return a.DivisionID > b.DivisionID ? 1 : -1 })
+    }
 
     return {
         success: true,

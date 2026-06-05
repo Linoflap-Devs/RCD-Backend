@@ -321,7 +321,8 @@ export const editBrokerImage = async (imageId: number, imageData: IImage): Query
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
-            ImageID: result.ImageID
+            ImageID: result.ImageID,
+            ImageType: result.Filename.includes('receipt') ? 'receipt' : result.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {
@@ -377,7 +378,8 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
-            ImageID: addImage.ImageID
+            ImageID: addImage.ImageID,
+            ImageType: addImage.Filename.includes('receipt') ? 'receipt' : addImage.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {

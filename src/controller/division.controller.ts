@@ -3,7 +3,8 @@ import { activateDivisionService, addDivisionRequestService, addDivisionService,
 
 export const getDivisionsController = async (req: Request, res: Response) => {
 
-    const result = await getDivisionsService()
+    const { showBrokerTransaction } = req.query
+    const result = await getDivisionsService(showBrokerTransaction === 'true')
 
     if(!result.success){
         res.status(result.error?.code || 500).json({

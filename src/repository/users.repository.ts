@@ -1015,7 +1015,8 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
-            ImageID: addImage.ImageID
+            ImageID: addImage.ImageID,
+            ImageType: addImage.Filename.includes('receipt') ? 'receipt' : addImage.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {
