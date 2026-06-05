@@ -882,6 +882,7 @@ export interface TblSMSTemplate {
 
 export interface TblTokens {
   CreatedAt: Generated<Date>;
+  Scope: string;
   Token: string;
   TokenID: Generated<number>;
   UserID: number;
