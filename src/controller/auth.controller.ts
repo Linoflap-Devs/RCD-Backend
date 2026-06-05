@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, bindNewAccountToExistingBrokerService, changeAgentUserPasswordAdminService, changeBrokerUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, bindNewAccountToExistingBrokerService, changeAgentUserPasswordAdminService, changeBrokerUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService, verifyPinOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -1021,7 +1021,7 @@ export const sendOTPController = async (req: Request, res: Response) => {
         email
     } = req.body
 
-    const result = await findEmailSendOTP(email)
+    const result = await findEmailSendOTP(email, 'reset_password')
 
     return res.status(200).json({
         success: true, 
@@ -1055,6 +1055,46 @@ export const verifyOTPController = async (req: Request, res: Response) => {
         data: result.data
     });
 
+}
+
+export const sendOTPPinController = async (req: Request, res: Response) => {
+
+    const {
+        email
+    } = req.body
+
+    const result = await findEmailSendOTP(email, 'pin_reset')
+
+    return res.status(200).json({
+        success: true, 
+        message: "Check your email.", 
+        data: result.data
+    });
+}
+
+export const verifyResetPinOTPController = async (req: Request, res: Response) => {
+    const {
+        email, 
+        otp
+    } = req.body
+
+    const result = await verifyPinOTPService(email, otp)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to verify otp.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "OTP verified successfully.", 
+        data: result.data
+    });
 }
 
 export const updateAgentPasswordController = async (req: Request, res: Response) => {

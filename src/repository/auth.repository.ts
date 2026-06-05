@@ -1,5 +1,5 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
+import { TblAgentRegistration, TblAgents, TblAgentSession, TblTokens, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
 import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage, IImageR2 } from "../types/image.types";
@@ -9,6 +9,7 @@ import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
 import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IBroker, ITblBrokerRegistration } from "../types/brokers.types";
+import { Selectable } from "kysely";
 
 // Agent Sessions
 
@@ -2351,11 +2352,38 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
     }
 }
 
-export const findUserOTP = async (userId: number, token: string): QueryResult<boolean> => {
+export const getUserOTPs = async (userId: number, scope: string): QueryResult<Selectable<TblTokens>[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Tokens')
+            .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
+            .selectAll()
+            .execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch (err: unknown){
+        const error = err as Error;
+        return {    
+            success: false,
+            data: [] as Selectable<TblTokens>[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findUserOTP = async (userId: number, token: string, scope: string): QueryResult<boolean> => {
     try {
         const result = await db.selectFrom('Tbl_Tokens')
             .where('Token', '=', token)
             .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
             .selectAll()
             .executeTakeFirst()
         
@@ -2402,13 +2430,14 @@ export const findUserOTP = async (userId: number, token: string): QueryResult<bo
     }
 }
 
-export const insertOTP = async (userId: number, token: string, expiry: Date): QueryResult<Token> => {
+export const insertOTP = async (userId: number, token: string, expiry: Date, scope: string): QueryResult<Token> => {
     try {
         const result = await db.insertInto('Tbl_Tokens')
             .values({
                 Token: token,
                 UserID: userId,
-                ValidUntil: expiry
+                ValidUntil: expiry,
+                Scope: scope
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
@@ -2437,6 +2466,32 @@ export const deleteOTP = async (token: string): QueryResult<null> => {
         const result = await db.deleteFrom('Tbl_Tokens')
             .where('Token', '=', token)
             .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteAllOTPs = async (userId: number, scope: string): QueryResult<null> => {
+    try {
+        const result = await db.deleteFrom('Tbl_Tokens')
+            .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
+            .executeTakeFirstOrThrow()        
         
         return {
             success: true,
