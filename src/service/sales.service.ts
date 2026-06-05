@@ -1,6 +1,6 @@
 import { TblDistribution, VwAgents, VwHandsOffTransactions, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getHandsOffSalesTrans, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesBySalesTransId, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
+import { findAgentBasicDetailsByUserId, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
@@ -1216,6 +1216,8 @@ export const addPendingSalesService = async (
             }
         }
     }
+
+    
     
     const [project, normalizedCommissions] = await Promise.all([
         getProjectById(data.property.projectID),
@@ -1302,8 +1304,6 @@ export const addPendingSalesService = async (
     }
 
     data.commissionRates = filteredCommissions.data
-
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
 
     if(!normalizedCommissions.success){
         return {
@@ -1617,6 +1617,18 @@ export const addPendingSalesServiceR2 = async (
         getValidatedCommissionRates(data.commissionRates)
     ])
 
+    
+    if(!normalizedCommissions.success){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
+                code: normalizedCommissions.error?.code || 400
+            }
+        }
+    }
+
     if(!project.success){
         return {
             success: false,
@@ -1673,18 +1685,6 @@ export const addPendingSalesServiceR2 = async (
 
     data.commissionRates = filteredCommissions.data
 
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
-
-    if(!normalizedCommissions.success){
-        return {
-            success: false,
-            data: {},
-            error: {
-                message: normalizedCommissions.error?.message || 'Invalid commission rates.',
-                code: normalizedCommissions.error?.code || 400
-            }
-        }
-    }
 
     const validCommissions = normalizedCommissions.data
 
