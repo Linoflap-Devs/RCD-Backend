@@ -2408,7 +2408,8 @@ export const insertOTP = async (userId: number, token: string, expiry: Date): Qu
             .values({
                 Token: token,
                 UserID: userId,
-                ValidUntil: expiry
+                ValidUntil: expiry,
+                Scope: ''
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
