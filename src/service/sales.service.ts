@@ -1168,12 +1168,12 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+        if(isBrokerTransactionDivision(data.divisionID) && !requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Only Sales Admin can add Broker Transactions.',
+                    message: 'Only Sales Admin and Branch Head can add Broker Transactions.',
                     code: 403
                 }
             }
@@ -1563,12 +1563,12 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+        if(isBrokerTransactionDivision(data.divisionID) && !requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Only Sales Admin can add Broker Transactions.',
+                    message: 'Only Sales Admin and Branch Head can add Broker Transactions.',
                     code: 403
                 }
             }
