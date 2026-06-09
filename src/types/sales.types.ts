@@ -200,6 +200,17 @@ export interface DivisionYearlySalesGrouped {
     YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>;
 }
 
+export interface FnHandsOffSales {
+    Broker: string,	
+    CurrentMonth: number,	
+    LastMonth: number,	
+    CurrentMonthLastYear: number,	
+    CurrentQuarter: number,	
+    LastQuarter: number,	
+    LastYear: number,	
+    CurrentYear: number
+}
+
 export interface FnSalesTarget {
     DivisionName: string	
     TargetMonth: number	

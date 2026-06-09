@@ -1362,9 +1362,7 @@ export interface VwHandsOffTransactions {
   BuyersContactNumber: string | null;
   BuyersName: string | null;
   BuyersOccupation: string | null;
-  Commission: number | null;
   CommissionRate: number | null;
-  CommStatus: string | null;
   DateFiled: Date | null;
   DevCommType: string;
   DeveloperID: number | null;
@@ -1386,13 +1384,12 @@ export interface VwHandsOffTransactions {
   MonthlyDP: number;
   NetTotalTCP: number;
   Phase: string;
-  PositionID: number | null;
   PositionName: string | null;
   ProjectID: number | null;
   ProjectLocationID: number | null;
   ProjectName: string | null;
   ProjectTypeName: string | null;
-  ReservationDate: string | null;
+  ReservationDate: Date;
   ReservationDateFormatted: Date;
   SalesBranchID: number | null;
   SalesSectorID: number;
@@ -1402,8 +1399,6 @@ export interface VwHandsOffTransactions {
   SalesTransDtlID: number | null;
   SectorName: string | null;
   SellerName: string;
-  VATRate: number | null;
-  WTaxRate: number | null;
 }
 
 export interface VwIncentives {

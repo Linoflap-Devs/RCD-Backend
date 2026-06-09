@@ -788,14 +788,14 @@ export const getWebHandsOffTransService = async (
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwHandsOffTransactions>[]}> => {
 
     const userData = await findEmployeeUserById(userId);
 
     if(!userData.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwHandsOffTransactions>[]},
             error: {
                 code: 500,
                 message: 'No user found.'
@@ -816,7 +816,7 @@ export const getWebHandsOffTransService = async (
     if(!result.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwHandsOffTransactions[]},
             error: {
                 code: 500,
                 message: 'No sales found.'
