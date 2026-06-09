@@ -1,6 +1,6 @@
 import { VwSalesTransactions, VwWebKPIs } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
-import { getDivisionSales, getDivisionSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
+import { getDivisionSales, getDivisionSalesTotalsFn, getHandsOffSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -368,6 +368,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
         salesTargetTotalsResult,
         divSalesResult,
         top10DivsResult,
+        handsOffSalesResult,
         top10UmsResult,
         top10SpsResult,
         developerSalesResult,
@@ -381,6 +382,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
         getSalesTargetTotals(),
         getDivisionSalesTotalsFn([{ field: 'Division', direction: 'asc' }]),
         getDivisionSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'Division', direction: 'asc' }], 10),
+        getHandsOffSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }], 10),
         getUnitManagerSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
         getSalesPersonSalesTotalsFn([{ field: 'CurrentMonth', direction: 'desc' }, { field: 'AgentName', direction: 'asc' }], 10),
         getSalesByDeveloperTotals([{ field: 'NetTotalTCP', direction: 'desc' }], undefined, undefined, { month: new Date().getMonth() + 1, year: new Date().getFullYear() }),
@@ -402,6 +404,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
     const salesTargetTotals = unwrap(salesTargetTotalsResult, { success: true, data: {} as SalesTargetTotals })
     const divSales = unwrap(divSalesResult, { success: true, data: [] })
     const top10DivsFormat = unwrap(top10DivsResult, { success: true, data: [] })
+    const handsOffSales = unwrap(handsOffSalesResult, { success: true, data: [] })
     const top10UmsFormat = unwrap(top10UmsResult, { success: true, data: [] })
     const top10SpsFormat = unwrap(top10SpsResult, { success: true, data: [] })
     const developerSales = unwrap(developerSalesResult, { success: true, data: [] })
@@ -419,6 +422,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
                 Divisions: salesTarget.data
             },
             DivisionSales: divSales.data,
+            HandsOffSales: handsOffSales.data,
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,
             Top10SalesPersons: top10SpsFormat,

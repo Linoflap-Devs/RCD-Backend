@@ -788,14 +788,14 @@ export const getWebHandsOffTransService = async (
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwHandsOffTransactions>[]}> => {
 
     const userData = await findEmployeeUserById(userId);
 
     if(!userData.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: Partial<VwHandsOffTransactions>[]},
             error: {
                 code: 500,
                 message: 'No user found.'
@@ -816,7 +816,7 @@ export const getWebHandsOffTransService = async (
     if(!result.success){
         return {
             success: false,
-            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwSalesTrans[]},
+            data: {} as {totalResults: number, totalPages: number, totalSales: number, results: VwHandsOffTransactions[]},
             error: {
                 code: 500,
                 message: 'No sales found.'
@@ -1168,12 +1168,12 @@ export const addPendingSalesService = async (
             }
         }
 
-        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+        if(isBrokerTransactionDivision(data.divisionID) && !requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Only Sales Admin can add Broker Transactions.',
+                    message: 'Only Sales Admin and Branch Head can add Broker Transactions.',
                     code: 403
                 }
             }
@@ -1563,12 +1563,12 @@ export const addPendingSalesServiceR2 = async (
             }
         }
 
-        if(isBrokerTransactionDivision(data.divisionID) && webUserData.data.Role !== 'SALES ADMIN'){
+        if(isBrokerTransactionDivision(data.divisionID) && !requiresExplicitDivision(webUserData.data.Role)){
             return {
                 success: false,
                 data: {},
                 error: {
-                    message: 'Only Sales Admin can add Broker Transactions.',
+                    message: 'Only Sales Admin and Branch Head can add Broker Transactions.',
                     code: 403
                 }
             }
