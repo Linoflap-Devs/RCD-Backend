@@ -1766,6 +1766,10 @@ export interface VwWebKPIs {
   TotalActiveDevelopers: number | null;
   TotalCurrentYear: number | null;
   TotalDivisions: number | null;
+  TotalHandsOffCurrentYear: number | null;
+  TotalHandsOffSalesCurrentMonth: number | null;
+  TotalHandsOffSalesLastMonth: number | null;
+  TotalHandsOffSalesPreviousYear: number | null;
   TotalProjects: number | null;
   TotalSalesCurrentMonth: number | null;
   TotalSalesLastMonth: number | null;
