@@ -38,7 +38,16 @@ export const rejectBrokerRegistrationSchema = z.object({
     brokerRegistrationId: z.coerce.number(),
 })
 
+export const verifySendOTPSchema = z.object({
+    email: z.email(),
+})
+
 export const verifyOTPSchema = z.object({
+    email: z.email(),
+    otp: z.string()
+})
+
+export const verifyOTPPinSchema = z.object({
     email: z.email(),
     otp: z.string()
 })
