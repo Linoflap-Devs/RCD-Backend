@@ -211,7 +211,8 @@ const normalizeCommissionRatesAgainstTemplate = async (
 }
 
 const getValidatedCommissionRates = async (
-    commissionRates: AddPendingSaleDetail[] | undefined
+    commissionRates: AddPendingSaleDetail[] | undefined,
+    existingDetails?: any[]
 ): Promise<QueryResult<AddPendingSaleDetail[]>> => {
     const activeDistributionTemplate = await getActiveDistributionTemplateService()
 
@@ -226,9 +227,32 @@ const getValidatedCommissionRates = async (
         }
     }
 
+    const mergedTemplate = [...activeDistributionTemplate.data];
+
+    if (existingDetails && existingDetails.length > 0) {
+        for (const detail of existingDetails) {
+            // Check if the detail's DistributionID already exists in the mergedTemplate
+            const exists = mergedTemplate.some(t => Number(t.DistributionID) === Number(detail.DistributionID));
+            
+            // If it doesn't exist and has a DistributionID, it's likely an archived/inactive template that needs to be allowed for this edit
+            if (!exists && detail.DistributionID) {
+                mergedTemplate.push({
+                    DistributionID: detail.DistributionID,
+                    DistributionCode: null, // Legacy rows might not map to codes well, but ID is enough for the lookup
+                    Distribution: detail.PositionName,
+                    Position: detail.PositionName,
+                    PositionID: detail.PositionID,
+                    Level: 0,
+                    IsActive: 0,
+                    DateAdded: null
+                } as Selectable<TblDistribution>);
+            }
+        }
+    }
+
     return normalizeCommissionRatesAgainstTemplate(
         commissionRates,
-        activeDistributionTemplate.data
+        mergedTemplate
     )
 }
 
@@ -2790,7 +2814,10 @@ export const editPendingSaleService = async (
         data.commissionRates = filteredCommissions.data
     }
 
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+    const normalizedCommissions = await getValidatedCommissionRates(
+        data.commissionRates,
+        pendingSale.data.Details
+    )
 
     if(!normalizedCommissions.success){
         return {
@@ -3052,7 +3079,10 @@ export const editPendingSaleServiceR2 = async (
         data.commissionRates = filteredCommissions.data
     }
 
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+    const normalizedCommissions = await getValidatedCommissionRates(
+        data.commissionRates,
+        pendingSale.data.Details
+    )
 
     if(!normalizedCommissions.success){
         return {
@@ -3264,7 +3294,10 @@ export const editPendingSalesDetailsService = async (
 
         commissionRates = filteredCommissions.data
 
-        const normalizedCommissions = await getValidatedCommissionRates(commissionRates)
+        const normalizedCommissions = await getValidatedCommissionRates(
+            commissionRates,
+            pendingSale.data.Details
+        )
 
         if(!normalizedCommissions.success){
             return {
@@ -3415,7 +3448,10 @@ export const editSalesTranService = async (
         data.commissionRates = filteredCommissions.data
     }
 
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+    const normalizedCommissions = await getValidatedCommissionRates(
+        data.commissionRates,
+        pendingSale.data
+    )
 
     if(!normalizedCommissions.success){
         return {
@@ -3580,7 +3616,10 @@ export const editHandsOffTranService = async (
         data.commissionRates = filteredCommissions.data
     }
 
-    const normalizedCommissions = await getValidatedCommissionRates(data.commissionRates)
+    const normalizedCommissions = await getValidatedCommissionRates(
+        data.commissionRates,
+        pendingSale.data.results
+    )
 
     if(!normalizedCommissions.success){
         return {
