@@ -61,9 +61,32 @@ async function getActiveDistributionTemplateForWrite(trx: Transaction<DB>) {
 async function resolveCommissionDetailRows(
     trx: Transaction<DB>,
     commissionRates?: AddPendingSaleDetail[],
-    context?: CommissionResolutionContext
+    context?: CommissionResolutionContext,
+    existingDetailsToMerge?: ExistingCommissionDetailRow[]
 ): Promise<ResolvedCommissionDetailRow[]> {
-    const templateRows = await getActiveDistributionTemplateForWrite(trx);
+    const activeTemplateRows = await getActiveDistributionTemplateForWrite(trx);
+
+    const templateRows = [...activeTemplateRows];
+
+    if (existingDetailsToMerge && existingDetailsToMerge.length > 0) {
+        for (const detail of existingDetailsToMerge) {
+            const exists = templateRows.some(t => Number(t.DistributionID) === Number(detail.DistributionID));
+            if (!exists && detail.DistributionID) {
+                templateRows.push({
+                    DistributionID: Number(detail.DistributionID),
+                    Distribution: detail.PositionName || '',
+                    Position: detail.PositionName || '',
+                    PositionID: Number(detail.PositionID) || 0,
+                    IsActive: 0,
+                    Level: 0,
+                    DistributionCode: '',
+                    DateAdded: null,
+                    UpdateBy: null,
+                    LastUpdate: null
+                } as any);
+            }
+        }
+    }
 
     if(templateRows.length === 0){
         throw new Error('No active distribution template found.');
@@ -178,7 +201,7 @@ async function syncCommissionDetailRows<TExisting extends ExistingCommissionDeta
     insertMissingRow: (resolvedRow: ResolvedCommissionDetailRow) => Promise<void>,
     deleteStaleRow?: (existingRow: TExisting) => Promise<void>
 ) {
-    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates, context);
+    const resolvedRows = await resolveCommissionDetailRows(trx, commissionRates, context, existingRows);
     const unmatchedExistingRows = [...existingRows];
 
     for(const resolvedRow of resolvedRows){
