@@ -237,15 +237,17 @@ const getValidatedCommissionRates = async (
             // If it doesn't exist and has a DistributionID, it's likely an archived/inactive template that needs to be allowed for this edit
             if (!exists && detail.DistributionID) {
                 mergedTemplate.push({
-                    DistributionID: detail.DistributionID,
-                    DistributionCode: null, // Legacy rows might not map to codes well, but ID is enough for the lookup
-                    Distribution: detail.PositionName,
-                    Position: detail.PositionName,
-                    PositionID: detail.PositionID,
+                    DistributionID: Number(detail.DistributionID),
+                    DistributionCode: '', // Legacy rows might not map to codes well, but ID is enough for the lookup
+                    Distribution: detail.PositionName || '',
+                    Position: detail.PositionName || '',
+                    PositionID: detail.PositionID ? Number(detail.PositionID) : 0,
                     Level: 0,
                     IsActive: 0,
-                    DateAdded: null
-                } as Selectable<TblDistribution>);
+                    DateAdded: null,
+                    UpdateBy: null,
+                    LastUpdate: null
+                } as unknown as Selectable<TblDistribution>);
             }
         }
     }
