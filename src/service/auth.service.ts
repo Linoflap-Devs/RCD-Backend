@@ -2086,7 +2086,7 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
         }
     }
 
-    const otp = await findUserOTP(user.data.agentUserId, code, 'password_reset')
+    const otp = await findUserOTP(user.data.agentUserId, code, 'reset_password')
 
     if(!otp.success){
         logger('Failed to find otp.', {email: email, code: code})
