@@ -3569,93 +3569,93 @@ export const editSalesTransaction = async (
             .executeTakeFirstOrThrow();
 
         // Handle images if provided
-        if(data.images && (data.images.receipt || data.images.agreement)){
-            const existingImages = await trx.selectFrom('Tbl_SalesTranImage')
-                .selectAll()
-                .where('SalesTransID', '=', salesTranId)
-                .execute();
+        // if(data.images && (data.images.receipt || data.images.agreement)){
+        //     const existingImages = await trx.selectFrom('Tbl_SalesTranImage')
+        //         .selectAll()
+        //         .where('SalesTransID', '=', salesTranId)
+        //         .execute();
 
-            const existingReceiptId = existingImages.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1;
-            const existingAgreementId = existingImages.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1;
+        //     const existingReceiptId = existingImages.find(img => img.ImageType.toLowerCase() === 'receipt')?.ImageID || -1;
+        //     const existingAgreementId = existingImages.find(img => img.ImageType.toLowerCase() === 'agreement')?.ImageID || -1;
 
-            console.log(existingImages, existingReceiptId, existingAgreementId)
+        //     console.log(existingImages, existingReceiptId, existingAgreementId)
 
-            // Handle receipt
-            if(data.images.receipt){
-                const newReceipt = await trx.insertInto('Tbl_Image')
-                    .values({
-                        Filename: `${existingSale.SalesTranCode}-receipt_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
-                        ContentType: data.images.receipt.ContentType,
-                        FileExtension: data.images.receipt.FileExt,
-                        FileSize: data.images.receipt.FileSize,
-                        FileContent: data.images.receipt.FileContent,
-                        CreatedAt: new Date()
-                    })
-                    .output('inserted.ImageID')
-                    .executeTakeFirstOrThrow();
+        //     // Handle receipt
+        //     if(data.images.receipt){
+        //         const newReceipt = await trx.insertInto('Tbl_Image')
+        //             .values({
+        //                 Filename: `${existingSale.SalesTranCode}-receipt_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
+        //                 ContentType: data.images.receipt.ContentType,
+        //                 FileExtension: data.images.receipt.FileExt,
+        //                 FileSize: data.images.receipt.FileSize,
+        //                 FileContent: data.images.receipt.FileContent,
+        //                 CreatedAt: new Date()
+        //             })
+        //             .output('inserted.ImageID')
+        //             .executeTakeFirstOrThrow();
 
-                const newReceiptId = newReceipt.ImageID;
+        //         const newReceiptId = newReceipt.ImageID;
 
-                await trx.insertInto('Tbl_SalesTranImage')
-                    .values({
-                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
-                        SalesTransID: salesTranId,
-                        TranCode: existingSale.SalesTranCode,
-                        ImageID: newReceiptId,
-                        ImageType: 'RECEIPT'
-                    })
-                    .execute();
+        //         await trx.insertInto('Tbl_SalesTranImage')
+        //             .values({
+        //                 PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
+        //                 SalesTransID: salesTranId,
+        //                 TranCode: existingSale.SalesTranCode,
+        //                 ImageID: newReceiptId,
+        //                 ImageType: 'RECEIPT'
+        //             })
+        //             .execute();
 
-                // Delete old receipt if exists
-                if(existingReceiptId > 0){
-                    await trx.deleteFrom('Tbl_SalesTranImage')
-                        .where('ImageID', '=', existingReceiptId)
-                        .execute();
+        //         // Delete old receipt if exists
+        //         if(existingReceiptId > 0){
+        //             await trx.deleteFrom('Tbl_SalesTranImage')
+        //                 .where('ImageID', '=', existingReceiptId)
+        //                 .execute();
                     
-                    await trx.deleteFrom('Tbl_Image')
-                        .where('ImageID', '=', existingReceiptId)
-                        .execute();
-                }
-            }
+        //             await trx.deleteFrom('Tbl_Image')
+        //                 .where('ImageID', '=', existingReceiptId)
+        //                 .execute();
+        //         }
+        //     }
 
-            // Handle agreement
-            if(data.images.agreement){
-                const newAgreement = await trx.insertInto('Tbl_Image')
-                    .values({
-                        Filename: `${existingSale.SalesTranCode}-agreement_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
-                        ContentType: data.images.agreement.ContentType,
-                        FileExtension: data.images.agreement.FileExt,
-                        FileSize: data.images.agreement.FileSize,
-                        FileContent: data.images.agreement.FileContent,
-                        CreatedAt: new Date()
-                    })
-                    .output('inserted.ImageID')
-                    .executeTakeFirstOrThrow();
+        //     // Handle agreement
+        //     if(data.images.agreement){
+        //         const newAgreement = await trx.insertInto('Tbl_Image')
+        //             .values({
+        //                 Filename: `${existingSale.SalesTranCode}-agreement_${format(new Date(), 'yyyy-MM-dd_hh:mmaa')}`.toLowerCase(),
+        //                 ContentType: data.images.agreement.ContentType,
+        //                 FileExtension: data.images.agreement.FileExt,
+        //                 FileSize: data.images.agreement.FileSize,
+        //                 FileContent: data.images.agreement.FileContent,
+        //                 CreatedAt: new Date()
+        //             })
+        //             .output('inserted.ImageID')
+        //             .executeTakeFirstOrThrow();
 
-                const newAgreementId = newAgreement.ImageID;
+        //         const newAgreementId = newAgreement.ImageID;
 
-                await trx.insertInto('Tbl_SalesTranImage')
-                    .values({
-                        PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
-                        SalesTransID: salesTranId,
-                        TranCode: existingSale.SalesTranCode,
-                        ImageID: newAgreementId,
-                        ImageType: 'AGREEMENT'
-                    })
-                    .execute();
+        //         await trx.insertInto('Tbl_SalesTranImage')
+        //             .values({
+        //                 PendingSalesTransID: existingImages.length > 0 ? existingImages[0].PendingSalesTransID : 0,
+        //                 SalesTransID: salesTranId,
+        //                 TranCode: existingSale.SalesTranCode,
+        //                 ImageID: newAgreementId,
+        //                 ImageType: 'AGREEMENT'
+        //             })
+        //             .execute();
 
-                // Delete old agreement if exists
-                if(existingAgreementId > 0){
-                    await trx.deleteFrom('Tbl_SalesTranImage')
-                        .where('ImageID', '=', existingAgreementId)
-                        .execute();
+        //         // Delete old agreement if exists
+        //         if(existingAgreementId > 0){
+        //             await trx.deleteFrom('Tbl_SalesTranImage')
+        //                 .where('ImageID', '=', existingAgreementId)
+        //                 .execute();
                     
-                    await trx.deleteFrom('Tbl_Image')
-                        .where('ImageID', '=', existingAgreementId)
-                        .execute();
-                }
-            }
-        }
+        //             await trx.deleteFrom('Tbl_Image')
+        //                 .where('ImageID', '=', existingAgreementId)
+        //                 .execute();
+        //         }
+        //     }
+        // }
 
         // Handle commission rates if provided
         if(data.commissionRates !== undefined){

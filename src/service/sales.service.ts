@@ -641,6 +641,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
             imageCopies.map(async (img: ITypedImageBase64) => {
                 const url = img.StorageKey ? (await getPresignedUrl(img.StorageKey)).data : await Promise.resolve('')
+                console.log(url)
                 return {
                     ...img,
                     URL: url
@@ -648,6 +649,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
             })
         )
         resultCopy = { ...result.data[0], images: images }
+        console.log(resultCopy.images)
     }
 
     const details = await mapSalesCommissionDetails(result.data)
@@ -3371,7 +3373,7 @@ export const editSalesTranService = async (
 
     // validations
 
-    const pendingSale = await getSalesTransDetails(data.salesTranId)
+    const pendingSale = await getSalesTransDetails(data.salesTranId, true)
 
     if(!pendingSale.success || !pendingSale.data || pendingSale.data.length == 0){
         return {
@@ -3385,6 +3387,17 @@ export const editSalesTranService = async (
     }
 
     const sale = pendingSale.data[0]
+
+    if(!sale || !sale.SalesTranCode){
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No sale found.',
+                code: 400
+            }
+        }
+    }
     
     let project: VwProjectDeveloper | undefined = undefined
     
@@ -3429,8 +3442,6 @@ export const editSalesTranService = async (
             FileContent: agreement.buffer
         }
     }
-
-    console.log(sale)
 
     if(data.commissionRates !== undefined && sale.DivisionID !== undefined) {
         const effectiveDivID = data.divisionID !== undefined ? data.divisionID : sale.DivisionID !== undefined? sale.DivisionID : undefined
@@ -3479,6 +3490,84 @@ export const editSalesTranService = async (
         data.salesTranId,
         updatedData
     )
+
+    if(data.images && data.images.receipt){
+        let receiptImg: IImageR2 | undefined = {
+            FileName: `${pendingSale.data[0].SalesTranCode}-receipt_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.receipt.mimetype,
+            FileExt: path.extname(data.images.receipt.originalname),
+            FileSize: data.images.receipt.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(receiptImg)
+
+        const r2Upload = await r2UploadReceipt(sale.SalesTranCode, data.images.receipt)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data[0].images?.filter((i) => i.ImageType == 'receipt')
+
+        console.log('receipt existing', existing)
+
+        if(existing && existing.length > 0){
+            console.log(existing)
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
+            
+            console.log(deleteSalesTranImage)
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'receipt'}], undefined, data.salesTranId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
+
+    if(data.images && data.images.agreement){
+        let agreementImg: IImageR2 | undefined = {
+            FileName: `${sale.SalesTranCode}-agreement_${format(new Date(), 'yyyy-mm-dd_hh:mmaa')}`.toLowerCase(),
+            ContentType: data.images.agreement.mimetype,
+            FileExt: path.extname(data.images.agreement.originalname),
+            FileSize: data.images.agreement.size,
+            FileContent: null,
+            StorageKey: null
+        }
+
+        const addDBImage = await addImage(agreementImg)
+
+        const r2Upload = await r2UploadReceipt(sale.SalesTranCode, data.images.agreement)
+
+        const editImageResult = await editImage(addDBImage.data.ImageID, { StorageKey: r2Upload.data.storageKey} as IImage)
+
+        const existing = pendingSale.data[0].images?.filter((i) => i.ImageType == 'agreement')
+
+        if(existing && existing.length > 0){
+            console.log(existing)
+            const deleteSalesTranImage = await deleteSaleTranImages({ imageId: existing.map((i) => Number(i.ImageID)) || undefined})
+        }
+
+        const bind = await bindImagesToSales([{ id: addDBImage.data.ImageID, type: 'agreement'}], undefined, data.salesTranId)
+
+        if(!bind.success){
+            return {
+                success: false,
+                data: {},
+                error: {
+                    message: 'Editing sale data.images failed.',
+                    code: 400
+                }
+            }
+        }
+    }
 
     if(!updateSalesTran.success){
         return {
