@@ -273,7 +273,7 @@ export const getAgentBrokers = async (filters?: { name?: string, showInactive?: 
             .leftJoin('Tbl_AgentRegistration', 'Tbl_AgentUser.AgentRegistrationID', 'Tbl_AgentRegistration.AgentRegistrationID')
             .selectAll('Vw_Agents')
             .select('Tbl_AgentRegistration.AgentRegistrationID')
-            .select('Tbl_AgentUser.Email')
+            .select(['Tbl_AgentUser.Email', 'Tbl_AgentUser.AgentUserID'])
 
         if(filters && filters.division){
             result = result.where('DivisionID' , '=', filters.division.toString())
@@ -1385,7 +1385,7 @@ export const addAgent = async (userId: number, agent: IAddAgent, user?: { email:
 
         const generateAgentCode = (): string => {
             const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
-            return `0.${randomNumber}`;
+            return `0${randomNumber}`;
         };
 
         const checkDuplicateAgentCode = async (agentCode: string): Promise<boolean> => {
@@ -1432,7 +1432,7 @@ export const addAgent = async (userId: number, agent: IAddAgent, user?: { email:
                 AffiliationDate: agent.AffiliationDate || new Date(),
                 DivisionID: agent.DivisionID || null,
                 ReferredByID: agent.ReferredByID,
-                ReferredCode: agent.ReferredCode,
+                ReferredCode: agent.ReferredCode && agent.ReferredCode.trim() !== '' ? agent.ReferredCode : null,
                 TelephoneNumber: agent.TelephoneNumber,
                 TINNumber: agent.TINNumber || '',
                 SSSNumber: agent.SSSNumber || '',

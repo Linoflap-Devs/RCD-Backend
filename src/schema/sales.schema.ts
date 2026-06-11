@@ -2,7 +2,8 @@ import z from 'zod'
 
 export const addPendingSaleSchema = z.object({
     reservationDate: z.coerce.date(),
-    salesBranchID: z.coerce.number(),
+    divisionID: z.coerce.number().min(0).optional(),
+    salesBranchID: z.coerce.number().min(0),
     sectorID: z.coerce.number(),
     buyersName: z.string().max(255),
     address: z.string().max(255).optional(),
@@ -44,4 +45,13 @@ export const addSalesDistributionSchema = z.object({
     distributionName: z.string().max(255),
     level: z.coerce.number(),
     positionID: z.coerce.number().optional()
+})
+
+export const editSalesDistributionSchema = z.object({
+    distributionCode: z.string().max(50).optional(),
+    distributionName: z.string().max(255).optional(),
+    level: z.coerce.number().optional(),
+    positionID: z.coerce.number().optional()
+}).refine((data) => Object.values(data).some((value) => value !== undefined), {
+    message: 'At least one field is required.'
 })

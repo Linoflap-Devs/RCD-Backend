@@ -41,6 +41,23 @@ export const getPresignedUrl = async (storageKey: string): QueryResult<string> =
     }
 }
 
+export const getPresignedUrls = async (keys: (string | null)[]): Promise<Map<string, string>> => {
+    const results = await Promise.allSettled(
+        keys
+            .filter((k): k is string => !!k)
+            .map(async (key) => {
+                const result = await getPresignedUrl(key);
+                return { key, url: result.success ? result.data : '' };
+            })
+    );
+
+    return new Map(
+        results
+            .filter((r): r is PromiseFulfilledResult<{ key: string; url: string }> => r.status === 'fulfilled')
+            .map((r) => [r.value.key, r.value.url])
+    );
+};
+
 export const getPublicUrl = (storageKey: string): string => {
     return `${process.env.R2_PUBLIC_ENDPOINT}/${storageKey}`
 }

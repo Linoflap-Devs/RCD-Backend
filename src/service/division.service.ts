@@ -8,7 +8,7 @@ import { agent } from "supertest"
 import { IAgent } from "../types/users.types"
 import { ITblAgentNullableID } from "../types/agent.types"
 
-export const getDivisionsService = async (): QueryResult<IDivision[]> => {
+export const getDivisionsService = async (showBrokerTransaction: boolean = false): QueryResult<IDivision[]> => {
     const result = await getDivisions()
 
     if(!result.success){
@@ -26,6 +26,18 @@ export const getDivisionsService = async (): QueryResult<IDivision[]> => {
         DirectorID: div.DirectorID,
         IsActive: div.IsActive
     }))
+
+    if(showBrokerTransaction){
+        obj.push({
+            DivisionID: 0,
+            DivisionName: 'Broker Transaction',
+            DivisionCode: 'BT',
+            DirectorID: 0,
+            IsActive: 1
+        })
+
+        obj.sort((a, b) => { return a.DivisionID > b.DivisionID ? 1 : -1 })
+    }
 
     return {
         success: true,
@@ -315,6 +327,7 @@ export const getDivisionHierarchyService = async (agentUserId: number): QueryRes
         lastName: item.LastName?.trim() || '',
         middleName: item.MiddleName?.trim() || '',
         position: item.Position?.trim() || '',
+        positionId: item.PositionID,
         referredById: item.ReferredByID || null,
     }))
 
@@ -567,7 +580,7 @@ export const getDivisionAgentLastRequestService = async (
     }
 }
 
-export const addDivisionRequestService = async ( userId: number, divisionId: number, unitManagerId: number ): QueryResult<ITblDivisionRequests> => {
+export const addDivisionRequestService = async ( userId: number, unitManagerId: number ): QueryResult<ITblDivisionRequests> => {
 
     const agentData = await findAgentDetailsByUserId(userId)
 
@@ -590,7 +603,7 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         }
     }
 
-    if(agentData.data.ReferredByID || agentData.data.DivisionID){
+    if(agentData.data.ReferredByID && agentData.data.DivisionID){
         return {
             success: false,
             data: {} as ITblDivisionRequests,
@@ -648,20 +661,20 @@ export const addDivisionRequestService = async ( userId: number, divisionId: num
         }
     }
 
-    if(Number(umData.data.DivisionID) != divisionId){
-        return {
-            success: false,
-            data: {} as ITblDivisionRequests,
-            error: {
-                message: 'Unit manager does not belong to the given division',
-                code: 400
-            }
-        }
-    }
+    // if(Number(umData.data.DivisionID) != divisionId){
+    //     return {
+    //         success: false,
+    //         data: {} as ITblDivisionRequests,
+    //         error: {
+    //             message: 'Unit manager does not belong to the given division',
+    //             code: 400
+    //         }
+    //     }
+    // }
 
     const result = await addDivisionRequest({
         AgentID: agentData.data.AgentID,
-        DivisionID: divisionId,
+        DivisionID: Number(umData.data.DivisionID),
         UnitManagerID: umData.data.AgentID
     })
 

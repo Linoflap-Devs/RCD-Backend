@@ -1,8 +1,7 @@
 import { Request, Response } from "express"
-import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesTargetService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
+import { addPendingSalesService, addPendingSalesServiceR2, addSalesDistributionListService, addSalesTargetService, approveBranchHeadService, approvePendingSaleService, approveSalesAdminService, approveSalesDirectorService, archivePendingSaleService, archivePendingSalesTransactionService, archiveSalesTransactionService, assignUMToPendingSaleService, deleteSalesDistributionListService, deleteSalesTargetService, editHandsOffTranService, editPendingSaleImagesService, editPendingSaleImagesServiceR2, editPendingSalesDetailsService, editPendingSaleService, editPendingSaleServiceR2, editSalesDistributionListService, editSalesTargetService, editSalesTranService, getCombinedPersonalSalesService, getDivisionSalesYearlyTotalsFnService, getPendingSalesDetailService, getPendingSalesService, getSalesByDeveloperTotalsFnService, getSalesDistributionListService, getSalesTargetsService, getSalesTransactionDetailService, getUserDivisionSalesService, getUserPersonalSalesService, getWebDivisionSalesService, getWebHandsOffTransDtlService, getWebHandsOffTransService, getWebPendingSalesDetailService, getWebPendingSalesService, getWebPersonalSalesService, getWebSalesTranDtlService, getWebSalesTransService, rejectPendingSaleService } from "../service/sales.service";
 import { logger } from "../utils/logger";
 import { ITblSalesTarget } from "../types/sales.types";
-import { addDistributionList } from "../repository/sales.repository";
 
 export const getDivisionSalesController = async (req: Request, res: Response) => {
     const session = req.session
@@ -161,6 +160,65 @@ export const getWebSalesTransDtlController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Sales transaction detail', data: result.data})
+}
+
+export const getWebHandsOffTransController = async ( req: Request, res: Response ) => {
+    const session = req.session
+
+    
+    const { page, pageSize, month, year, developerId, search } = req.query
+
+    if(!session){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    const result = await getWebHandsOffTransService(session.userID, {
+        month: month ? Number(month) : undefined,
+        year: year ? Number(year) : undefined,
+        developerId: developerId ? Number(developerId) : undefined,
+        search: search ? search.toString() : undefined,
+    }, {
+        page: Number(page), 
+        pageSize: Number(pageSize)
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({ success: false, message: result.error?.message || 'Failed to get sales transactions', data: {} })
+        return
+    }
+
+    return res.status(200).json({ success: true, message: 'List of hands-off sales transactions.', data: result.data })
+}
+
+export const getWebHandsOffTransDtlController = async ( req: Request, res: Response ) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({ success: false, data: {}, message: 'Unauthorized' })
+        return
+    }
+
+    const { salesTransactionId } = req.params 
+
+    const result = await getWebHandsOffTransDtlService(session.userID, Number(salesTransactionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({ success: false, message: result.error?.message || 'Failed to get sales transaction details', data: {} })
+        return
+    }
+
+    return res.status(200).json({ success: true, message: 'Hands-off Sales transaction details', data: result.data })
 }
 
 export const getPendingSalesController = async (req: Request, res: Response) => {
@@ -340,6 +398,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         reservationDate,
         salesBranchID,
         sectorID,
+        divisionID,
         buyersName,
         address,
         phoneNumber,
@@ -390,6 +449,7 @@ export const addPendingSaleController = async (req: Request, res: Response) => {
         }, 
         {
         reservationDate,
+        divisionID,
         salesBranchID,
         sectorID,
         buyer: {
@@ -452,6 +512,7 @@ export const addPendingSaleControllerR2 = async (req: Request, res: Response) =>
         reservationDate,
         salesBranchID,
         sectorID,
+        divisionID,
         buyersName,
         address,
         phoneNumber,
@@ -502,6 +563,7 @@ export const addPendingSaleControllerR2 = async (req: Request, res: Response) =>
         }, 
         {
         reservationDate,
+        divisionID,
         salesBranchID,
         sectorID,
         buyer: {
@@ -637,7 +699,7 @@ export const addWebPendingSaleController = async (req: Request, res: Response) =
         }
     }
 
-    const result = await addPendingSalesService(
+    const result = await addPendingSalesServiceR2(
         {
             webUserId: session.userID
         }, 
@@ -786,7 +848,7 @@ export const editPendingSalesControllerV2 = async (req: Request, res: Response) 
                 receipt: images?.receipt ? images.receipt[0] : undefined,
                 agreement: images?.agreement ? images.agreement[0] : undefined
             },
-            commissionRates: parsedCommissionRates ? parsedCommissionRates : [],
+            commissionRates: parsedCommissionRates && commissionRates ? parsedCommissionRates : undefined,
         }
     )
 
@@ -1024,6 +1086,119 @@ export const editSalesTransactionController = async (req: Request, res: Response
     return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
 }
 
+export const editHandsOffSalesTransactionController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return
+    }
+
+    const images = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined
+
+    const {
+        reservationDate,
+        salesBranchID,
+        sectorID,
+        buyersName,
+        address,
+        phoneNumber,
+        occupation,
+        projectID,
+        blkFlr,
+        lotUnit,
+        phase,
+        lotArea,
+        flrArea,
+        developerID,
+        developerCommission,
+        netTCP,
+        miscFee,
+        financingScheme,
+        downpayment,
+        dpTerms,
+        monthlyPayment,
+        dpStartDate,
+        sellerName,
+        commissionRates
+    } = req.body
+
+    const { 
+        salesTransactionId
+    } = req.params
+
+    let parsedCommissionRates = [];
+    if (commissionRates) {
+        try {
+            console.log('commissionRates', commissionRates);
+            parsedCommissionRates = JSON.parse(commissionRates);
+            console.log('parsedCommissionRates', parsedCommissionRates);
+        } catch (error) {
+            // Try parsing double-escaped JSON
+            try {
+                const unescaped = commissionRates.replace(/\\\"/g, '"');
+                console.log('unescaped', unescaped);
+                parsedCommissionRates = JSON.parse(unescaped);
+                console.log('parsedCommissionRates after unescape', parsedCommissionRates);
+            } catch (innerError) {
+                res.status(400).json({
+                    success: false, 
+                    message: 'Invalid commissionRates format', 
+                    data: {}
+                });
+                return;
+            }
+        }
+    }
+
+    const result = await editHandsOffTranService(
+        session.userID, 
+        {
+            salesTranId: Number(salesTransactionId),
+            reservationDate,
+            salesBranchID,
+            sectorID,
+            buyersName,
+            address,
+            phoneNumber,
+            occupation,
+            projectID,
+            blkFlr,
+            lotUnit,
+            phase,
+            lotArea,
+            flrArea,
+            developerCommission,
+            netTCP,
+            miscFee,
+            financingScheme,
+            downpayment,
+            dpTerms,
+            monthlyPayment,
+            dpStartDate,
+            sellerName,
+            images: {
+                receipt: images?.receipt ? images.receipt[0] : undefined,
+                agreement: images?.agreement ? images.agreement[0] : undefined
+            },
+            commissionRates: parsedCommissionRates.length > 0 ? parsedCommissionRates : undefined,
+        }
+)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to add sales', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Sales edited', data: result.data})
+}
+
+
 export const editPendingSalesController = async (req: Request, res: Response) => {
     const session = req.session
 
@@ -1038,9 +1213,9 @@ export const editPendingSalesController = async (req: Request, res: Response) =>
     }
 
     const { pendingSalesId } = req.params
-    const { edit = [] } = req.body
+    const { commissionRates } = req.body
 
-    const result = await editPendingSalesDetailsService(session.userID, Number(pendingSalesId), edit)
+    const result = await editPendingSalesDetailsService(session.userID, Number(pendingSalesId), commissionRates)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit sales', data: {}})
@@ -1635,7 +1810,7 @@ export const addDistributionListController = async (req: Request, res: Response)
         DistributionCode: distributionCode,
         Distribution: distributionName,
         Level: level,
-        PositionID: positionID
+        PositionID: positionID ? Number(positionID) : 0
     })
 
     console.log(result.data)
@@ -1646,4 +1821,70 @@ export const addDistributionListController = async (req: Request, res: Response)
     }
 
     return res.status(200).json({success: true, message: 'Distribution list added', data: result.data})
+}
+
+export const editDistributionListController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    const {
+        distributionCode,
+        distributionName,
+        level,
+        positionID,
+    } = req.body
+
+    const {
+        distributionId
+    } = req.params
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await editSalesDistributionListService(session.userID, Number(distributionId), {
+        DistributionCode: distributionCode ?? undefined,
+        Distribution: distributionName ?? undefined,
+        Level: level ?? undefined,
+        PositionID: positionID ?? undefined
+    })
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to edit distribution list', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Distribution list edited', data: result.data})
+}
+
+export const deleteDistributionListController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    const {
+        distributionId
+    } = req.params
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const result = await deleteSalesDistributionListService(session.userID, Number(distributionId))
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to delete distribution list', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Distribution list deleted', data: result.data})
 }

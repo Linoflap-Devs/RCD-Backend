@@ -47,6 +47,7 @@ export const registerInviteSchema = z.object({
     firstName: z.string().max(150),
     middleName: z.string().max(50).optional(),
     lastName: z.string().max(50),
+    contactNumber: z.coerce.string().max(20).optional(), 
     gender: z.enum(['Male', 'Female']),  
     birthdate: z.coerce.date(),
     address: z.string().max(255),
@@ -145,7 +146,7 @@ export const editAgentSchema = z.object({
 
 export const addBrokerSchema = z.object({
     brokerType: z.enum(['hands-on', 'hands-off']),
-    brokerCode: z.string().max(50),
+    brokerCode: z.string().max(50).optional(),
     firstName: z.string().max(150),
     middleName: z.string().max(50).optional(),
     lastName: z.string().max(50),

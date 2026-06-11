@@ -8,10 +8,10 @@ import { bufferToBase64 } from "../utils/utils"
 
 export const getBrokerRegistrationByUserId = async (brokerUserId: number): QueryResult<IBrokerRegistration> => {
     try {
-        const brokerUser = await db.selectFrom('Tbl_BrokerUser')
-            .where('BrokerUserID', '=', brokerUserId)
-            .selectAll()
-            .executeTakeFirstOrThrow()
+        // const brokerUser = await db.selectFrom('Tbl_BrokerUser')
+        //     .where('BrokerUserID', '=', brokerUserId)
+        //     .selectAll()
+        //     .executeTakeFirstOrThrow()
         
         // const brokerRegistration = await db.selectFrom('Tbl_BrokerRegistration')
         //     .where('BrokerRegistrationID', '=', brokerUser.BrokerRegistrationID)
@@ -81,6 +81,8 @@ export const getBrokerRegistrationByUserId = async (brokerUserId: number): Query
             .where('Tbl_BrokerUser.BrokerUserID', '=', brokerUserId)
             .executeTakeFirstOrThrow()
 
+        console.log("Registration ID", baseBrokerDataQuery)
+
         const educationData = await db.selectFrom('Tbl_BrokerEducation')
             .select([
                 'BrokerEducationID',
@@ -91,7 +93,7 @@ export const getBrokerRegistrationByUserId = async (brokerUserId: number): Query
                 'School',
                 'StartDate'
             ])
-            .where('BrokerRegistrationID', 'in', baseBrokerDataQuery.BrokerRegistrationID)
+            .where('BrokerRegistrationID', '=', baseBrokerDataQuery.BrokerRegistrationID)
             .execute();
 
         // 3. Get work experience data for all brokers in one query
@@ -319,7 +321,8 @@ export const editBrokerImage = async (imageId: number, imageData: IImage): Query
             FileExt: result.FileExtension,
             FileName: result.Filename,
             FileSize: result.FileSize,
-            ImageID: result.ImageID
+            ImageID: result.ImageID,
+            ImageType: result.Filename.includes('receipt') ? 'receipt' : result.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {
@@ -375,7 +378,8 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
-            ImageID: addImage.ImageID
+            ImageID: addImage.ImageID,
+            ImageType: addImage.Filename.includes('receipt') ? 'receipt' : addImage.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {
@@ -399,11 +403,39 @@ export const addBrokerImage = async (brokerId: number, imageData: IImage): Query
     }
 }
 
-export const addBroker = async (userId: number, broker: IAddBroker): QueryResult<ITblBroker> => {
+export const addBroker = async (userId: number, broker: IAddBroker, user?: { email: string, passwordHash: string }): QueryResult<{ broker: ITblBroker, user?: ITblBrokerUser}> => {
+    const trx = await db.startTransaction().execute();
     try {
-        const result = await db.insertInto('Tbl_Broker')
+
+
+        let userResult: ITblBrokerUser = {} as ITblBrokerUser
+
+        const generateBrokerCode = (): string => {
+            const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
+            return `0${randomNumber}`;
+        };
+
+        const checkDuplicateBrokerCode = async (brokerCode: string): Promise<boolean> => {
+            const broker = await db.selectFrom('Tbl_Broker')
+                .where('BrokerCode', '=', brokerCode)
+                .selectAll()
+                .executeTakeFirst();
+            return !!broker; // Returns true if broker exists, false otherwise
+        };
+
+        const getUniqueBrokerCode = async (): Promise<string> => {
+            let brokerCode: string;
+            do {
+                brokerCode = generateBrokerCode();
+            } while (await checkDuplicateBrokerCode(brokerCode));
+            return brokerCode;
+        };
+
+        const uniqueCode = await getUniqueBrokerCode();
+
+        const result = await trx.insertInto('Tbl_Broker')
             .values({
-                BrokerCode: broker.BrokerCode,
+                BrokerCode: broker.BrokerCode ? broker.BrokerCode : uniqueCode,
                 Broker: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
                 RepresentativeName: `${broker.LastName}, ${broker.FirstName} ${broker.MiddleName}`,
                 Birthdate: broker.Birthdate,
@@ -433,18 +465,38 @@ export const addBroker = async (userId: number, broker: IAddBroker): QueryResult
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
-        
+       
+        if(user){
+            const userQuery = await trx.insertInto('Tbl_BrokerUser')
+                .values({
+                    Email: user.email,
+                    Password: user.passwordHash,
+                    BrokerID: result.BrokerID,
+                    IsVerified: 1             
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+            
+            userResult = userQuery
+        }
+
+        await trx.commit().execute()
+
         return {
             success: true,
-            data: result
+            data: {
+                broker: result,
+                user: userResult
+            }
         }
     }
 
     catch (err: unknown){
+        await trx.rollback().execute();
         const error = err as Error
         return {
             success: false,
-            data: {} as ITblBroker,
+            data: {} as { broker: ITblBroker, user?: ITblBrokerUser },
             error: {
                 code: 400,
                 message: error.message
@@ -677,7 +729,7 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
             .leftJoin('Tbl_BrokerRegistration', 'Tbl_BrokerUser.BrokerRegistrationID', 'Tbl_BrokerRegistration.BrokerRegistrationID')
             .selectAll('Tbl_Broker')
             .select('Tbl_BrokerRegistration.BrokerRegistrationID')
-            .select('Tbl_BrokerUser.Email')
+            .select(['Tbl_BrokerUser.Email', 'Tbl_BrokerUser.BrokerUserID'])
 
         if(filters && filters.brokerId){
             result = result.where('Tbl_Broker.BrokerID' , '=', filters.brokerId)
@@ -716,13 +768,17 @@ export const getBrokers = async (filters?: { name?: string, showInactive?: boole
     }
 }
 
-export const getBrokerUsers = async (filters?: {brokerIds?: number[]}): QueryResult<ITblBrokerUser[]> => {
+export const getBrokerUsers = async (filters?: {brokerIds?: number[], emails?: string[]}): QueryResult<ITblBrokerUser[]> => {
     try {   
         let baseQuery = await db.selectFrom('Tbl_BrokerUser')
             .selectAll()
 
         if(filters && filters.brokerIds && filters.brokerIds.length > 0){
             baseQuery = baseQuery.where('Tbl_BrokerUser.BrokerID', 'in', filters.brokerIds)
+        }
+
+        if(filters && filters.emails && filters.emails.length > 0){
+            baseQuery = baseQuery.where('Tbl_BrokerUser.Email', 'in', filters.emails)
         }
 
         const result = await baseQuery.execute();

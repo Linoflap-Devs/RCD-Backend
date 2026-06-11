@@ -15,6 +15,7 @@ import { ITblAgentTaxRates } from "../types/tax.types";
 import { IAgent } from "../types/users.types";
 import { hashPassword } from "../utils/scrypt";
 import { getPresignedUrl, getPublicUrl } from "../utils/r2";
+import { agent } from "supertest";
 
 export const getAgentsService = async (
     filters?: {
@@ -822,6 +823,29 @@ export const editAgentService = async (
 
     if ((salespersonIds && salespersonIds.length > 0) && isSalesPerson) {
         return { success: false, data: {}, error: { code: 400, message: 'SPs cannot be assigned to Sales Persons.' } };
+    }
+
+    // Referred Code
+    if (data.ReferredByID) {
+        const referringAgent = await findAgentDetailsByAgentId(data.ReferredByID);
+
+        if (!referringAgent.success) {
+            return { success: false, data: {}, error: { code: 400, message: 'Cannot find referring agent. \n' + referringAgent.error?.message } };
+        }
+
+        if (referringAgent.data.Position !== 'UNIT MANAGER') {
+            return { success: false, data: {}, error: { code: 400, message: 'Referring agent is not a Unit Manager.' } };
+        }
+
+        // Check Dvision match if current agent is a salesperson
+        if (isSalesPerson && agentData.data.DivisionID && agentData.data.DivisionID !== referringAgent.data.DivisionID) {
+            return { success: false, data: {}, error: { code: 400, message: 'Referring agent must be in the same division as the salesperson.' } };
+        }
+
+        data.ReferredCode = referringAgent.data.AgentCode;
+        if(!agentData.data.DivisionID && referringAgent.data.DivisionID){
+            data.DivisionID = referringAgent.data.DivisionID
+        }
     }
 
     // --- Parallel SP sync + agent edit ---

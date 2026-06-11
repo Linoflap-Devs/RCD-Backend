@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentImageServiceR2, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerImageServiceR2, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersService, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
+import { addBrokerService, BrokerType, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentImageServiceR2, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerImageServiceR2, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersServiceV2, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -573,9 +573,17 @@ export const editBrokerWorkExpController = async (req: Request, res: Response) =
 
 export const getBrokersController = async (req: Request, res: Response) => {
 
-    const { showSales, month, year } = req.query
+    const { showSales, month, year, brokerType } = req.query
 
-    const result = await getBrokersService(showSales ? true : false, { month: month ? Number(month) : undefined, year: year ? Number(year) : undefined })
+    if(brokerType && typeof brokerType === 'string' && !['all', 'hands-off', 'hands-on'].includes(brokerType)){
+        return res.status(400).json({
+            success: false,
+            message: "Invalid broker type.",
+            data: []
+        });
+    }
+
+    const result = await getBrokersServiceV2(showSales ? true : false, brokerType as BrokerType, { month: month ? Number(month) : undefined, year: year ? Number(year) : undefined })
 
     if(!result.success){
         res.status(400).json({ 
@@ -760,13 +768,15 @@ export const addBrokerController = async (req: Request, res: Response) => {
         philhealthNumber,
         pagibigNumber,
         tinNumber,
-        employeeIdNumber
+        employeeIdNumber,
+        email,
+        password
     } = req.body
 
     const result = await addBrokerService(session.userID,
         {
             BrokerType: brokerType,
-            BrokerCode: brokerCode,
+            BrokerCode: brokerCode.trim().length > 0 ? brokerCode : null,
             LastName: lastName,
             FirstName: firstName,
             MiddleName: middleName,
@@ -793,7 +803,9 @@ export const addBrokerController = async (req: Request, res: Response) => {
             PhilhealthNumber: philhealthNumber,
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
-            EmployeeIDNumber: employeeIdNumber
+            EmployeeIDNumber: employeeIdNumber,
+            Email: email,
+            Password: password
         }
     )
 

@@ -392,6 +392,29 @@ export const createAdmin = async (): QueryResult<ITblUsersWeb> => {
     }
 }
 
+export const createBranchHead = async (): QueryResult<ITblUsersWeb> => {
+    const result = await createWebUser({ 
+        empName: 'BRANCH HEAD USER',
+        username: 'bhead',
+        password: process.env.TESTING_PW || 'password',
+        role: 'BRANCH SALES STAFF',
+        usercode: 'BH'
+    })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: result.error
+        }
+    }
+
+    return {
+        success: result.success,
+        data: result.data,
+    }
+}
+
 export const createHandsOffBroker = async (): QueryResult<ITblBrokerUser> => {
     const result = await createBrokerUser({ 
         firstName: 'HANDSOFF BROKER',

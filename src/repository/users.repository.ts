@@ -601,6 +601,35 @@ export const findBrokerUserById = async (brokerUserId: number): QueryResult<{
     }
 }
 
+export const findAgentBasicDetailsByUserId = async (agentUserId: number): QueryResult<VwAgents> => {
+    try {
+        const account = await db.selectFrom('Tbl_AgentUser')
+            .where('AgentUserID', '=', agentUserId)
+            .select(['AgentID'])
+            .executeTakeFirstOrThrow();
+
+        const agent: VwAgents = await db.selectFrom('Vw_Agents')
+            .where('AgentID', '=', account.AgentID)
+            .selectAll()
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: agent
+        }
+    } catch (err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as VwAgents,
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }
+}
+
 export const findAgentDetailsByUserId = async (agentUserId: number): QueryResult<VwAgentPicture> => {
     try {
 
@@ -945,7 +974,7 @@ export const editBrokerDetails = async (brokerId: number, data: Partial<ITblBrok
             success: false,
             data: {} as ITblBroker,
             error: {
-                code: 400,
+                code: 400, 
                 message: error.message
             }
         }
@@ -986,7 +1015,8 @@ export const addAgentImage = async (agentId: number, imageData: IImage): QueryRe
             FileExt: addImage.FileExtension,
             FileName: addImage.Filename,
             FileSize: addImage.FileSize,
-            ImageID: addImage.ImageID
+            ImageID: addImage.ImageID,
+            ImageType: addImage.Filename.includes('receipt') ? 'receipt' : addImage.Filename.includes('agreement') ? 'agreement' : 'other'
         }
 
         return {

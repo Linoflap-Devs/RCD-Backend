@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, changeAgentUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, bindNewAccountToExistingBrokerService, changeAgentUserPasswordAdminService, changeBrokerUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService, verifyPinOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -177,6 +177,7 @@ export const registerInviteController = async (req: Request, res: Response) => {
         birthdate,
         address,
         email,  
+        contactNumber,
         password,
         inviteToken
     } = req.body
@@ -187,6 +188,7 @@ export const registerInviteController = async (req: Request, res: Response) => {
         firstName,
         middleName,
         lastName,
+        contactNumber,
         gender,
         birthdate,
         address,
@@ -1019,7 +1021,7 @@ export const sendOTPController = async (req: Request, res: Response) => {
         email
     } = req.body
 
-    const result = await findEmailSendOTP(email)
+    const result = await findEmailSendOTP(email, 'reset_password')
 
     return res.status(200).json({
         success: true, 
@@ -1053,6 +1055,46 @@ export const verifyOTPController = async (req: Request, res: Response) => {
         data: result.data
     });
 
+}
+
+export const sendOTPPinController = async (req: Request, res: Response) => {
+
+    const {
+        email
+    } = req.body
+
+    const result = await findEmailSendOTP(email, 'pin_reset')
+
+    return res.status(200).json({
+        success: true, 
+        message: "Check your email.", 
+        data: result.data
+    });
+}
+
+export const verifyResetPinOTPController = async (req: Request, res: Response) => {
+    const {
+        email, 
+        otp
+    } = req.body
+
+    const result = await verifyPinOTPService(email, otp)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to verify otp.", 
+            data: {}
+        });
+
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "OTP verified successfully.", 
+        data: result.data
+    });
 }
 
 export const updateAgentPasswordController = async (req: Request, res: Response) => {
@@ -1217,6 +1259,43 @@ export const changeAgentUserPasswordAdminController = async (req: Request, res: 
     });
 }
 
+export const changeBrokerUserPasswordAdminController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+    
+    const {
+        brokerUserID,
+        newPassword
+    } = req.body
+
+    const result = await changeBrokerUserPasswordAdminService(session.userID, brokerUserID, newPassword)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to change password.", 
+            data: {}
+        });
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Password changed successfully.", 
+        data: result.data
+    });
+}
+
+
 export const bindAccountToAgentController = async (req: Request, res: Response) => {
 
     const session = req.session
@@ -1238,6 +1317,44 @@ export const bindAccountToAgentController = async (req: Request, res: Response) 
     } = req.body
 
     const result = await bindNewAccountToExistingAgentService(agentId, email, password)
+
+    if(!result.success){
+        res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to create account.", 
+            data: {}
+        });
+        return
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Account created successfully.", 
+        data: result.data
+    });
+}
+
+export const bindAccountToBrokerController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session) {
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        email,
+        password,
+        brokerId
+    } = req.body
+
+    const result = await bindNewAccountToExistingBrokerService(brokerId, email, password)
 
     if(!result.success){
         res.status(result.error?.code || 500).json({

@@ -1,5 +1,3 @@
-import { AddPendingSaleDetail } from "./sales.types"
-
 export interface FnCommissionForecast {
     ReservationDate: Date	
     BuyersName: string	
@@ -47,30 +45,11 @@ export interface FnCommissionForecastPercentage {
     TotalPaidPercent: number
 }
 
-export enum CommissionDetailPositions {
-    BROKER = 'BROKER',
-    SALES_DIRECTOR = 'SALES DIRECTOR',
-    UNIT_MANAGER = 'UNIT MANAGER',
-    SALES_PERSON = 'SALES PERSON',
-    SALES_ASSOCIATE = 'SALES ASSOCIATE',
-    ASSISTANCE_FEE = 'ASSISTANCE FEE',
-    REFERRAL_FEE = 'REFERRAL FEE',
-    OTHERS = 'OTHERS'
-}
-
-export interface CommissionRate {
+export interface CommissionRateInput {
+    distributionId: number,
+    distributionCode?: string,
     agentId?: number,
     agentName?: string,
+    brokerId?: number,
     commissionRate: number,
-}
-
-export interface CommissionRateDetail {
-    broker?: CommissionRate;
-    salesDirector?: CommissionRate;
-    unitManager?: CommissionRate;
-    salesPerson?: CommissionRate;
-    salesAssociate?: CommissionRate;
-    assistanceFee?: CommissionRate;
-    referralFee?: CommissionRate;
-    others?: CommissionRate;
 }

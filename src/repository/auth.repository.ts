@@ -1,5 +1,5 @@
 import { QueryResult } from "../types/global.types";
-import { TblAgentRegistration, TblAgents, TblAgentSession, TblUsersWeb } from "../db/db-types";
+import { TblAgentRegistration, TblAgents, TblAgentSession, TblTokens, TblUsersWeb } from "../db/db-types";
 import { db } from "../db/db";
 import { IAgentRegister, IAgentSession, IAgentUser, IAgentUserSession, IBrokerRegister, IBrokerSession, IBrokerUser, IBrokerUserSession, IEmployeeRegister, IEmployeeSession, IEmployeeUserSession, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb, Token } from "../types/auth.types";
 import { IImage, IImageR2 } from "../types/image.types";
@@ -9,6 +9,7 @@ import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
 import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IBroker, ITblBrokerRegistration } from "../types/brokers.types";
+import { Selectable } from "kysely";
 
 // Agent Sessions
 
@@ -144,6 +145,31 @@ export const deleteSessionUser = async (userId: number): QueryResult<null> => {
     try {
 
         const result = await db.deleteFrom('Tbl_AgentSession').where('AgentUserID', '=', userId).execute();
+
+        console.log(result)
+
+        return {
+            success: true,
+            data: null,
+        }
+    }
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteSessionBroker = async (userId: number): QueryResult<null> => {
+    try {
+
+        const result = await db.deleteFrom('Tbl_BrokerSession').where('BrokerUserID', '=', userId).execute();
 
         console.log(result)
 
@@ -1816,7 +1842,7 @@ export const approveAgentRegistrationTransaction = async(
                 // generate 6 digit number
                 const generateAgentCode = (): string => {
                     const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
-                    return `0.${randomNumber}`;
+                    return `0${randomNumber}`;
                 };
 
                 const checkDuplicateAgentCode = async (agentCode: string): Promise<boolean> => {
@@ -2159,7 +2185,7 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
                 // generate 6 digit number
                 const generateBrokerCode = (): string => {
                     const randomNumber = (Math.floor(Math.random() * 900000) + 100000).toString().padStart(6, '0');
-                    return `0.${randomNumber}`;
+                    return `0${randomNumber}`;
                 };
 
                 const checkDuplicateBrokerCode = async (brokerCode: string): Promise<boolean> => {
@@ -2326,11 +2352,38 @@ export const approveBrokerRegistrationTransaction = async(brokerRegistrationId: 
     }
 }
 
-export const findUserOTP = async (userId: number, token: string): QueryResult<boolean> => {
+export const getUserOTPs = async (userId: number, scope: string): QueryResult<Selectable<TblTokens>[]> => {
+    try {
+        const result = await db.selectFrom('Tbl_Tokens')
+            .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
+            .selectAll()
+            .execute()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+    catch (err: unknown){
+        const error = err as Error;
+        return {    
+            success: false,
+            data: [] as Selectable<TblTokens>[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findUserOTP = async (userId: number, token: string, scope: string): QueryResult<boolean> => {
     try {
         const result = await db.selectFrom('Tbl_Tokens')
             .where('Token', '=', token)
             .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
             .selectAll()
             .executeTakeFirst()
         
@@ -2377,13 +2430,14 @@ export const findUserOTP = async (userId: number, token: string): QueryResult<bo
     }
 }
 
-export const insertOTP = async (userId: number, token: string, expiry: Date): QueryResult<Token> => {
+export const insertOTP = async (userId: number, token: string, expiry: Date, scope: string): QueryResult<Token> => {
     try {
         const result = await db.insertInto('Tbl_Tokens')
             .values({
                 Token: token,
                 UserID: userId,
-                ValidUntil: expiry
+                ValidUntil: expiry,
+                Scope: scope
             })
             .outputAll('inserted')
             .executeTakeFirstOrThrow()
@@ -2412,6 +2466,32 @@ export const deleteOTP = async (token: string): QueryResult<null> => {
         const result = await db.deleteFrom('Tbl_Tokens')
             .where('Token', '=', token)
             .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: null
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const deleteAllOTPs = async (userId: number, scope: string): QueryResult<null> => {
+    try {
+        const result = await db.deleteFrom('Tbl_Tokens')
+            .where('UserID', '=', userId)
+            .where('Scope', '=', scope)
+            .executeTakeFirstOrThrow()        
         
         return {
             success: true,
@@ -2683,6 +2763,32 @@ export const changePassword = async (userId: number, password: string): QueryRes
     }
 }
 
+export const changeBrokerPassword = async (userId: number, password: string): QueryResult<any> => {
+    try {
+        const result = await db.updateTable('Tbl_BrokerUser')
+            .set({ Password: password })
+            .where('BrokerUserID', '=', userId)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: null,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
 export const changeEmployeePassword = async (userId: number, password: string): QueryResult<ITblUsersWeb> => {
     try {
         const result = await db.updateTable('Tbl_UsersWeb')
@@ -2733,6 +2839,37 @@ export const bindNewAccountToAgent = async (email: string, passwordHash: string,
         return {
             success: false,
             data: {} as ITblAgentUser,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const bindNewAccountToBroker = async (email: string, passwordHash: string, brokerId: number): QueryResult<ITblBrokerUser> => {
+    try {
+        const newBrokerUser = await db.insertInto('Tbl_BrokerUser')
+            .values({
+                Email: email,
+                Password: passwordHash,
+                BrokerID: brokerId,
+                IsVerified: 1
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: newBrokerUser
+        }
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
             error: {
                 code: 500,
                 message: error.message

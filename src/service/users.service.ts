@@ -21,6 +21,7 @@ import { findInviteToken, findInviteTokenWithRegistration } from "../repository/
 import { TZDate } from "@date-fns/tz";
 import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar, r2UploadBrokerAvatar } from "../utils/r2";
 import { addImage, editImage } from "../repository/images.repository";
+import { hashPassword } from "../utils/scrypt";
 
 export const getUsersService = async (): QueryResult<ITblUsersWeb[]> => {
     const result = await getUsers();
@@ -171,6 +172,7 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
     }
 
     if(!brokerUserDetails.data.BrokerID){
+        console.log('No broker found', { parameter: brokerUserId, details: brokerUserDetails })
         return {
             success: false,
             data: {},
@@ -189,12 +191,15 @@ export const getBrokerDetailsService = async (brokerUserId: number): QueryResult
 
     const brokerDetails = await getBrokerRegistrationByUserId(brokerUserId)
 
-    if(!brokerDetails.success) return {
-        success: false,
-        data: {},
-        error: {
-            message: 'No broker found',
-            code: 400
+    if(!brokerDetails.success) {   
+        console.log('No broker registration found', { parameter: brokerUserId, details: brokerDetails })
+        return {
+            success: false,
+            data: {},
+            error: {
+                message: 'No broker found',
+                code: 400
+            }
         }
     }
 
@@ -1406,8 +1411,128 @@ export const editBrokerWorkExpService = async (
     return { success: true, data: result.data };
 };
 
-export const getBrokersService = async (
-    showSales: boolean = false, 
+// export const getBrokersService = async (
+//     showSales: boolean = false, 
+//     filters?: { month?: number; year?: number }
+// ): QueryResult<{
+//     BrokerID?: number | null;
+//     AgentID?: number | null;
+//     BrokerCode?: string | null;
+//     AgentCode?: string | null;
+//     Broker: string;
+//     Divisions: { DivisionID: number; DivisionName: string }[];
+//     PersonalSales?: number;
+// }[]> => {
+//     // Fetch brokers and agents in parallel
+//     const [extBrokers, intBrokers] = await Promise.all([
+//         getBrokers(),
+//         getAgentBrokers()
+//     ]);
+
+//     // Early return on errors
+//     if (!extBrokers.success) return { success: false, data: [], error: extBrokers.error };
+//     if (!intBrokers.success) return { success: false, data: [], error: intBrokers.error };
+
+//     // Fetch divisions
+//     const divisions = await getDivisionBrokers({ 
+//         agentIds: intBrokers.data.map((a: any) => a.AgentID), 
+//         brokerIds: extBrokers.data.map((b: any) => b.BrokerID) 
+//     });
+
+//     if (!divisions.success) return { success: false, data: [], error: divisions.error };
+
+//     // Create division lookup maps for O(1) access
+//     const extBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
+//     const intBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
+
+//     divisions.data.forEach((d: IBrokerDivision) => {
+//         const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName };
+        
+//         if (d.BrokerID) {
+//         const existing = extBrokerDivisionsMap.get(d.BrokerID) || [];
+//         extBrokerDivisionsMap.set(d.BrokerID, [...existing, divisionInfo]);
+//         }
+        
+//         if (d.AgentID) {
+//         const existing = intBrokerDivisionsMap.get(d.AgentID) || [];
+//         intBrokerDivisionsMap.set(d.AgentID, [...existing, divisionInfo]);
+//         }
+//     });
+
+//     // Conditionally fetch sales data only if showSales is true
+//     let extBrokerSalesMap = new Map<string, number>();
+//     let intBrokerSalesMap = new Map<number, number>();
+
+//     if (showSales) {
+//         const [extBrokerSales, intBrokerSales] = await Promise.all([
+//             getMultipleTotalPersonalSales(
+//                 { brokerNames: extBrokers.data.map((b: any) => b.RepresentativeName) },
+//                 filters
+//             ),
+//             getMultipleTotalPersonalSales(
+//                 { agentIds: intBrokers.data.map((a: any) => a.AgentID) },
+//                 filters
+//             )
+//         ]);
+
+//         // Create lookup maps for O(1) access
+//         if (extBrokerSales.success) {
+//             extBrokerSalesMap = new Map(
+//                 extBrokerSales.data.map((s: any) => [s.AgentName, s.TotalSales || 0])
+//             );
+//         }
+//         if (intBrokerSales.success) {
+//             intBrokerSalesMap = new Map(
+//                 intBrokerSales.data.map((s: any) => [s.AgentID, s.TotalSales || 0])
+//             );
+//         }
+//     }
+
+//     // Format external brokers
+//     const extFormatted = extBrokers.data.map((broker: ITblBroker) => ({
+//         BrokerID: broker.BrokerID,
+//         AgentID: null,
+//         BrokerCode: broker.BrokerCode,
+//         AgentCode: null,
+//         Broker: broker.RepresentativeName,
+//         AgentRegistrationID: null,
+//         BrokerRegistrationID: broker.BrokerRegistrationID || null,
+//         AgentUserID: null,
+//         BrokerUserID: broker.BrokerUserID || null,
+//         Email: broker.Email || null, 
+//         TaxRate: broker.BrokerTaxRate || 0,
+//         Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
+//         ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
+//     }));
+
+//     // Format internal brokers
+//     const intFormatted = intBrokers.data.map((agent: IAgent) => ({
+//         BrokerID: null,
+//         AgentID: agent.AgentID,
+//         BrokerCode: null,
+//         AgentCode: agent.AgentCode,
+//         Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
+//         AgentRegistrationID: agent.AgentRegistrationID || null,
+//         BrokerRegistrationID: null,
+//         AgentUserID: agent.AgentUserID || null,
+//         BrokerUserID: null,
+//         Email: agent.Email || null,
+//         TaxRate: agent.AgentTaxRate || 0,
+//         Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
+//         ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
+//     }));
+
+//     return { 
+//         success: true, 
+//         data: [...extFormatted, ...intFormatted] 
+//     };
+// };
+
+export type BrokerType = 'all' | 'hands-off' | 'hands-on';
+
+export const getBrokersServiceV2 = async (
+    showSales: boolean = false,
+    brokerType: BrokerType = 'all',
     filters?: { month?: number; year?: number }
 ): QueryResult<{
     BrokerID?: number | null;
@@ -1418,59 +1543,55 @@ export const getBrokersService = async (
     Divisions: { DivisionID: number; DivisionName: string }[];
     PersonalSales?: number;
 }[]> => {
-    // Fetch brokers and agents in parallel
+    const needsExternal = brokerType !== 'hands-on';
+    const needsInternal = brokerType !== 'hands-off';
+
+    // Only fetch what's needed
     const [extBrokers, intBrokers] = await Promise.all([
-        getBrokers(),
-        getAgentBrokers()
+        needsExternal ? getBrokers()      : Promise.resolve({ success: true, data: [], error: { code: 404, message: 'No brokers found'} }),
+        needsInternal ? getAgentBrokers() : Promise.resolve({ success: true, data: [], error: { code: 404, message: 'No agents found'} }),
     ]);
 
-    // Early return on errors
     if (!extBrokers.success) return { success: false, data: [], error: extBrokers.error };
     if (!intBrokers.success) return { success: false, data: [], error: intBrokers.error };
 
-    // Fetch divisions
-    const divisions = await getDivisionBrokers({ 
-        agentIds: intBrokers.data.map((a: any) => a.AgentID), 
-        brokerIds: extBrokers.data.map((b: any) => b.BrokerID) 
+    const divisions = await getDivisionBrokers({
+        agentIds:  needsInternal ? intBrokers.data.map((a: any) => a.AgentID)  : [],
+        brokerIds: needsExternal ? extBrokers.data.map((b: any) => b.BrokerID) : [],
     });
 
     if (!divisions.success) return { success: false, data: [], error: divisions.error };
 
-    // Create division lookup maps for O(1) access
     const extBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
     const intBrokerDivisionsMap = new Map<number, { DivisionID: number; DivisionName: string }[]>();
 
     divisions.data.forEach((d: IBrokerDivision) => {
         const divisionInfo = { DivisionID: d.DivisionID, DivisionName: d.DivisionName };
-        
+
         if (d.BrokerID) {
-        const existing = extBrokerDivisionsMap.get(d.BrokerID) || [];
-        extBrokerDivisionsMap.set(d.BrokerID, [...existing, divisionInfo]);
+            const existing = extBrokerDivisionsMap.get(d.BrokerID) || [];
+            extBrokerDivisionsMap.set(d.BrokerID, [...existing, divisionInfo]);
         }
-        
+
         if (d.AgentID) {
-        const existing = intBrokerDivisionsMap.get(d.AgentID) || [];
-        intBrokerDivisionsMap.set(d.AgentID, [...existing, divisionInfo]);
+            const existing = intBrokerDivisionsMap.get(d.AgentID) || [];
+            intBrokerDivisionsMap.set(d.AgentID, [...existing, divisionInfo]);
         }
     });
 
-    // Conditionally fetch sales data only if showSales is true
     let extBrokerSalesMap = new Map<string, number>();
     let intBrokerSalesMap = new Map<number, number>();
 
     if (showSales) {
         const [extBrokerSales, intBrokerSales] = await Promise.all([
-            getMultipleTotalPersonalSales(
-                { brokerNames: extBrokers.data.map((b: any) => b.RepresentativeName) },
-                filters
-            ),
-            getMultipleTotalPersonalSales(
-                { agentIds: intBrokers.data.map((a: any) => a.AgentID) },
-                filters
-            )
+            needsExternal
+                ? getMultipleTotalPersonalSales({ brokerNames: extBrokers.data.map((b: any) => b.RepresentativeName) }, filters)
+                : Promise.resolve({ success: true, data: [] }),
+            needsInternal
+                ? getMultipleTotalPersonalSales({ agentIds: intBrokers.data.map((a: any) => a.AgentID) }, filters)
+                : Promise.resolve({ success: true, data: [] }),
         ]);
 
-        // Create lookup maps for O(1) access
         if (extBrokerSales.success) {
             extBrokerSalesMap = new Map(
                 extBrokerSales.data.map((s: any) => [s.AgentName, s.TotalSales || 0])
@@ -1483,41 +1604,48 @@ export const getBrokersService = async (
         }
     }
 
-    // Format external brokers
-    const extFormatted = extBrokers.data.map((broker: ITblBroker) => ({
-        BrokerID: broker.BrokerID,
-        AgentID: null,
-        BrokerCode: broker.BrokerCode,
-        AgentCode: null,
-        Broker: broker.RepresentativeName,
-        AgentRegistrationID: null,
-        Email: broker.Email || null, 
-        BrokerRegistrationID: broker.BrokerRegistrationID || null,
-        TaxRate: broker.BrokerTaxRate || 0,
-        Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
-        ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
-    }));
+    const extFormatted = needsExternal
+        ? extBrokers.data.map((broker: ITblBroker) => ({
+            BrokerID: broker.BrokerID,
+            AgentID: null,
+            BrokerCode: broker.BrokerCode,
+            AgentCode: null,
+            Broker: broker.RepresentativeName,
+            AgentRegistrationID: null,
+            BrokerRegistrationID: broker.BrokerRegistrationID || null,
+            AgentUserID: null,
+            BrokerUserID: broker.BrokerUserID || null,
+            Email: broker.Email || null,
+            TaxRate: broker.BrokerTaxRate || 0,
+            Divisions: extBrokerDivisionsMap.get(broker.BrokerID) || [],
+            ...(showSales && { PersonalSales: extBrokerSalesMap.get(broker.RepresentativeName) || 0 })
+        }))
+        : [];
 
-    // Format internal brokers
-    const intFormatted = intBrokers.data.map((agent: IAgent) => ({
-        BrokerID: null,
-        AgentID: agent.AgentID,
-        BrokerCode: null,
-        AgentCode: agent.AgentCode,
-        Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
-        AgentRegistrationID: agent.AgentRegistrationID || null,
-        BrokerRegistrationID: null,
-        TaxRate: agent.AgentTaxRate || 0,
-        Email: agent.Email || null,
-        Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
-        ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
-    }));
+    const intFormatted = needsInternal
+        ? intBrokers.data.map((agent: IAgent) => ({
+            BrokerID: null,
+            AgentID: agent.AgentID,
+            BrokerCode: null,
+            AgentCode: agent.AgentCode,
+            Broker: agent.FullName || `${agent.LastName.trim()}, ${agent.FirstName.trim()} ${agent.MiddleName.trim()}`.trim(),
+            AgentRegistrationID: agent.AgentRegistrationID || null,
+            BrokerRegistrationID: null,
+            AgentUserID: agent.AgentUserID || null,
+            BrokerUserID: null,
+            Email: agent.Email || null,
+            TaxRate: agent.AgentTaxRate || 0,
+            Divisions: intBrokerDivisionsMap.get(agent.AgentID) || [],
+            ...(showSales && { PersonalSales: intBrokerSalesMap.get(agent.AgentID) || 0 })
+        }))
+        : [];
 
-    return { 
-        success: true, 
-        data: [...extFormatted, ...intFormatted] 
+    return {
+        success: true,
+        data: [...extFormatted, ...intFormatted]
     };
 };
+
 export const getBrokerRegistrationsService = async (brokerId?: number): QueryResult<IBrokerRegistrationListItem[]> => {
 
     console.log("brokerId", brokerId)
@@ -1702,6 +1830,23 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
 
     let result: ITblBroker | ITblAgent | undefined = undefined 
 
+    if((data.Email && !data.Password) || (data.Password && !data.Email)){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Email and password must be provided together.'
+            }
+        }
+    }
+
+    let pwHash = ''
+    if(data.Password){
+        pwHash = await hashPassword(data.Password)
+    }
+
+
     if(data.BrokerType === 'hands-on'){
 
         const mappedData = {
@@ -1729,7 +1874,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             mappedData.PositionID = position.data[0].PositionID
         }
     
-        const agentResult = await addAgent(userId, mappedData)
+        const agentResult = await addAgent(userId, mappedData, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     
         if(!agentResult.success){
             return {
@@ -1766,7 +1911,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
         }
     
     
-        const brokerResult = await addBroker(userId, data)
+        const brokerResult = await addBroker(userId, data, (data.Email && data.Password) ? { email: data.Email, passwordHash: pwHash } : undefined)
     
         if(!brokerResult.success){
             return {
@@ -1776,7 +1921,7 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
             }
         }
 
-        result = brokerResult.data
+        result = brokerResult.data.broker
     }
 
 

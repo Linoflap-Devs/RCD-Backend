@@ -137,6 +137,7 @@ export interface TblAgentPendingSalesDtl {
   AgentPendingSalesDtlID: Generated<number>;
   Commission: number;
   CommissionRate: number;
+  DistributionID: number | null;
   PendingSalesTranCode: string;
   PositionID: number;
   PositionName: string;
@@ -851,6 +852,7 @@ export interface TblSalesTransDtl {
   AgentName: string | null;
   Commission: number;
   CommissionRate: number;
+  DistributionID: number | null;
   PositionID: number;
   PositionName: string;
   SalesTranCode: string;
@@ -880,6 +882,7 @@ export interface TblSMSTemplate {
 
 export interface TblTokens {
   CreatedAt: Generated<Date>;
+  Scope: string;
   Token: string;
   TokenID: Generated<number>;
   UserID: number;
@@ -1351,6 +1354,53 @@ export interface VwDivisionSalesYearMonth {
   Year: number | null;
 }
 
+export interface VwHandsOffTransactions {
+  AgentID: number | null;
+  AgentName: string | null;
+  Block: string;
+  BuyersAddress: string | null;
+  BuyersContactNumber: string | null;
+  BuyersName: string | null;
+  BuyersOccupation: string | null;
+  CommissionRate: number | null;
+  DateFiled: Date | null;
+  DevCommType: string;
+  DeveloperID: number | null;
+  DeveloperName: string | null;
+  DistributionID: number | null;
+  Division: string | null;
+  DivisionID: number | null;
+  DownPayment: number;
+  DPStartSchedule: Date | null;
+  DPTerms: string;
+  Expr1: number | null;
+  FinancingScheme: string;
+  FloorArea: number;
+  LastUpdate: Date;
+  LastUpdateby: number;
+  Lot: string;
+  LotArea: number;
+  MiscFee: number;
+  MonthlyDP: number;
+  NetTotalTCP: number;
+  Phase: string;
+  PositionName: string | null;
+  ProjectID: number | null;
+  ProjectLocationID: number | null;
+  ProjectName: string | null;
+  ProjectTypeName: string | null;
+  ReservationDate: Date;
+  ReservationDateFormatted: Date;
+  SalesBranchID: number | null;
+  SalesSectorID: number;
+  SalesStatus: string;
+  SalesTranCode: string;
+  SalesTranID: number;
+  SalesTransDtlID: number | null;
+  SectorName: string | null;
+  SellerName: string;
+}
+
 export interface VwIncentives {
   AdditionalIncentive: number | null;
   AdditionalSalesIncentive: number | null;
@@ -1572,6 +1622,7 @@ export interface VwSalesTransactions {
   DevCommType: string | null;
   DeveloperID: number | null;
   DeveloperName: string | null;
+  DistributionID: number | null;
   Division: string;
   DivisionID: number | null;
   DownPayment: number | null;
@@ -1715,6 +1766,10 @@ export interface VwWebKPIs {
   TotalActiveDevelopers: number | null;
   TotalCurrentYear: number | null;
   TotalDivisions: number | null;
+  TotalHandsOffCurrentYear: number | null;
+  TotalHandsOffSalesCurrentMonth: number | null;
+  TotalHandsOffSalesLastMonth: number | null;
+  TotalHandsOffSalesPreviousYear: number | null;
   TotalProjects: number | null;
   TotalSalesCurrentMonth: number | null;
   TotalSalesLastMonth: number | null;
@@ -1824,6 +1879,7 @@ export interface DB {
   vw_DivisionSalesYearly: VwDivisionSalesYearly;
   "vw_DivisionSalesYearly-11_10_2025": VwDivisionSalesYearly11102025;
   vw_DivisionSalesYearMonth: VwDivisionSalesYearMonth;
+  Vw_HandsOffTransactions: VwHandsOffTransactions;
   vw_Incentives: VwIncentives;
   vw_Messages: VwMessages;
   vw_MonthlySalesComparison: VwMonthlySalesComparison;

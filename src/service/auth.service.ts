@@ -3,8 +3,8 @@ import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, bindNewAccountToBroker, changeBrokerPassword, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteAllOTPs, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionBrokerUser, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, getUserOTPs, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findBrokerUserById, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -23,6 +23,7 @@ import { send } from "process";
 import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from "../repository/agents.repository";
 import { r2UploadAgentAvatar, r2UploadBrokerAvatar, r2UploadBrokerGovId, r2UploadBrokerGovSelfie, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
 import { editImage } from "../repository/images.repository";
+import { getDivisions } from "../repository/division.repository";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -489,7 +490,7 @@ export const registerInviteService = async (
     return result
 }
 
-export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, hasUMDivision?: boolean}> => {
+export const loginAgentService = async (email: string, password: string): QueryResult<{token: string, agentId: number | null, email: string, position: string, division: number | undefined, unitManagerId?: number, divDirectorId?: number | null, hasUMDivision?: boolean}> => {
     const user = await findAgentUserByEmail(email)
 
     if(!user.success) {
@@ -561,7 +562,20 @@ export const loginAgentService = async (email: string, password: string): QueryR
         }
     }
 
+    let divisionDirectorId = null
+
     const isSalesPerson = agentDetails.data.Position == 'SALES PERSON' ? true : false
+
+    if(agentDetails.data.DivisionID && Number(agentDetails.data.DivisionID) > 0){
+        const divisionDetails = await getDivisions({ divisionIds: [Number(agentDetails.data.DivisionID)]})
+
+        if(divisionDetails.success && divisionDetails.data.length > 0){
+            divisionDirectorId = divisionDetails.data[0].DirectorID
+        }
+        else {
+            logger(( divisionDetails.error?.message || 'Failed to find division details.'), {email: email, divisionId: agentDetails.data.DivisionID})
+        }
+    }
 
     return {
         success: true,
@@ -572,6 +586,7 @@ export const loginAgentService = async (email: string, password: string): QueryR
             position: agentDetails.data.Position || '',
             division: Number(agentDetails.data.DivisionID) || undefined,
             unitManagerId: agentDetails.data.ReferredByID || undefined,
+            divDirectorId: divisionDirectorId,
             ... ( isSalesPerson && {hasUMDivision: (agentDetails.data.ReferredByID && agentDetails.data.DivisionID) ? true : false})
         }
     }
@@ -867,174 +882,6 @@ export const registerBrokerServiceR2 = async (
         data: result
     }
 }
-
-// export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
-
-//     const [
-//         agentUser,
-//         brokerUser
-//     ] = await Promise.all([
-//         findAgentUserByEmail(email),
-//         findBrokerUserByEmail(email)
-//     ])
-
-//     if(!agentUser.success && !brokerUser.success){
-//         return {
-//             success: false,
-//             data: {} as {token: string, email: string, position: string},
-//             error: {
-//                 message: 'Invalid credentials.',
-//                 code: 400
-//             }
-//         }
-//     }
-
-//     let storedPassword = ''
-
-//     if(agentUser.success){
-//         const user = await findAgentUserByEmail(email)
-
-//         if(!user.success) {
-//             logger((user.error?.message || 'Failed to find user.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-
-//         if(!user.data.isVerified){
-//             logger(('User is not verified.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-
-//         const positionCheck = await findAgentDetailsByUserId(user.data.agentUserId)
-
-//         if(!positionCheck.success) {
-//             logger((positionCheck.error?.message || 'Failed to find agent details.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-        
-//         if(positionCheck.data.Position?.toLowerCase().includes('broker') == false){
-//             logger(('User is not a broker.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-
-//         storedPassword = user.data.password
-//     } else {
-//         const user = await findBrokerUserByEmail(email)
-
-//         if(!user.success) {
-//             logger((user.error?.message || 'Failed to find user.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-
-//         if(!user.data.isVerified){
-//             logger(('User is not verified.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Invalid credentials.',
-//                     code: 400
-//                 }
-//             }
-//         }
-
-//         storedPassword = user.data.password
-//     }
-
-    
-
-//     // compare passwords
-//     //const storedPw = user.data.password
-//     const compare = await verifyPassword(password, storedPassword)
-//     const userId = agentUser.success ? agentUser.data.agentUserId : brokerUser.data.brokerUserId
-
-//     if(!compare){
-//         logger(('Password does not match.'), {email: email})
-//         return {
-//             success: false,
-//             data: {} as {token: string, email: string, position: string},
-//             error: {
-//                 message: 'Invalid credentials.',
-//                 code: 400
-//             }
-//         }
-//     }
-
-//     const token = generateSessionToken()
-//     if(agentUser.success){
-//         const session = await createSession(token, userId)
-
-//         if(!session.success) {
-//             logger(( session.error?.message || 'Failed to create session.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Failed to create session.',
-//                     code: 500
-//                 }
-//             }
-//         }
-//     }
-//     else {
-//         const session = await createBrokerSession(token, userId)
-
-//         if(!session.success) {
-//             logger(( session.error?.message || 'Failed to create session.'), {email: email})
-//             return {
-//                 success: false,
-//                 data: {} as {token: string, email: string, position: string},
-//                 error: {
-//                     message: 'Failed to create session.',
-//                     code: 500
-//                 }
-//             }
-//         }
-//     }
-
-//     return {
-//         success: true,
-//         data: {
-//             token: token,
-//             email: email,
-//             position: agentUser.success ? 'HANDS-ON BROKER' : 'HANDS-OFF BROKER'
-//         }
-//     }
-// }
 
 export const loginBrokerService = async (email: string, password: string): QueryResult<{token: string, email: string, position: string}> => {
 
@@ -1921,6 +1768,56 @@ export const bindNewAccountToExistingAgentService = async (agentId: number, emai
     }
 }
 
+export const bindNewAccountToExistingBrokerService = async (brokerId: number, email: string, password: string): QueryResult<ITblBrokerUser> => {
+    // check if broker id already has account
+    const existingBrokerId = await getBrokerUsers({ brokerIds: [brokerId] })
+
+    if (existingBrokerId.success && existingBrokerId.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Broker already has an account.',
+                code: 400
+            }
+        }
+    }
+
+    const existingEmail = await getBrokerUsers({ emails: [email] })
+
+    if (existingEmail.success && existingEmail.data.length > 0) {
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Email is already registered.',
+                code: 400
+            }
+        }
+    }
+    
+    const hash = await hashPassword(password)
+
+    const result = await bindNewAccountToBroker(email, hash, brokerId)
+
+    if(!result.success){
+        logger('Failed to bind new account to broker.', {email: email, brokerId: brokerId})
+        return {
+            success: false,
+            data: {} as ITblBrokerUser,
+            error: {
+                message: 'Failed to bind new account to broker.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
+
 export const logoutBrokerSessionService = async(sessionId: number): QueryResult<any> => {
     const result = await deleteBrokerSession(sessionId)
 
@@ -2080,8 +1977,48 @@ export const changeAgentUserPasswordAdminService = async (userId: number, agentU
     }
 }
 
+export const changeBrokerUserPasswordAdminService = async (userId: number, brokerUserId: number, newPassword: string): QueryResult<any> => {
+    const brokerUser = await findBrokerUserById(brokerUserId)
 
-export const findEmailSendOTP = async (email: string): QueryResult<null> => {
+    if(!brokerUser.success){
+        logger('Failed to find user.', {userId: brokerUserId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    const hash = await hashPassword(newPassword)
+
+    const updatePassword = await changeBrokerPassword(brokerUser.data.brokerUserId, hash)
+
+    if(!updatePassword.success){
+        logger('Failed to update password.', {userId: userId})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to update password.',
+                code: 500
+            }
+        }
+    }
+
+    // delete sessions
+
+    const deleteSessionsBroker = await deleteSessionBrokerUser(brokerUser.data.brokerUserId)
+
+    return {
+        success: true,
+        data: {}
+    }
+}
+
+export const findEmailSendOTP = async (email: string, scope: string): QueryResult<null> => {
     const findEmail = await findAgentEmail(email)
 
     if(!findEmail.success){
@@ -2100,9 +2037,16 @@ export const findEmailSendOTP = async (email: string): QueryResult<null> => {
     const minuteExpiry = 5
     const expiry = addMinutes(new Date(), minuteExpiry)
 
+    // find otp
+
+    const findOtp = await getUserOTPs(findEmail.data.AgentUserID, scope)
+    if(findOtp.success && findOtp.data){
+        const deleteOtps = await deleteAllOTPs(findEmail.data.AgentUserID, scope)
+    }
+
     // insert otp
 
-    const otpInsert = await insertOTP(findEmail.data.AgentUserID, code, expiry)
+    const otpInsert = await insertOTP(findEmail.data.AgentUserID, code, expiry, scope)
 
     if(!otpInsert.success){
         logger('Failed to insert otp.', {email: email})
@@ -2143,7 +2087,7 @@ export const verifyOTPService = async (email: string, code: string): QueryResult
         }
     }
 
-    const otp = await findUserOTP(user.data.agentUserId, code)
+    const otp = await findUserOTP(user.data.agentUserId, code, 'reset_password')
 
     if(!otp.success){
         logger('Failed to find otp.', {email: email, code: code})
@@ -2288,6 +2232,48 @@ export const changePasswordService = async (email: string, resetToken: string, o
     const spare = sendTemplateEmail('wendell.ravago@linoflaptech.com', 'Password Changed', emailChangePasswordTemplate(date, time), emailChangePasswordTemplate(date, time))
 
     return {    
+        success: true,
+        data: null
+    }
+}
+
+// Forget PIN 
+
+export const verifyPinOTPService = async (email: string, code: string): QueryResult<any> => {
+    
+    const user = await findAgentUserByEmail(email)
+
+    if(!user.success){
+        logger('Failed to find user.', {email: email})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: 'Failed to find user.',
+                code: 404
+            }
+        }
+    }
+
+    const otp = await findUserOTP(user.data.agentUserId, code, 'pin_reset')
+
+    if(!otp.success){
+        logger('Failed to find otp.', {email: email, code: code})
+        return {
+            success: false,
+            data: {} as any,
+            error: {
+                message: otp.error?.message || 'Failed to find otp.',
+                code: 404
+            }
+        }
+    }
+
+    // delete otp
+
+    const deleteOTPResult = await deleteOTP(code)
+
+    return {
         success: true,
         data: null
     }
