@@ -611,7 +611,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         }
     }
 
-    const result = await getSalesTransDetails(salesTranId);
+    const result = await getSalesTransDetails(salesTranId, true);
 
      if(!result.success){
         return {
@@ -635,23 +635,19 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         }
     }
 
-    let images: IImageBase64[] = []
-    if(result.data && result.data[0].SalesTransDtlID){
-        const data = await getSaleImagesByTransactionDetail(result.data[0].SalesTransDtlID);
-
-        if(data.success){
-            images = data.data
-        }
-    }
-    else {
-        return {
-            success: false,
-            data: {} as VwSalesTransactions,
-            error: {
-                code: 404,
-                message: 'No sales found.'
-            }
-        }
+    let resultCopy = { ...result.data[0] }
+    if (result.data[0].images && result.data[0].images.length > 0) {
+        const imageCopies = result.data[0].images
+        const images: (ITypedImageBase64 & { URL: string })[] = await Promise.all(
+            imageCopies.map(async (img: ITypedImageBase64) => {
+                const url = img.StorageKey ? (await getPresignedUrl(img.StorageKey)).data : await Promise.resolve('')
+                return {
+                    ...img,
+                    URL: url
+                }
+            })
+        )
+        resultCopy = { ...result.data[0], images: images }
     }
 
     const details = await mapSalesCommissionDetails(result.data)
@@ -702,6 +698,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         SectorName: data.SectorName,
         ProjectTypeName: data.ProjectTypeName,
         SellerName: data.SellerName?.trim() || '',
+        Images: resultCopy.images
     }
 
     return {
@@ -709,7 +706,7 @@ export const getWebSalesTranDtlService = async (userId: number, salesTranId: num
         data: {
             ...obj,
             Details: details,
-            Images: images
+            Images: resultCopy.images
         }
     }
 }

@@ -612,7 +612,7 @@ export const getSalesTrans = async (
     }
 }
 
-export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwSalesTransactions[]> => {
+export const getSalesTransDetails = async (salesTranId: number, getImages: boolean = false): QueryResult<(VwSalesTransactions & {images?: ITypedImageBase64[]})[] > => {
     try {
         const result = await db.selectFrom('Vw_SalesTransactions')
             .selectAll()
@@ -620,9 +620,60 @@ export const getSalesTransDetails = async (salesTranId: number): QueryResult<VwS
             .where('SalesStatus', '<>', 'ARCHIVED')
             .execute();
 
+        
+        let imgs: ITypedImageBase64[] = []
+        let resultCopy = result
+
+        if(getImages){
+            
+            const imageJunction = await db.selectFrom('Tbl_SalesTranImage')
+                .selectAll()
+                .where('SalesTransID', '=', salesTranId)
+                .execute()
+            
+            if(imageJunction && imageJunction.length > 0){
+                const imageIds = imageJunction.map(img => img.ImageID)
+    
+                const images = await db.selectFrom('Tbl_Image')
+                    .selectAll()
+                    .where('ImageID', 'in', imageIds)
+                    .execute()
+                
+                if(images && images.length > 0){
+                    imgs = images.map(img => {
+    
+                        const fileName = img.Filename.toLowerCase()
+    
+                        return {
+                            ImageID: img.ImageID,
+                            FileName: img.Filename,
+                            ContentType: img.ContentType,
+                            FileExt: img.FileExtension,
+                            FileSize: img.FileSize,
+                            FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
+                            ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other',
+                            StorageKey: img.StorageKey
+                        }
+                    })
+                }
+            }
+
+            console.log('imgs', imgs)
+
+            resultCopy = result.map(res => {
+                return {
+                    ...res,
+                    images: imgs
+                }
+            })
+
+            console.log(resultCopy)
+        }
+
+        console.log(resultCopy)
         return {
             success: true,
-            data: result
+            data: resultCopy
         }
     }
     catch(err: unknown){
