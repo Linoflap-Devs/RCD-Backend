@@ -566,14 +566,15 @@ export const loginAgentService = async (email: string, password: string): QueryR
 
     const isSalesPerson = agentDetails.data.Position == 'SALES PERSON' ? true : false
 
-    if(agentDetails.data.DivisionID){
+    if(agentDetails.data.DivisionID && Number(agentDetails.data.DivisionID) > 0){
         const divisionDetails = await getDivisions({ divisionIds: [Number(agentDetails.data.DivisionID)]})
 
-        if(!divisionDetails.success || divisionDetails.data.length == 0){
+        if(divisionDetails.success && divisionDetails.data.length > 0){
+            divisionDirectorId = divisionDetails.data[0].DirectorID
+        }
+        else {
             logger(( divisionDetails.error?.message || 'Failed to find division details.'), {email: email, divisionId: agentDetails.data.DivisionID})
         }
-
-        divisionDirectorId = divisionDetails.data[0].DirectorID
     }
 
     return {
