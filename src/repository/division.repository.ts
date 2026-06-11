@@ -164,7 +164,11 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
             // .where('AgentID', '<>', agentId)
             .where('IsActive', '=', 1)
             .orderBy('LastName', 'asc')
-            
+
+        let brokers = await db.selectFrom('Tbl_BrokerDivision')
+            .selectAll()
+            .where('DivisionID', '=', divisionId)
+            .execute()
         // if(role == 'SALES DIRECTOR'){
         //     result = result.where('Position', 'in', ['SALES DIRECTOR', 'UNIT MANAGER', 'SALES PERSON'])
         // }
@@ -179,13 +183,18 @@ export const getDivisionAgents = async (agentId: number, divisionId: number, rol
 
         const queryResult = await result.execute();
 
+        let result2 = await db.selectFrom('Vw_Agents')
+            .selectAll()
+            .where('AgentID', 'in', brokers?.map(broker => broker.AgentID))
+            .execute()
+
         if(!queryResult){
             throw new Error('No agents found.')
         }
 
         return {
             success: true,
-            data: queryResult
+            data: queryResult.concat(result2)
         }
     }
 
