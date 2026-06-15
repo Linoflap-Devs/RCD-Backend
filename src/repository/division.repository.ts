@@ -289,6 +289,54 @@ export const getDivisionBrokers = async (filters?: {
     }
 }
 
+export const addDivisionBroker = async (data: {
+    divisionIds: number[],
+    broker: { agentId?: number, brokerId?: number},
+    userId?: number
+}): QueryResult<ITblBrokerDivision[]> => {
+    
+    const trx = await db.startTransaction().execute();
+
+    try {
+         let inserted: ITblBrokerDivision[] = [] 
+
+        if(data.divisionIds.length > 0){
+            const insertNew = await trx.insertInto('Tbl_BrokerDivision')
+                .values(data.divisionIds.map((divisionId) => ({
+                    AgentID: data.broker.agentId || null,
+                    BrokerID: data.broker.brokerId || null,
+                    DivisionID: divisionId,
+                    UpdatedBy: data.userId || 0
+                })))
+                .outputAll('inserted')
+                .execute()
+
+            inserted = insertNew
+        }
+
+        await trx.commit().execute()
+
+        return {
+            success: true,
+            data: inserted
+        }
+    }
+
+    catch(err: unknown) {
+        await trx.rollback().execute()
+
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as ITblBrokerDivision[],
+            error: {
+                code: 400,
+                message: error.message
+            },
+        }
+    }   
+}
+
 export const editDivisionBroker = async (userId: number,  divisionIds: number[], broker: {agentId?: number, brokerId?: number}): QueryResult<ITblBrokerDivision[]> => {
     const trx = await db.startTransaction().execute();
     try {
