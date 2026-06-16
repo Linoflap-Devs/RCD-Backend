@@ -730,6 +730,22 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
     const images = await getSaleImagesByTransactionDetail(salesTransDtlId);
     const details = await getSalesDistributionBySalesTranDtlId(salesTransDtlId)
 
+    let imagesDetail: any = []
+
+    if(images.success){
+        const filter = images.data.map(image => ({ ...image, StorageKey: image.StorageKey ? image.StorageKey : null}))
+
+        const urls = await getPresignedUrls(filter.map(image => image.StorageKey))
+
+        const imageMap = images.data.map((c) => ({
+            ...c,
+            FileContent: '',
+            URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
+        }))
+
+        imagesDetail = imageMap
+    }
+
     let branchName = undefined
     if(result.data.SalesBranchID){
         const fetchBranch = await getSalesBranch(result.data.SalesBranchID)
@@ -786,7 +802,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         lastUpdatedBy: updatedByName,
         lastUpdatedAt: result.data.LastUpdate,
         details: detailsNew,
-        images: images.data
+        images: imagesDetail
     }
 
     return {
