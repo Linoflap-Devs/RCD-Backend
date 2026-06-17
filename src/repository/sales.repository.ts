@@ -2229,7 +2229,7 @@ export const getPendingSalesV2 = async (
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, results: AgentPendingSale[]}> => {
 
    try {
         const page = pagination?.page ?? 1;
@@ -2286,10 +2286,12 @@ export const getPendingSalesV2 = async (
         const totalCount = Number(countResult.rows[0]?.count ?? 0);
         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
 
+
         return {
             success: true,
             data: {
                 totalPages: totalPages,
+                totalResults: totalCount,
                 results: results.rows
             }
         };
@@ -2297,7 +2299,7 @@ export const getPendingSalesV2 = async (
         const error = err as Error;
         return {
             success: false,
-            data: {} as {totalPages: number, results: AgentPendingSale[]},
+            data: {} as {totalPages: number, totalResults: number,  results: AgentPendingSale[]},
             error: {
                 code: 500,
                 message: error.message
