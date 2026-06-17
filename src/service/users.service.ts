@@ -1,6 +1,6 @@
 import { add, format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
+import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, findPastEmail, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
@@ -17,7 +17,7 @@ import { addDivisionBroker, editDivisionBroker, getDivisionBrokers } from "../re
 import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
-import { findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
+import { deleteSessionUser, findInviteToken, findInviteTokenWithRegistration } from "../repository/auth.repository";
 import { TZDate } from "@date-fns/tz";
 import { getPresignedUrl, getPublicUrl, r2UploadAgentAvatar, r2UploadBrokerAvatar } from "../utils/r2";
 import { addImage, editImage } from "../repository/images.repository";
@@ -1995,6 +1995,45 @@ export const editWebBrokerService = async (userId: number, brokerId: number, dat
         data: result.data
     }
     
+}
+
+export const updateAgentUserEmailService = async (userId: number, agentUserId: number, email: string, logoutAll: boolean = false): QueryResult<any> => {
+    
+
+    // check for past emails
+    const existing = await findPastEmail(email)
+
+    if(existing.success && existing.data.Email){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Email already exists.'
+            }
+        }
+    }
+
+    const result = await editAgentUser(agentUserId, { Email: email })
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {},
+            error: result.error
+        }
+    }
+
+    console.log(logoutAll)
+
+    if(logoutAll){
+        const logout = await deleteSessionUser(agentUserId)
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
 }
 
 export const deleteWebBrokerService = async (userId: number, brokerId: number): QueryResult<ITblBroker> => {

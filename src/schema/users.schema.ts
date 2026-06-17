@@ -129,6 +129,10 @@ export const addAgentSchema = z.object({
     employeeIdNumber: z.string().max(20).optional(),
 })
 
+export const updateAgentUserEmailSchema = z.object({
+    email: z.email()
+})
+
 export const editAgentSchema = z.object({
     firstName: z.string().max(150).optional(),
     middleName: z.string().max(50).optional(),
