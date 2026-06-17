@@ -268,12 +268,13 @@ export const getWebPendingSalesController = async (req: Request, res: Response) 
         return;
     }
 
-    const { page, pageSize, month, year, developerId } = req.query
+    const { page, pageSize, month, year, developerId, search } = req.query
 
     const result = await getWebPendingSalesService(session.userID, {
         month: month ? Number(month) : undefined,
         year: year ? Number(year) : undefined,
-        developerId: developerId ? Number(developerId) : undefined
+        developerId: developerId ? Number(developerId) : undefined,
+        searchTerm: search ? search.toString() : undefined
     }, {
         page: Number(page), 
         pageSize: Number(pageSize)

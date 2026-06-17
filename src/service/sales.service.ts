@@ -531,7 +531,7 @@ export const getWebSalesTransService = async (
         showSales?: boolean
     },
     pagination?: {
-        page?: number, 
+        page?: number,  
         pageSize?: number
     }
 ): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
@@ -4526,7 +4526,8 @@ export const getWebPendingSalesService = async (
     filters: {
         month?: number,
         year?: number,
-        developerId?: number
+        developerId?: number,
+        searchTerm?: string
     },
     pagination?: {
         page?: number, 
@@ -4622,6 +4623,7 @@ export const getWebPendingSalesService = async (
             AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
+            BuyersName: item.BuyersName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
@@ -4634,6 +4636,7 @@ export const getWebPendingSalesService = async (
              AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
+            BuyersName: item.BuyersName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
