@@ -1,7 +1,7 @@
 import { TblDistribution, VwAgents, VwHandsOffTransactions, VwSalesTrans, VwSalesTransactions } from "../db/db-types";
 import { addDistributionList, addPendingSale, addPendingSaleR2, addSalesTarget, approveNextStage, approvePendingSaleTransaction, archivePendingSale, archiveSale, bindImagesToSales, deleteDistributionList, deleteSalesTarget, editDistributionList, editPendingSale, editPendingSaleR2, editPendingSalesDetails, editSaleImages, editSalesTarget, editSalesTransaction, getActiveDistributionTemplate, getDistributionList, getDivisionSales, getDivisionSalesTotalsFn, getDivisionSalesTotalsYearlyFn, getHandsOffSalesTrans, getPendingSaleById, getPendingSales, getPendingSalesV2, getPersonalSales, getSaleImagesBySalesTransId, getSaleImagesByTransactionDetail, getSalesBranch, getSalesByDeveloperTotals, getSalesDistributionBySalesTranDtlId, getSalesTargets, getSalesTrans, getSalesTransactionDetail, getSalesTransDetails, getTotalDivisionSales, getTotalPersonalSales, rejectPendingSale } from "../repository/sales.repository";
 import { findAgentBasicDetailsByUserId, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByBrokerId, findBrokerDetailsByUserId, findEmployeeUserById } from "../repository/users.repository";
-import { QueryResult } from "../types/global.types";
+import { PaginationResult, QueryResult } from "../types/global.types";
 import { logger } from "../utils/logger";
 import { getProjectById } from "../repository/projects.repository";
 import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, ApproverRole, DivisionYearlySalesGrouped, FnDivisionSalesYearly, IAgentPendingSale, ITblSalesTarget, RoleMap, SalesStatusText, SaleStatus } from "../types/sales.types";
@@ -531,7 +531,7 @@ export const getWebSalesTransService = async (
         showSales?: boolean
     },
     pagination?: {
-        page?: number, 
+        page?: number,  
         pageSize?: number
     }
 ): QueryResult<{totalResults: number, totalPages: number, totalSales: number, results: Partial<VwSalesTrans>[]}> => {
@@ -582,6 +582,7 @@ export const getWebSalesTransService = async (
             ReservationDate: sale.ReservationDate,
             NetTotalTCP: sale.NetTotalTCP,
             SellerName: sale.SellerName?.trim() || '',
+            BuyersName: sale.BuyersName?.trim() || '',
         }
     })
 
@@ -730,6 +731,28 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
     const images = await getSaleImagesByTransactionDetail(salesTransDtlId);
     const details = await getSalesDistributionBySalesTranDtlId(salesTransDtlId)
 
+    let imagesDetail: any = []
+
+    if(images.success){
+        const filter = images.data.map(image => ({ ...image, StorageKey: image.StorageKey ? image.StorageKey : null}))
+
+        const urls = await getPresignedUrls(filter.map(image => image.StorageKey))
+
+        console.log("urls", urls)
+
+        const imageMap = images.data.map((c) => {
+            imagesDetail.push(
+                {
+                    ...c,
+                    FileContent: '',
+                    URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
+                }
+            )
+        })
+    }
+
+    console.log(imagesDetail)
+
     let branchName = undefined
     if(result.data.SalesBranchID){
         const fetchBranch = await getSalesBranch(result.data.SalesBranchID)
@@ -786,7 +809,7 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
         lastUpdatedBy: updatedByName,
         lastUpdatedAt: result.data.LastUpdate,
         details: detailsNew,
-        images: images.data
+        images: imagesDetail
     }
 
     return {
@@ -4503,20 +4526,21 @@ export const getWebPendingSalesService = async (
     filters: {
         month?: number,
         year?: number,
-        developerId?: number
+        developerId?: number,
+        searchTerm?: string
     },
     pagination?: {
         page?: number, 
         pageSize?: number
     }
-): QueryResult<any> => {
+): QueryResult<PaginationResult<any>> => {
 
     const userData = await findEmployeeUserById(userId);
 
     if(!userData.success){
         return {
             success: false,
-            data: {},
+            data: {} as PaginationResult<any>,
             error: {
                 message: 'No user found',
                 code: 404
@@ -4529,7 +4553,7 @@ export const getWebPendingSalesService = async (
     if(role != 'branch sales staff' && role != 'sales admin'){
         return {
             success: false,
-            data: {},
+            data: {} as PaginationResult<any>,
             error: {
                 message: 'Not enough permission.',
                 code: 403
@@ -4564,15 +4588,13 @@ export const getWebPendingSalesService = async (
         ]
     )
 
-    console.log(ownedSales.data)
-
     const resultArray: any[] = []
 
     if(!result.success){
         logger(result.error?.message || '', {data: filters})
         return {
             success: false,
-            data: [],
+            data: {} as PaginationResult<any>,
             error: {
                 message: 'Getting pending sales failed.' + result.error?.message,
                 code: 400
@@ -4584,7 +4606,7 @@ export const getWebPendingSalesService = async (
         logger(ownedSales.error?.message || '', {data: filters})
         return {
             success: false,
-            data: [],
+            data: {} as PaginationResult<any>,
             error: {
                 message: 'Getting pending sales failed.'    + ownedSales.error?.message,
                 code: 400
@@ -4599,6 +4621,7 @@ export const getWebPendingSalesService = async (
             AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
+            BuyersName: item.BuyersName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
@@ -4611,6 +4634,7 @@ export const getWebPendingSalesService = async (
              AgentPendingSalesID: item.AgentPendingSalesID,
             PendingSalesTransCode: item.PendingSalesTranCode,
             SellerName: item.SellerName || 'N/A',
+            BuyersName: item.BuyersName || 'N/A',
             FinancingScheme: item.FinancingScheme,
             ReservationDate: item.ReservationDate,
             ApprovalStatus: item.ApprovalStatus,
@@ -4620,7 +4644,12 @@ export const getWebPendingSalesService = async (
 
     return {
         success: true,
-        data: resultArray
+        data: {
+            totalResults: result.data.totalResults,
+            totalPages: result.data.totalPages,
+            page: pagination?.page || 1,
+            results: resultArray
+        }
     }
 }
 

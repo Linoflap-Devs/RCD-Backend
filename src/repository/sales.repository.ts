@@ -525,6 +525,7 @@ export const getSalesTrans = async (
                     eb('ProjectName', 'like', searchTerm),
                     eb('Division', 'like', searchTerm),
                     eb('SalesStatus', 'like', searchTerm),
+                    eb('BuyersName', 'like', searchTerm),
                     ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
                 ])
             );
@@ -2221,13 +2222,14 @@ export const getPendingSalesV2 = async (
         isUnique?: boolean,
         approvalStatus?: number[],
         salesBranch?: number,
-        showRejected?: boolean
+        showRejected?: boolean,
+        searchTerm?: string
     },
     pagination?: {
         page?: number, 
         pageSize?: number
     }
-): QueryResult<{totalPages: number, results: AgentPendingSale[]}> => {
+): QueryResult<{totalResults: number, totalPages: number, results: AgentPendingSale[]}> => {
 
    try {
         const page = pagination?.page ?? 1;
@@ -2252,7 +2254,8 @@ export const getPendingSalesV2 = async (
                 ${filters?.salesBranch ?? null},
                 ${filters?.showRejected ? 1 : 0},
                 ${page || null},
-                ${pageSize || null}
+                ${pageSize || null},
+                ${filters?.searchTerm ?? null}
             )
         `.execute(db);
 
@@ -2275,17 +2278,20 @@ export const getPendingSalesV2 = async (
                 ${filters?.salesBranch ?? null},
                 ${filters?.showRejected ? 1 : 0},
                 1,
-                NULL
+                NULL,
+                ${filters?.searchTerm ?? null}
             )
         `.execute(db);
 
         const totalCount = Number(countResult.rows[0]?.count ?? 0);
         const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
 
+
         return {
             success: true,
             data: {
                 totalPages: totalPages,
+                totalResults: totalCount,
                 results: results.rows
             }
         };
@@ -2293,7 +2299,7 @@ export const getPendingSalesV2 = async (
         const error = err as Error;
         return {
             success: false,
-            data: {} as {totalPages: number, results: AgentPendingSale[]},
+            data: {} as {totalPages: number, totalResults: number,  results: AgentPendingSale[]},
             error: {
                 code: 500,
                 message: error.message
@@ -4117,8 +4123,8 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
                 FileExt: img.FileExtension,
                 FileSize: img.FileSize,
                 FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
-                ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
-
+                ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other',
+                StorageKey: img.StorageKey ?? undefined
             }    
         })
         

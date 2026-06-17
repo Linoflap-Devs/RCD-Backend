@@ -1457,8 +1457,6 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
 
     console.log('userId: ', userId, 'agentUserId: ', agentUserId)
 
-
-
     const trx = await db.startTransaction().execute();
 
     try {
@@ -1471,18 +1469,28 @@ export const unlinkAgentUser = async (userId: number, agentUserId: number): Quer
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
-        const registration = await trx.selectFrom('Tbl_AgentRegistration')
-            .select(['IsVerified'])
-            .where('AgentRegistrationID', '=', result.AgentRegistrationID)
-            .executeTakeFirstOrThrow()
+        if(result.AgentRegistrationID){
+            const registration = await trx.selectFrom('Tbl_AgentRegistration')
+                .select(['IsVerified'])
+                .where('AgentRegistrationID', '=', result.AgentRegistrationID)
+                .executeTakeFirst()
+    
+            if(registration){
+                const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
+                    .set({
+                        IsVerified: registration.IsVerified == 2 ? 1 : 0 
+                    })
+                    .where('AgentRegistrationID', '=', result.AgentRegistrationID)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+            }
+        }
 
-        const updateRegistration = await trx.updateTable('Tbl_AgentRegistration')
-            .set({
-                IsVerified: registration.IsVerified == 2 ? 1 : 0 
-            })
-            .where('AgentRegistrationID', '=', result.AgentRegistrationID)
-            .outputAll('inserted')
-            .executeTakeFirstOrThrow();
+        else {
+            const deleteAgentUser = await trx.deleteFrom('Tbl_AgentUser')
+                .where('AgentUserID', '=', agentUserId)
+                .executeTakeFirstOrThrow();
+        }
 
         await trx.commit().execute();
 
@@ -1522,13 +1530,29 @@ export const unlinkBrokerUser = async (userId: number, brokerUserId: number): Qu
             .outputAll('inserted')
             .executeTakeFirstOrThrow();
 
-        const updateRegistration = await trx.updateTable('Tbl_BrokerRegistration')
-            .set({
-                IsVerified: 0
-            })
-            .where('BrokerRegistrationID', '=', result.BrokerRegistrationID)
-            .outputAll('inserted')
-            .executeTakeFirstOrThrow();
+        if(result.BrokerRegistrationID) {
+            const registration = await trx.selectFrom('Tbl_BrokerRegistration')
+                .select(['IsVerified'])
+                .where('BrokerRegistrationID', '=', result.BrokerRegistrationID)
+                .executeTakeFirst()
+    
+            if(registration){
+                const updateRegistration = await trx.updateTable('Tbl_BrokerRegistration')
+                    .set({
+                        IsVerified: registration.IsVerified == 2 ? 1 : 0 
+                    })
+                    .where('BrokerRegistrationID', '=', result.BrokerRegistrationID)
+                    .outputAll('inserted')
+                    .executeTakeFirstOrThrow();
+            }
+        }
+
+        else {
+            const deleteBrokerUser = await trx.deleteFrom('Tbl_BrokerUser')
+                .where('BrokerUserID', '=', brokerUserId)
+                .executeTakeFirstOrThrow();
+        }
+
 
         await trx.commit().execute();
 

@@ -769,9 +769,19 @@ export const addBrokerController = async (req: Request, res: Response) => {
         pagibigNumber,
         tinNumber,
         employeeIdNumber,
+        divisionIds,
         email,
         password
     } = req.body
+
+    let divisionIdArr: number[] | null = null
+
+    if(divisionIds){
+        const divArrNum = divisionIds.map((num: string) => Number(num))
+        divisionIdArr = divArrNum
+    } else {
+        divisionIdArr = null
+    }
 
     const result = await addBrokerService(session.userID,
         {
@@ -804,6 +814,7 @@ export const addBrokerController = async (req: Request, res: Response) => {
             PagIbigNumber: pagibigNumber,
             TINNumber: tinNumber,
             EmployeeIDNumber: employeeIdNumber,
+            DivisionIds: divisionIdArr,
             Email: email,
             Password: password
         }

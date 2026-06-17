@@ -13,7 +13,7 @@ import { IAddBroker, IBroker, IBrokerRegistration, IBrokerRegistrationListItem, 
 import { addBroker, addBrokerImage, deleteBroker, editBroker, editBrokerImage, getBrokerByCode, getBrokerEducation, getBrokerRegistration, getBrokerRegistrationByUserId, getBrokerRegistrations, getBrokers, getBrokerUsers, getBrokerWithUser, getBrokerWorkExp } from "../repository/brokers.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales, getTotalPersonalSales } from "../repository/sales.repository";
-import { editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
+import { addDivisionBroker, editDivisionBroker, getDivisionBrokers } from "../repository/division.repository";
 import { IBrokerDivision } from "../types/division.types";
 import { ITblAgentTaxRates } from "../types/tax.types";
 import { getAgentTaxRate } from "../repository/tax.repository";
@@ -1882,6 +1882,14 @@ export const addBrokerService = async (userId: number, data: IAddBroker) => {
                 data: {},
                 error: agentResult.error
             }
+        }
+
+        if(data.DivisionIds && data.DivisionIds.length > 0){
+            const insertBrokerDivs = await addDivisionBroker({
+                divisionIds: data.DivisionIds,
+                broker: { agentId: agentResult.data.agent.AgentID },
+                userId: userId
+            })
         }
 
         result = agentResult.data.agent

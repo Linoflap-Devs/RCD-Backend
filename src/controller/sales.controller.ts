@@ -91,7 +91,7 @@ export const getDivisionSalesTotalFnController = async (req: Request, res: Respo
 export const getSalesTransactionDetailController = async (req: Request, res: Response) => {
     const { salesTransactionId } = req.params
 
-    const result = await getSalesTransactionDetailService(Number(salesTransactionId))
+const result = await getSalesTransactionDetailService(Number(salesTransactionId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales transaction detail', data: {}})
@@ -268,12 +268,13 @@ export const getWebPendingSalesController = async (req: Request, res: Response) 
         return;
     }
 
-    const { page, pageSize, month, year, developerId } = req.query
+    const { page, pageSize, month, year, developerId, search } = req.query
 
     const result = await getWebPendingSalesService(session.userID, {
         month: month ? Number(month) : undefined,
         year: year ? Number(year) : undefined,
-        developerId: developerId ? Number(developerId) : undefined
+        developerId: developerId ? Number(developerId) : undefined,
+        searchTerm: search ? search.toString() : undefined
     }, {
         page: Number(page), 
         pageSize: Number(pageSize)
