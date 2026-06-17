@@ -63,7 +63,6 @@ export const updateAgentUserEmailController = async (req: Request, res: Response
 
     const { agentUserId } = req.params
     
-
     const { email, logout } = req.body
 
     const result = await updateAgentUserEmailService(session.userID, Number(agentUserId), email, logout && logout == 'true' ? true : false)

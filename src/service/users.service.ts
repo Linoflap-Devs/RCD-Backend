@@ -1,6 +1,6 @@
 import { add, format } from "date-fns";
 import { TblBroker, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
-import { addAgentImage, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, findPastEmail, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
+import { addAgentImage, addPastEmail, editAgentDetails, editAgentEducation, editAgentGovIds, editAgentWorkExp, editBrokerDetails, editBrokerEducation, editBrokerGovIds, editBrokerWorkExp, findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserById, findEmployeeUserById, findPastEmail, getAgentDetails, getAgentEducation, getAgentGovIds, getAgentUsers, getAgentWorkExp, getBrokerGovIds, getUsers, unlinkAgentUser, unlinkBrokerUser, updateBrokerUser } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
 import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController, IAgentWorkExp, IAgentWorkExpEdit, IAgentWorkExpEditController, IBrokerEducationEditController, IBrokerWorkExpEditController, IMobileAccount, NewEducation, NewWorkExp } from "../types/users.types";
 import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
@@ -1999,6 +1999,18 @@ export const editWebBrokerService = async (userId: number, brokerId: number, dat
 
 export const updateAgentUserEmailService = async (userId: number, agentUserId: number, email: string, logoutAll: boolean = false): QueryResult<any> => {
     
+    const agentUser = await findAgentUserById(agentUserId)
+
+    if(!agentUser.success || !agentUser.data){
+        return {
+            success: false,
+            data: {},
+            error: {
+                code: 400,
+                message: 'Agent user not found.'
+            }
+        }
+    }
 
     // check for past emails
     const existing = await findPastEmail(email)
@@ -2028,6 +2040,17 @@ export const updateAgentUserEmailService = async (userId: number, agentUserId: n
 
     if(logoutAll){
         const logout = await deleteSessionUser(agentUserId)
+    }
+
+    // append to past email table
+    const updatePastEmails = await addPastEmail(email)
+
+    if(!updatePastEmails.success){
+        return {
+            success: false,
+            data: {},
+            error: updatePastEmails.error
+        }
     }
 
     return {
