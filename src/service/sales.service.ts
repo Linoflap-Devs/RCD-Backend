@@ -582,6 +582,7 @@ export const getWebSalesTransService = async (
             ReservationDate: sale.ReservationDate,
             NetTotalTCP: sale.NetTotalTCP,
             SellerName: sale.SellerName?.trim() || '',
+            BuyersName: sale.BuyersName?.trim() || '',
         }
     })
 

@@ -525,6 +525,7 @@ export const getSalesTrans = async (
                     eb('ProjectName', 'like', searchTerm),
                     eb('Division', 'like', searchTerm),
                     eb('SalesStatus', 'like', searchTerm),
+                    eb('BuyersName', 'like', searchTerm),
                     ...(isValidNumber ? [eb('SalesTranID', '=', searchAsNumber)] : [])
                 ])
             );

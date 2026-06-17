@@ -91,7 +91,7 @@ export const getDivisionSalesTotalFnController = async (req: Request, res: Respo
 export const getSalesTransactionDetailController = async (req: Request, res: Response) => {
     const { salesTransactionId } = req.params
 
-    const result = await getSalesTransactionDetailService(Number(salesTransactionId))
+const result = await getSalesTransactionDetailService(Number(salesTransactionId))
 
     if(!result.success){
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to get sales transaction detail', data: {}})
