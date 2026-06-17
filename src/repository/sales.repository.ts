@@ -4117,8 +4117,8 @@ export const getSaleImagesByTransactionDetail = async (salesTransDtlId: number):
                 FileExt: img.FileExtension,
                 FileSize: img.FileSize,
                 FileContent: img.FileContent ? img.FileContent.toString('base64') : '',
-                ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other'
-
+                ImageType: fileName.includes('receipt') ? 'receipt' : fileName.includes('agreement') ? 'agreement' : 'other',
+                StorageKey: img.StorageKey ?? undefined
             }    
         })
         

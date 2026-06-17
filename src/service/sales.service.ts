@@ -737,14 +737,20 @@ export const getSalesTransactionDetailService = async (salesTransDtlId: number):
 
         const urls = await getPresignedUrls(filter.map(image => image.StorageKey))
 
-        const imageMap = images.data.map((c) => ({
-            ...c,
-            FileContent: '',
-            URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
-        }))
+        console.log("urls", urls)
 
-        imagesDetail = imageMap
+        const imageMap = images.data.map((c) => {
+            imagesDetail.push(
+                {
+                    ...c,
+                    FileContent: '',
+                    URL: c.StorageKey ? (urls.get(c.StorageKey) ?? null) : null,
+                }
+            )
+        })
     }
+
+    console.log(imagesDetail)
 
     let branchName = undefined
     if(result.data.SalesBranchID){
