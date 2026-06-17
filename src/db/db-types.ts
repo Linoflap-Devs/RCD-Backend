@@ -714,6 +714,11 @@ export interface TblMessages {
   UserOriginID: number;
 }
 
+export interface TblPastEmails {
+  Email: string;
+  PastEmailID: Generated<number>;
+}
+
 export interface TblPosition {
   IsActive: number;
   LastUpdate: Date;
@@ -1839,6 +1844,7 @@ export interface DB {
   Tbl_Image: TblImage;
   Tbl_logs: TblLogs;
   tbl_Messages: TblMessages;
+  Tbl_PastEmails: TblPastEmails;
   Tbl_Position: TblPosition;
   Tbl_Projects: TblProjects;
   Tbl_ProjectType: TblProjectType;
