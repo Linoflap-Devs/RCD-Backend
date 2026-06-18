@@ -1607,7 +1607,7 @@ export const rejectBrokerRegistrationService = async (brokerRegistrationId: numb
         }
     }
 
-    if(brokerRegistration.data.IsVerified !== 0){
+    if(brokerRegistration.data.IsVerified > 1){
         logger(('Broker registration is already processed.'), {brokerRegistrationId: brokerRegistrationId})
         return {
             success: false,
