@@ -826,7 +826,7 @@ export const editAgentService = async (
     }
 
     // Referred Code
-    if (data.ReferredByID) {
+    if (data.ReferredByID && agentData.data.ReferredByID !== data.ReferredByID) {
         const referringAgent = await findAgentDetailsByAgentId(data.ReferredByID);
 
         if (!referringAgent.success) {
