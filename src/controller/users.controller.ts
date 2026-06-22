@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { addBrokerService, BrokerType, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentImageServiceR2, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerImageServiceR2, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersServiceV2, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService } from "../service/users.service";
+import { addBrokerService, BrokerType, deleteWebBrokerService, editAgentEducationService, editAgentGovIdsService, editAgentImageService, editAgentImageServiceR2, editAgentService, editAgentWorkExpService, editBrokerEducationService, editBrokerGovIdsService, editBrokerImageService, editBrokerImageServiceR2, editBrokerService, editBrokerWorkExpService, editWebBrokerService, getAgentGovIdsService, getAgentUsersService, getBrokerDetailsService, getBrokerRegistrationsService, getBrokersGovIdsService, getBrokersServiceV2, getInvitedEmailsService, getInviteRegistrationDetailsService, getMobileAccountsService, getUserDetailsService, getUserDetailsWithValidationService, getUsersService, lookupBrokerDetailsService, lookupBrokerRegistrationService, top10SPsService, top10UMsService, unlinkAgentUserService, unlinkBrokerUserService, updateAgentUserEmailService } from "../service/users.service";
 import { IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentEducationEditController } from "../types/users.types";
 import { QueryResult } from "../types/global.types";
 import { IEditBroker, ITblBroker } from "../types/brokers.types";
@@ -51,6 +51,36 @@ export const getAgentUsersController = async (req: Request, res: Response) => {
         message: "List of agent users.",
         data: result.data
     });
+}
+
+export const updateAgentUserEmailController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session || !session.userID) {
+        res.status(401).json({success: false, data: null, message: 'Unauthorized'})
+        return;
+    }
+
+    const { agentUserId } = req.params
+    
+    const { email, logout } = req.body
+
+    const result = await updateAgentUserEmailService(session.userID, Number(agentUserId), email, logout && logout == 'true' ? true : false)
+
+    if(!result.success){
+        res.status(400).json({ 
+            success: false,
+            message: result.error?.message || "Failed to update agent user email.",
+            data: null
+         });
+        return
+    }
+
+    return res.status(200).json({
+        success: true,
+        message: "Agent user email updated.",
+        data: null
+    })
 }
 
 export const getAgentUserDetailsController = async (req: Request, res: Response) => {

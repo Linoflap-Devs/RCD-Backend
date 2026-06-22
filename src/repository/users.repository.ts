@@ -1,6 +1,6 @@
 import { Selectable, Updateable } from "kysely";
 import { db } from "../db/db";
-import { TblAgents, TblAgentWorkExp, TblBroker, TblBrokerUser, TblImage, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
+import { TblAgents, TblAgentUser, TblAgentWorkExp, TblBroker, TblBrokerUser, TblImage, TblPastEmails, TblUsers, TblUsersWeb, VwAgents } from "../db/db-types";
 import { ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { IBroker, IBrokerEmailPicture, IBrokerPicture, ITblBroker, ITblBrokerEducation, ITblBrokerV2, ITblBrokerWorkExp } from "../types/brokers.types";
 import { QueryResult } from "../types/global.types";
@@ -1595,6 +1595,60 @@ export const updateBrokerUser = async (brokerUserId: number, data: Updateable<Tb
         return {
             success: false,
             data: {} as Selectable<TblBrokerUser>,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const addPastEmail = async (pastEmail: string): QueryResult<{Email: string}> => {
+    try {
+        const result = await db.insertInto('Tbl_PastEmails')
+            .values({
+                Email: pastEmail
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: {Email: result.Email}
+        }        
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblAgentUser> | Selectable<TblBrokerUser>,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const findPastEmail = async (pastEmail: string): QueryResult<Selectable<TblPastEmails>> => {
+    try {
+        const result = await db.selectFrom('Tbl_PastEmails')
+            .selectAll()
+            .where('Email', '=', pastEmail)
+            .executeTakeFirstOrThrow()
+
+        return {
+            success: true,
+            data: result
+        }        
+    }
+
+    catch(err: unknown){
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as Selectable<TblPastEmails>,
             error: {
                 code: 500,
                 message: error.message
