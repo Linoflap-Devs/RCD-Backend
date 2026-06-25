@@ -7,7 +7,7 @@ import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
 import { getAgentTaxRate } from "../repository/tax.repository";
 import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentsDetailsByAgentId, getAgentUsers } from "../repository/users.repository";
 import { IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
-import { IAgentRegistration, IAgentRegistrationListItem, ITblAgentUser } from "../types/auth.types";
+import { IAgentRegistration, IAgentRegistrationInvite, IAgentRegistrationListItem, ITblAgentUser } from "../types/auth.types";
 import { IBrokerDivision } from "../types/division.types";
 import { QueryResult } from "../types/global.types";
 import { ITypedImageBase64, TblImageWithId } from "../types/image.types";
@@ -150,7 +150,7 @@ export const getAgentRegistrationsService = async (pagination?: {page?: number, 
         }
     }
 
-    const obj: IAgentRegistrationListItem[] = result.data.result.map((item: IAgentRegistration) => ({
+    const obj: IAgentRegistrationListItem[] = result.data.result.map((item: IAgentRegistrationInvite) => ({
         AgentRegistrationID: item.AgentRegistrationID,
         FirstName: item.FirstName,
         MiddleName: item.MiddleName || '',
@@ -158,7 +158,8 @@ export const getAgentRegistrationsService = async (pagination?: {page?: number, 
         Email: item.Email,
         Gender: item.Gender,
         ContactNumber: item.ContactNumber,
-        Division: item.Division
+        Division: item.Division,
+        HasInvitation: item.Invitation == null ? false : true
     }))
 
     return {

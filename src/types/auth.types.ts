@@ -225,6 +225,7 @@ export interface IAgentRegistrationListItem {
     Gender: string,
     ContactNumber?: string | null,
     Division?: string | null
+    HasInvitation?: boolean
 }
 
 export interface IAgentRegistration {
@@ -265,6 +266,17 @@ export interface IAgentRegistration {
         StartDate: Date,
         EndDate?: Date | null
     }[]
+}
+
+export interface IAgentRegistrationInvite extends IAgentRegistration {
+    Invitation?: {
+        InviteTokenID: number,
+        ReferredByAgentID: number | null,
+        ReferredByFirstName: string | null,
+        ReferredByLastName: string | null,
+        ReferredByMiddleName: string | null,
+        IsActive: number
+    } | null
 }
 
 export interface Token {

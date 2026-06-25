@@ -1025,6 +1025,22 @@ export interface VwAgents {
   UpdateBy: number | null;
 }
 
+export interface VwAgentUsersInviteTokens {
+  AgentID: number | null;
+  AgentRegistrationID: number | null;
+  AgentUserID: number;
+  Email: string;
+  ImageID: number | null;
+  InviteTokenID: number | null;
+  IsVerified: number;
+  LinkedUserID: number | null;
+  Password: string;
+  ReferredByFirstName: string | null;
+  ReferredByLastName: string | null;
+  ReferredByMiddleName: string | null;
+  TokenIsActive: number | null;
+}
+
 export interface VwCommCollectionReleasing {
   BuyerName: string;
   CollectionRefNumber: string;
@@ -1870,6 +1886,7 @@ export interface DB {
   vw_AgentCommissionLedger: VwAgentCommissionLedger;
   vw_AgentCommissionLedgerReport: VwAgentCommissionLedgerReport;
   Vw_Agents: VwAgents;
+  vw_AgentUsersInviteTokens: VwAgentUsersInviteTokens;
   vw_CommCollectionReleasing: VwCommCollectionReleasing;
   vw_CommCollections: VwCommCollections;
   vw_CommissionCollections: VwCommissionCollections;

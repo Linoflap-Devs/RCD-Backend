@@ -1,7 +1,7 @@
 import { QueryResult } from "../types/global.types";
 import { db } from "../db/db";
 import { IAgent, IAgentEducation, IAgentWorkExp, VwAgentPicture } from "../types/users.types";
-import { IAgentRegister, IAgentRegistration, ITblAgentUser, IVwAgents } from "../types/auth.types";
+import { IAgentRegister, IAgentRegistration, IAgentRegistrationInvite, ITblAgentUser, IVwAgents } from "../types/auth.types";
 import { IImage, IImageBase64, IImageR2, ITypedImageBase64, TblImageWithId } from "../types/image.types";
 import { Selectable, sql, Updateable } from "kysely";
 import { FnAgentSales, IAddAgent, ITblAgent, ITblAgentRegistration } from "../types/agent.types";
@@ -467,7 +467,7 @@ export const getAgentRegistrations = async (
         page?: number,
         pageSize?: number
     }
-): QueryResult<{totalPages: number, result: IAgentRegistration[]}> => {
+): QueryResult<{totalPages: number, result: IAgentRegistrationInvite[]}> => {
     try {
 
         const page = pagination?.page ?? 1;
@@ -486,6 +486,8 @@ export const getAgentRegistrations = async (
             // Join for division info
             .leftJoin('Tbl_Agents', 'Tbl_AgentRegistration.ReferredByID', 'Tbl_Agents.AgentID')
             .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
+            .leftJoin('InviteTokens', 'Tbl_AgentRegistration.AgentRegistrationID', 'InviteTokens.AgentRegistration')
+            .leftJoin('Tbl_Agents as ReferredBy', 'InviteTokens.LinkedUserID', 'ReferredBy.AgentID')
             .select([
                 'Tbl_AgentRegistration.AgentRegistrationID',
                 'Tbl_AgentRegistration.IsVerified',
@@ -532,7 +534,15 @@ export const getAgentRegistrations = async (
                 'SelfieImage.FileContent as SelfieFileContent',
                 'SelfieImage.StorageKey as SelfieStorageKey',
                 // Division
-                'Tbl_Division.Division'
+                'Tbl_Division.Division',
+                // Invitations
+                'InviteTokens.InviteTokenID',
+                'InviteTokens.IsActive',
+                'ReferredBy.FirstName as ReferredByFirstName',
+                'ReferredBy.LastName as ReferredByLastName',
+                'ReferredBy.MiddleName as ReferredByMiddleName',
+                'ReferredBy.AgentID as ReferredByAgentID'
+
             ])
 
         let totalCountResult = await db.selectFrom('Tbl_AgentRegistration')
@@ -660,6 +670,18 @@ export const getAgentRegistrations = async (
             // Build images array
             const images: ITypedImageBase64[] = [];
 
+            let invitation = null
+            if(agent.InviteTokenID){
+                invitation = {
+                    InviteTokenID: agent.InviteTokenID,
+                    ReferredByFirstName: agent.ReferredByFirstName,
+                    ReferredByLastName: agent.ReferredByLastName,
+                    ReferredByMiddleName: agent.ReferredByMiddleName,
+                    ReferredByAgentID: agent.ReferredByAgentID,
+                    IsActive: agent.IsActive
+                }
+            }
+
             // Add profile image
             if (agent.ProfileFilename) {
                 images.push({
@@ -725,6 +747,7 @@ export const getAgentRegistrations = async (
                 Images: images,
                 Experience: workExpByAgentId[agent.AgentRegistrationID] || [],
                 Education: educationByAgentId[agent.AgentRegistrationID] || [],
+                Invitation: invitation
             };
         });
 
@@ -762,7 +785,7 @@ export const getAgentRegistrationsNoImages = async (
         page?: number,
         pageSize?: number
     }
-): QueryResult<{totalPages: number, result: IAgentRegistration[]}> => {
+): QueryResult<{totalPages: number, result: IAgentRegistrationInvite[]}> => {
     try {
 
         const page = pagination?.page ?? 1;
@@ -775,6 +798,8 @@ export const getAgentRegistrationsNoImages = async (
             // Join for division info
             .leftJoin('Tbl_Agents', 'Tbl_AgentRegistration.ReferredByID', 'Tbl_Agents.AgentID')
             .leftJoin('Tbl_Division', 'Tbl_Agents.DivisionID', 'Tbl_Division.DivisionID')
+            .leftJoin('InviteTokens', 'Tbl_AgentRegistration.AgentRegistrationID', 'InviteTokens.AgentRegistration')
+            .leftJoin('Tbl_Agents as ReferredBy', 'InviteTokens.LinkedUserID', 'ReferredBy.AgentID')
             .select([
                 'Tbl_AgentRegistration.AgentRegistrationID',
                 'Tbl_AgentRegistration.IsVerified',
@@ -800,7 +825,14 @@ export const getAgentRegistrationsNoImages = async (
                 'Tbl_AgentUser.Password',
                 'Tbl_AgentUser.AgentID',
                 // Division
-                'Tbl_Division.Division'
+                'Tbl_Division.Division',
+                // Invitations
+                'InviteTokens.InviteTokenID',
+                'InviteTokens.IsActive',
+                'ReferredBy.FirstName as ReferredByFirstName',
+                'ReferredBy.LastName as ReferredByLastName',
+                'ReferredBy.MiddleName as ReferredByMiddleName',
+                'ReferredBy.AgentID as ReferredByAgentID'
             ])
 
         let totalCountResult = await db.selectFrom('Tbl_AgentRegistration')
@@ -858,6 +890,19 @@ export const getAgentRegistrationsNoImages = async (
 
         // 5. Build the final result array
         const result: IAgentRegistration[] = baseAgentData.map(agent => {
+
+            let invitation = null
+            if(agent.InviteTokenID){
+                invitation = {
+                    InviteTokenID: agent.InviteTokenID,
+                    ReferredByFirstName: agent.ReferredByFirstName,
+                    ReferredByLastName: agent.ReferredByLastName,
+                    ReferredByMiddleName: agent.ReferredByMiddleName,
+                    ReferredByAgentID: agent.ReferredByAgentID,
+                    IsActive: agent.IsActive
+                }
+            }
+
             return {
                 AgentRegistrationID: agent.AgentRegistrationID,
                 IsVerified: agent.IsVerified,
@@ -883,6 +928,7 @@ export const getAgentRegistrationsNoImages = async (
                 EmployeeIdNumber: agent.EmployeeIDNumber,
                 Education: [],
                 Experience: [],
+                Invitation: invitation
             };
         });
 
