@@ -1,6 +1,6 @@
 import { VwSalesTransactions, VwWebKPIs } from "../db/db-types";
 import { getCommissionForecastByMonthFn, getCommissionForecastFn, getCommissionForecastPercentageFn, getCommissionForecastTopBuyersFn, getCommissions, getTotalAgentCommissions } from "../repository/commission.repository";
-import { getDivisionSales, getDivisionSalesTotalsFn, getHandsOffSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
+import { getBranchSalesTotalsFn, getDivisionSales, getDivisionSalesTotalsFn, getHandsOffSalesTotalsFn, getPersonalSales, getSalesByDeveloperTotals, getSalesTarget, getSalesTargetTotals, getTotalPersonalSales } from "../repository/sales.repository";
 import { getWebKPIs } from "../repository/dashboard.repository";
 import { findAgentDetailsByUserId, findBrokerDetailsByUserId } from "../repository/users.repository";
 import { QueryResult } from "../types/global.types";
@@ -338,6 +338,13 @@ export const getWebDashboardService = async (): QueryResult<any> => {
 
     // commission forecast
     const commForecast = await getCommissionForecastFn()
+
+    // branch sales
+    const branchSales = await getBranchSalesTotalsFn(
+        [
+            { field: 'BranchName', direction: 'asc' }
+        ]
+    )
     
     return {
         success: true,
@@ -348,6 +355,7 @@ export const getWebDashboardService = async (): QueryResult<any> => {
                 Divisions: salesTarget.data
             },
             DivisionSales: divSales.data,
+            BranchSales: branchSales.data,
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,
             Top10SalesPersons: top10SpsFormat,
@@ -375,7 +383,8 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
         downPaymentPercentResult,
         top10ForecastBuyersResult,
         commForecastByMonthResult,
-        commForecastResult
+        commForecastResult,
+        branchSalesResult
     ] = await Promise.allSettled([
         getWebKPIs(),
         getSalesTarget([{ field: "DivisionName", direction: "asc" }]),
@@ -389,7 +398,8 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
         getCommissionForecastPercentageFn(),
         getCommissionForecastTopBuyersFn([{ field: 'NetTotalTCP', direction: 'desc' }], 10),
         getCommissionForecastByMonthFn([{ field: 'Year', direction: 'desc' }, { field: 'Month', direction: 'desc' }]),
-        getCommissionForecastFn()
+        getCommissionForecastFn(),
+        getBranchSalesTotalsFn([{ field: 'BranchName', direction: 'asc' }])
     ])
 
     // Helper to safely extract data or return a fallback
@@ -412,6 +422,8 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
     const top10ForecastBuyers = unwrap(top10ForecastBuyersResult, { success: true, data: [] })
     const commForecastByMonthFormat = unwrap(commForecastByMonthResult, { success: true, data: [] })
     const commForecast = unwrap(commForecastResult, { success: true, data: [] })
+    const branchSales = unwrap(branchSalesResult, { success: true, data: [] })
+
     
     return {
         success: true,
@@ -422,6 +434,7 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
                 Divisions: salesTarget.data
             },
             DivisionSales: divSales.data,
+            BranchSales: branchSales.data,
             HandsOffSales: handsOffSales.data,
             Top10Divisions: top10DivsFormat,
             Top10UnitManagers: top10UmsFormat,

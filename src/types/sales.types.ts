@@ -195,9 +195,22 @@ export interface FnDivisionSalesYearly extends FnDivisionSales {
     Month: number | null
 }
 
+
 export interface DivisionYearlySalesGrouped {
     Division: string;
     YearData: Array<Omit<FnDivisionSalesYearly, 'Division'>>;
+}
+
+
+export interface FnBranchSales {
+    BranchName: string,	
+    CurrentMonth: number,	
+    LastMonth: number,	
+    CurrentMonthLastYear: number,	
+    CurrentQuarter: number,	
+    LastQuarter: number,	
+    LastYear: number,	
+    CurrentYear: number
 }
 
 export interface FnHandsOffSales {

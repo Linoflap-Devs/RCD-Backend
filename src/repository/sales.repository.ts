@@ -3,7 +3,7 @@ import { db } from "../db/db"
 import { DB, TblAgentPendingSalesDtl, TblDistribution, TblSalesBranch, TblSalesSector, TblSalesTarget, TblSalesTranImage, TblSalesTrans, TblSalesTransDtl, VwAgents, VwDivisionSalesTarget, VwSalesTrans, VwSalesTransactions, VwHandsOffTransactions } from "../db/db-types"
 import { QueryResult } from "../types/global.types"
 import { logger } from "../utils/logger"
-import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, FnDivisionSales, FnDivisionSalesYearly, FnHandsOffSales, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
+import { AddPendingSaleDetail, AgentPendingSale, AgentPendingSalesDetail, AgentPendingSalesWithDetails, DeveloperSales, FnBranchSales, FnDivisionSales, FnDivisionSalesYearly, FnHandsOffSales, FnSalesTarget, IAgentPendingSale, ITblSalesTarget, ITblSalesTrans, SalesTargetTotals, SaleStatus } from "../types/sales.types";
 import { TZDate } from "@date-fns/tz";
 import { sql, ExpressionBuilder, Selectable, Insertable, Transaction, Updateable } from "kysely";
 import { SalesStatusText } from "../types/sales.types";
@@ -1645,6 +1645,49 @@ export const getDivisionSalesTotalsFn = async (sorts?: SortOption[], take?: numb
         }
     }
 }
+
+type SortOptionBranch = {
+    field: 'BranchName' | 'CurrentMonth'
+    direction: 'asc' | 'desc'
+}
+
+export const getBranchSalesTotalsFn = async (sorts?: SortOptionBranch[], take?: number, date?: Date): QueryResult<FnBranchSales[]> => {
+    try {
+        const orderParts: any[] = []
+        
+        if (sorts && sorts.length > 0) {
+            sorts.forEach(sort => {
+                orderParts.push(sql`${sql.ref(sort.field)} ${sql.raw(sort.direction.toUpperCase())}`)
+                
+            })
+        }
+        
+        const result = await sql`
+            SELECT ${take ? sql`TOP ${sql.raw(take.toString())}` : sql``} *
+            FROM Fn_BranchSales(${date ? sql.raw(`'${date.toISOString()}'`) : sql.raw('getdate()')})
+            WHERE BranchName IS NOT NULL
+            AND BranchID > 0
+            AND BranchID IS NOT NULL
+            ${orderParts.length > 0 ? sql`ORDER BY ${sql.join(orderParts, sql`, `)}` : sql``}
+        `.execute(db)
+        
+        const rows: FnBranchSales[] = result.rows as FnBranchSales[]
+        return {
+            success: true,
+            data: rows
+        }
+    } catch(err: unknown) {
+        const error = err as Error
+        return {
+            success: false,
+            data: [] as FnBranchSales[],
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+} 
 
 export const getHandsOffSalesTotalsFn = async (sorts?: SortOption[], take?: number, date?: Date): QueryResult<FnHandsOffSales[]> => {
     try {
