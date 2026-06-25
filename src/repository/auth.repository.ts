@@ -9,7 +9,7 @@ import { logger } from "../utils/logger";
 import { IAgent } from "../types/users.types";
 import { ITblAgent, ITblAgentRegistration } from "../types/agent.types";
 import { IBroker, ITblBrokerRegistration } from "../types/brokers.types";
-import { Selectable } from "kysely";
+import { Selectable, Updateable } from "kysely";
 
 // Agent Sessions
 
@@ -2535,6 +2535,37 @@ export const registerEmployee = async (data: IEmployeeRegister): QueryResult<ITb
     }
 
     catch (err: unknown) {
+        const error = err as Error;
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
+
+export const editEmployee = async (userId: number, data: Updateable<ITblUsersWeb>): QueryResult<ITblUsersWeb> => {
+    try {
+        const updateData = {
+            ...data
+        }
+
+        const result = await db.updateTable('Tbl_UsersWeb')
+            .where('UserWebID', '=', userId)
+            .set(updateData)
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+        
+        return {
+            success: true,
+            data: result
+        }
+    }
+
+    catch(err: unknown){
         const error = err as Error;
         return {
             success: false,

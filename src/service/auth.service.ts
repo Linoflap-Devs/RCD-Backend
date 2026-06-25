@@ -1,10 +1,10 @@
-import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens, ITblAgentUser, ITblBrokerUser } from "../types/auth.types";
+import { IAgentInvite, IAgentRegister, IBrokerRegister, IEmployeeRegister, IInviteTokens, ITblAgentUser, ITblBrokerUser, ITblUsersWeb } from "../types/auth.types";
 import { QueryResult } from "../types/global.types";
 import { addMinutes, format } from 'date-fns'
 import { IImage, IImageR2 } from "../types/image.types";
 import path from "path";
-import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, bindNewAccountToBroker, changeBrokerPassword, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteAllOTPs, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionBrokerUser, deleteSessionUser, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, getUserOTPs, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
-import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findBrokerUserById, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers } from "../repository/users.repository";
+import { approveAgentRegistrationTransaction, approveBrokerRegistrationTransaction, bindNewAccountToAgent, bindNewAccountToBroker, changeBrokerPassword, changeEmployeePassword, changePassword, deleteAllInviteTokensByEmail, deleteAllOTPs, deleteBrokerSession, deleteEmployeeAllSessions, deleteEmployeeSession, deleteInviteRegistrationTransaction, deleteInviteToken, deleteOTP, deleteResetPasswordToken, deleteSession, deleteSessionBrokerUser, deleteSessionUser, editEmployee, extendEmployeeSessionExpiry, extendSessionExpiry, findAgentEmail, findAgentRegistrationById, findBrokerRegistrationById, findBrokerSession, findEmployeeSession, findInviteToken, findResetPasswordToken, findResetPasswordTokenByUserId, findSession, findUserOTP, getTblAgentUsers, getUserOTPs, insertBrokerSession, insertEmployeeSession, insertInviteToken, insertOTP, insertResetPasswordToken, insertSession, invalidateTokens, registerAgentTransaction, registerAgentTransactionR2, registerBrokerTransaction, registerBrokerTransactionR2, registerEmployee, rejectAgentRegistration, rejectBrokerRegistration, rejectInviteRegistrationTransaction, updateInviteToken, updateResetPasswordToken } from "../repository/auth.repository";
+import { findAgentDetailsByAgentId, findAgentDetailsByUserId, findAgentUserByEmail, findAgentUserById, findBrokerDetailsByUserId, findBrokerUserByEmail, findBrokerUserById, findEmployeeUserById, findEmployeeUserByUsername, getAgentUsers, getUsers } from "../repository/users.repository";
 import { logger } from "../utils/logger";
 import { hashPassword, verifyPassword } from "../utils/scrypt";
 import crypto from 'crypto';
@@ -24,6 +24,7 @@ import { editAgentRegistration, getAgent, getAgentRegistration, getAgents } from
 import { r2UploadAgentAvatar, r2UploadBrokerAvatar, r2UploadBrokerGovId, r2UploadBrokerGovSelfie, r2UploadGovId, r2UploadGovSelfie } from "../utils/r2";
 import { editImage } from "../repository/images.repository";
 import { getDivisions } from "../repository/division.repository";
+import { Updateable } from "kysely";
 
 const DES_KEY = process.env.DES_KEY || ''
 
@@ -1715,6 +1716,93 @@ export const logoutEmployeeSessionService = async(sessionId: number): QueryResul
     return {
         success: true,
         data: {}
+    }
+}
+
+export const editEmployeeService = async (userId: number, userRole: string, targetUserId: number, data: Updateable<ITblUsersWeb>): QueryResult<Omit<ITblUsersWeb, 'Password'>> => {
+    
+    // validations
+
+    const excludedRoles = []
+
+    if(userRole == 'ADMIN'){
+        excludedRoles.push('ADMIN')
+    }
+
+    if(userRole == 'SALES ADMIN'){
+        excludedRoles.push('ADMIN', 'SALES ADMIN')
+    }
+
+    const target = await getUsers({ excRoles: excludedRoles })
+
+    console.log(excludedRoles)
+    console.log(target)
+
+    if(!target.success || !target.data){
+        logger('Failed to find target user.', {userId: userId, targetUserId: targetUserId})
+        return {
+            success: false,
+            data: {} as Omit<ITblUsersWeb, 'Password'>,
+            error: {
+                message: 'Failed to find target user.',
+                code: 404
+            }
+        }
+    }
+
+    if(!target.data.find(user => user.UserWebID == targetUserId)){
+        logger('Target user not found.', {userId: userId, targetUserId: targetUserId})
+        return {
+            success: false,
+            data: {} as Omit<ITblUsersWeb, 'Password'>,
+            error: {
+                message: 'Target user not found.',
+                code: 404
+            }
+        }
+    }
+
+    // check branch validity
+
+    console.log(data)
+
+    if(data.BranchID){
+        const branch = await getSalesBranch(data.BranchID)
+
+        if(!branch.success || !branch.data){
+            return {
+                success: false,
+                data: {} as Omit<ITblUsersWeb, 'Password'>,
+                error: {
+                    message: 'Invalid branch.',
+                    code: 400
+                }
+            }
+        }
+
+        data = {
+            ...data,
+            BranchName: branch.data.BranchName
+        }
+    }
+    
+    const result = await editEmployee(targetUserId, data)
+
+    if(!result.success){
+        logger('Failed to edit employee.', {userId: userId, targetUserId: targetUserId, data: data})
+        return {
+            success: false,
+            data: {} as ITblUsersWeb,
+            error: {
+                message: 'Failed to edit employee.',
+                code: 500
+            }
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
     }
 }
 

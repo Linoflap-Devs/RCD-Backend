@@ -19,6 +19,13 @@ export const loginEmployeeSchema = z.object({
     password: z.string()
 })
 
+export const editEmployeeSchema = z.object({
+    branchID: z.coerce.number().optional(),
+    empName: z.string().optional(),
+    role: z.enum(['ADMIN', 'SALES ADMIN', 'ACCOUNTING STAFF', 'MANAGEMENT LEVEL', 'BRANCH SALES STAFF', 'HO SALES STAFF']).optional(),
+    userName: z.string().optional(),
+})
+
 export const approveRegistrationSchema = z.object({
     agentRegistrationId: z.coerce.number(),
     agentId: z.coerce.number().optional(),

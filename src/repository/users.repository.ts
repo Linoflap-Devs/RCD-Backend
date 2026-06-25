@@ -9,9 +9,20 @@ import { IAgent, IAgentEdit, IAgentEducation, IAgentEducationEdit, IAgentPicture
 import { mapToEditAgent, mapToEditEducation, mapToEditWorkExp, mapToImageEdit } from "../utils/maps";
 import { bufferToBase64 } from "../utils/utils";
 
-export const getUsers = async (): QueryResult<ITblUsersWeb[]> => {
+export const getUsers = async (
+    filters?: {
+        excRoles?: string[],
+    }
+): QueryResult<ITblUsersWeb[]> => {
     try {
-        const users = await db.selectFrom('Tbl_UsersWeb').selectAll().execute();
+        let baseQuery = await db.selectFrom('Tbl_UsersWeb')
+            .selectAll()
+
+        if (filters && filters.excRoles && filters.excRoles.length > 0) {
+            baseQuery = baseQuery.where('Role', 'not in', filters.excRoles)
+        }
+
+        const users = await baseQuery.execute()
         return {
             success: true,
             data: users

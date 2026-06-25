@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { IAgentInvite, IAgentRegister, IBrokerRegister } from "../types/auth.types";
-import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, bindNewAccountToExistingBrokerService, changeAgentUserPasswordAdminService, changeBrokerUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService, verifyPinOTPService } from "../service/auth.service";
+import { approveAgentRegistrationService, approveBrokerRegistrationService, approveInviteRegistrationService, bindNewAccountToExistingAgentService, bindNewAccountToExistingBrokerService, changeAgentUserPasswordAdminService, changeBrokerUserPasswordAdminService, changeEmployeePasswordAdminService, changeEmployeePasswordService, changePasswordService, editEmployeeService, findEmailSendOTP, getCurrentAgentService, getInviteTokenDetailsService, inviteNewUserService, loginAgentService, loginBrokerService, loginEmployeeService, logoutAgentSessionService, logoutBrokerSessionService, logoutEmployeeSessionService, registerAgentService, registerAgentServiceR2, registerBrokerService, registerBrokerServiceR2, registerEmployeeService, registerInviteService, rejectAgentRegistrationService, rejectBrokerRegistrationService, rejectInviteRegistrationService, revokeInviteTokenService, verifyOTPService, verifyPinOTPService } from "../service/auth.service";
 import { getUserDetailsWebService } from "../service/users.service";
 
 export const registerAgentController = async (req: Request, res: Response) => {
@@ -568,6 +568,48 @@ export const registerEmployeeController = async (req: Request, res: Response) =>
     return res.status(200).json({
         success: true, 
         message: "Employee registered successfully.",
+        data: result.data
+    })
+}
+
+export const editEmployeeController = async (req: Request, res: Response) => {
+
+    const session = req.session
+
+    if(!session || !session.userID || !session.userRole){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        userId
+    } = req.params
+
+    const {
+        branchID,
+        empName,
+        role,
+        userName
+    } = req.body
+
+    const result = await editEmployeeService(session.userID, session.userRole, Number(userId), {
+        BranchID: branchID ? Number(branchID) : undefined,
+        EmpName: empName,
+        Role: role,
+        UserName: userName
+    })
+
+    if(!result.success){
+        return res.status(result.error?.code || 500).json({
+            success: false, 
+            message: result.error?.message || "Failed to edit employee.",
+            data: {}
+        })
+    }
+
+    return res.status(200).json({
+        success: true, 
+        message: "Employee edited successfully.",
         data: result.data
     })
 }
