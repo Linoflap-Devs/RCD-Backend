@@ -443,7 +443,8 @@ export const getWebDashboardServiceV2 = async (): QueryResult<any> => {
             DownpaymentPercent: downPaymentPercent.data,
             Top10ForecastBuyers: top10ForecastBuyers.data,
             CommissionForecastByYearMonth: commForecastByMonthFormat,
-            CommissionForecast: commForecast.data
+            CommissionForecast: commForecast.data,
+            OverallSales: divSales.data.reduce((acc, curr) => acc + curr.CurrentYear, 0)
         }
     }
 }
