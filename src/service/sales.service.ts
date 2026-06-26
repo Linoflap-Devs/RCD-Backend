@@ -4530,8 +4530,7 @@ export const getWebPendingSalesService = async (
         month?: number,
         year?: number,
         developerId?: number,
-        searchTerm?: string,
-        status?: number
+        searchTerm?: string
     },
     pagination?: {
         page?: number, 
