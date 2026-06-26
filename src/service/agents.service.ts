@@ -947,7 +947,7 @@ export const demoteUMtoSPService = async (
         }
     }
 
-    const umPosition = positions.data.find(p => p.Position == 'UNIT MANAGER')
+    const umPosition = positions.data.find(p => p.Position.trim() == 'UNIT MANAGER')
 
     if(!umPosition){
         return {
@@ -960,7 +960,7 @@ export const demoteUMtoSPService = async (
         }
     }
 
-    const spPosition = positions.data.find(p => p.Position == 'SALES PERSON')
+    const spPosition = positions.data.find(p => p.Position.trim() == 'SALES PERSON')
 
     if(!spPosition){
         return {
