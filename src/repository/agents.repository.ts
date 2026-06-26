@@ -1728,23 +1728,25 @@ export const demoteUmTransferSpTransaction = async (
 
         // assign SPs to new UM
         const spList = await trx.selectFrom('Tbl_Agents')
+            .where('PositionID', '=', spPositionId)
             .where(eb => eb.or([
                 eb('ReferredByID', '=', umId),
                 eb('ReferredCode', '=', umCode || "no match")
             ]))
             .select('AgentID')
             .execute()
+            
+        const agentIds = spList.map(sp => sp.AgentID)
 
         if(spList.length > 0){
             const assignNewUM = await trx.updateTable('Tbl_Agents')
-                .where('AgentID', 'in', spList.map(sp => sp.AgentID))
-                .where('PositionID', '=', spPositionId)
                 .set({
                     ReferredByID: replacementUmId,
                     ReferredCode: replacementUmCode
                 })
-                .outputAll('inserted')
-                .executeTakeFirstOrThrow()
+                .where('AgentID', 'in', agentIds)
+                .where('PositionID', '=', spPositionId)
+                .execute()
         }
 
         await trx.commit().execute();
@@ -1757,6 +1759,7 @@ export const demoteUmTransferSpTransaction = async (
     catch(err: unknown){
         await trx.rollback().execute();
         const error = err as Error
+        console.log(error)
         return {
             success: false,
             data: {} as ITblAgent,
@@ -1766,4 +1769,21 @@ export const demoteUmTransferSpTransaction = async (
             }
         }
     }
+}
+
+export const countReferredSPs = async (
+    umId: number,
+    umCode: string | undefined,
+    spPositionId: number
+): Promise<number> => {
+    const result = await db.selectFrom('Tbl_Agents')
+        .select(({ fn }) => fn.count<number>('AgentID').as('count'))
+        .where('PositionID', '=', spPositionId)
+        .where(eb => eb.or([
+            eb('ReferredByID', '=', umId),
+            ...(umCode ? [eb('ReferredCode', '=', umCode)] : [])
+        ]))
+        .executeTakeFirst()
+
+    return result ? Number(result.count) : 0
 }

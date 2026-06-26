@@ -1,6 +1,6 @@
 import { string } from "zod";
 import { VwAgents } from "../db/db-types";
-import { addAgent, assignUMtoSPs, deleteAgent, demoteUmTransferSpTransaction, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
+import { addAgent, assignUMtoSPs, countReferredSPs, deleteAgent, demoteUmTransferSpTransaction, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
@@ -932,6 +932,11 @@ export const demoteUMtoSPService = async (
     replacementUMId?: number
 ): QueryResult<ITblAgent> => {
 
+    console.log('demoteUMtoSPService');
+    console.log(umId);
+    console.log(replacementUMId);
+
+
     const positions = await getPositions({ positionNames: ['SALES PERSON', 'UNIT MANAGER'] })
 
     if(!positions.success){
@@ -984,31 +989,32 @@ export const demoteUMtoSPService = async (
         }
     }
 
-    const spList = await getAgents({ 
-        positionId: [spPosition.PositionID],
-        referredById: umId, 
-        ...( umData.data.AgentCode && {referredCode: umData.data.AgentCode}) 
-    })
-
-    if(!spList.success){
+    if(umData.data.PositionID !== umPosition.PositionID){
         return {
             success: false,
             data: {} as ITblAgent,
-            error: spList.error
+            error: {
+                message: 'Agent is not a unit manager.',
+                code: 404
+            }
         }
     }
+
+    const spCount = await countReferredSPs(umId, umData.data.AgentCode || undefined, spPosition.PositionID)
+
+    const hasSPs = spCount > 0
 
     let replacementUM = null
 
     // check replacement UM validations if sp list existing
-    if(spList.data && spList.data.results.length > 0){
+    if(hasSPs){
         if(!replacementUMId){
             return {
                 success: false,
                 data: {} as ITblAgent,
                 error: {
                     message: 'No replacement UM id provided',
-                    code: 400
+                    code: 404
                 }
             }
         }
@@ -1032,7 +1038,29 @@ export const demoteUMtoSPService = async (
                 data: {} as ITblAgent,
                 error: {
                     message: 'Replacement user is not a unit manager.',
-                    code: 400
+                    code: 404
+                }
+            }
+        }
+
+        if(replacementUMData.data.AgentID === umId){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'Replacement user is the same as the unit manager.',
+                    code: 404
+                }
+            }
+        }
+
+        if(replacementUMData.data.DivisionID != umData.data.DivisionID){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'Replacement user does not belong to the same division.',
+                    code: 404
                 }
             }
         }

@@ -366,9 +366,9 @@ export const demoteUMtoSPController = async (req: Request, res: Response) => {
 
     const {
         replacementUmId
-    } = req.body
+    } = req.body || {}
     
-    const result = await demoteUMtoSPService(session.userID, Number(agentId), Number(replacementUmId));
+    const result = await demoteUMtoSPService(session.userID, Number(agentId), replacementUmId ? Number(replacementUmId) : undefined);
 
     if(!result.success) {
         res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to demote agent.', data: {}})
