@@ -2266,7 +2266,8 @@ export const getPendingSalesV2 = async (
         approvalStatus?: number[],
         salesBranch?: number,
         showRejected?: boolean,
-        searchTerm?: string
+        searchTerm?: string,
+        status?: number
     },
     pagination?: {
         page?: number, 
@@ -2298,7 +2299,8 @@ export const getPendingSalesV2 = async (
                 ${filters?.showRejected ? 1 : 0},
                 ${page || null},
                 ${pageSize || null},
-                ${filters?.searchTerm ?? null}
+                ${filters?.searchTerm ?? null},
+                ${filters?.status ?? null}
             )
         `.execute(db);
 
@@ -2322,7 +2324,8 @@ export const getPendingSalesV2 = async (
                 ${filters?.showRejected ? 1 : 0},
                 1,
                 NULL,
-                ${filters?.searchTerm ?? null}
+                ${filters?.searchTerm ?? null},
+                ${filters?.status ?? null}
             )
         `.execute(db);
 
