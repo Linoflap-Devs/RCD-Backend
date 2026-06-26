@@ -1698,3 +1698,72 @@ export const editAgentUser = async (agentUserId: number, data: Updateable<TblAge
         }
     }
 }
+
+export const demoteUmTransferSpTransaction = async (
+    userId: number,
+    umId: number,
+    umPositionId: number,
+    spPositionId: number,
+    umCode?: string,
+    replacementUmId?: number,
+    replacementUmCode?: string
+): QueryResult<ITblAgent> => {
+    
+    const trx = await db.startTransaction().execute();
+    
+    try {
+        // demote to SP
+        const demoteUM = await trx.updateTable('Tbl_Agents')
+            .where('AgentID', '=', umId)
+            .where('PositionID', '=', umPositionId)
+            .set({
+                ReferredByID: null,
+                ReferredCode: null,
+                UpdateBy: userId,
+                LastUpdate: new Date(),
+                PositionID: spPositionId,
+            })
+            .outputAll('inserted')
+            .executeTakeFirstOrThrow()
+
+        // assign SPs to new UM
+        const spList = await trx.selectFrom('Tbl_Agents')
+            .where(eb => eb.or([
+                eb('ReferredByID', '=', umId),
+                eb('ReferredCode', '=', umCode || "no match")
+            ]))
+            .select('AgentID')
+            .execute()
+
+        if(spList.length > 0){
+            const assignNewUM = await trx.updateTable('Tbl_Agents')
+                .where('AgentID', 'in', spList.map(sp => sp.AgentID))
+                .where('PositionID', '=', spPositionId)
+                .set({
+                    ReferredByID: replacementUmId,
+                    ReferredCode: replacementUmCode
+                })
+                .outputAll('inserted')
+                .executeTakeFirstOrThrow()
+        }
+
+        await trx.commit().execute();
+        return {
+            success: true,
+            data: demoteUM
+        }
+    }
+
+    catch(err: unknown){
+        await trx.rollback().execute();
+        const error = err as Error
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                code: 500,
+                message: error.message
+            }
+        }
+    }
+}
