@@ -1,6 +1,6 @@
 import { string } from "zod";
 import { VwAgents } from "../db/db-types";
-import { addAgent, assignUMtoSPs, deleteAgent, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
+import { addAgent, assignUMtoSPs, countReferredSPs, deleteAgent, demoteUmTransferSpTransaction, editAgent, getAgent, getAgentByCode, getAgentEducation, getAgentImages, getAgentRegistration, getAgentRegistrations, getAgentRegistrationsNoImages, getAgents, getAgentUserByAgentId, getAgentWithRegistration, getAgentWithUser, getAgentWorkExp, unassignSPs } from "../repository/agents.repository";
 import { editDivisionBroker, getDivisionBrokers, getDivisions } from "../repository/division.repository";
 import { getPositions } from "../repository/position.repository";
 import { getMultipleTotalPersonalSales } from "../repository/sales.repository";
@@ -925,6 +925,172 @@ export const syncUMSalespersons = async (
 
     return { success: true, data: {} };
 };
+
+export const demoteUMtoSPService = async (
+    userId: number,
+    umId: number,
+    replacementUMId?: number
+): QueryResult<ITblAgent> => {
+
+    console.log('demoteUMtoSPService');
+    console.log(umId);
+    console.log(replacementUMId);
+
+
+    const positions = await getPositions({ positionNames: ['SALES PERSON', 'UNIT MANAGER'] })
+
+    if(!positions.success){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: positions.error
+        }
+    }
+
+    const umPosition = positions.data.find(p => p.Position.trim() == 'UNIT MANAGER')
+
+    if(!umPosition){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                message: 'No unit manager position found',
+                code: 400
+            }
+        }
+    }
+
+    const spPosition = positions.data.find(p => p.Position.trim() == 'SALES PERSON')
+
+    if(!spPosition){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                message: 'No sales person position found',
+                code: 400
+            }
+        }
+    }
+
+    // validations
+
+    // check UM validations
+    const umData = await findAgentDetailsByUserId(umId)
+
+    if(!umData.success){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                message: 'No user found',
+                code: 404
+            }
+        }
+    }
+
+    if(umData.data.PositionID !== umPosition.PositionID){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: {
+                message: 'Agent is not a unit manager.',
+                code: 404
+            }
+        }
+    }
+
+    const spCount = await countReferredSPs(umId, umData.data.AgentCode || undefined, spPosition.PositionID)
+
+    const hasSPs = spCount > 0
+
+    let replacementUM = null
+
+    // check replacement UM validations if sp list existing
+    if(hasSPs){
+        if(!replacementUMId){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'No replacement UM id provided',
+                    code: 404
+                }
+            }
+        }
+
+        const replacementUMData = await findAgentDetailsByUserId(replacementUMId)
+
+        if(!replacementUMData.success){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'No replacement user found.',
+                    code: 404
+                }
+            }
+        }
+
+        if(replacementUMData.data.PositionID !== umPosition.PositionID){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'Replacement user is not a unit manager.',
+                    code: 404
+                }
+            }
+        }
+
+        if(replacementUMData.data.AgentID === umId){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'Replacement user is the same as the unit manager.',
+                    code: 404
+                }
+            }
+        }
+
+        if(replacementUMData.data.DivisionID != umData.data.DivisionID){
+            return {
+                success: false,
+                data: {} as ITblAgent,
+                error: {
+                    message: 'Replacement user does not belong to the same division.',
+                    code: 404
+                }
+            }
+        }
+
+        replacementUM = replacementUMData.data
+    }
+
+    const result = await demoteUmTransferSpTransaction(
+        userId, 
+        umId, 
+        umPosition.PositionID, 
+        spPosition.PositionID, 
+        umData.data.AgentCode || undefined, 
+        replacementUM && replacementUM.AgentID ? replacementUM.AgentID : undefined,
+        replacementUM && replacementUM.AgentCode ? replacementUM.AgentCode : undefined
+    )
+
+    if(!result.success){
+        return {
+            success: false,
+            data: {} as ITblAgent,
+            error: result.error
+        }
+    }
+
+    return {
+        success: true,
+        data: result.data
+    }
+}
 
 export const deleteAgentService = async (userId: number, agentId: number): QueryResult<ITblAgent> => {
     const result = await deleteAgent(userId, agentId)

@@ -1,10 +1,11 @@
 import express from 'express';
 import { validateAgentEmployeeSession, validateEmployeeSession, validateSession } from '../middleware/auth';
-import { addNewAgentController, deleteAgentController, editAgentController, getAgentDetailsController, getAgentRegistrationController, getAgentRegistrationsController, getAgentsController, promoteAgentController } from '../controller/agent.controller';
+import { addNewAgentController, deleteAgentController, demoteUMtoSPController, editAgentController, getAgentDetailsController, getAgentRegistrationController, getAgentRegistrationsController, getAgentsController, promoteAgentController } from '../controller/agent.controller';
 import { validate } from '../middleware/zod';
 import { validateRole } from '../middleware/roles';
 import { addAgentController } from '../controller/auth.controller';
 import { addAgentSchema } from '../schema/users.schema';
+import { demoteUMSchema } from '../schema/agents.schema';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ router.route('/registrations/:agentRegistrationId').get([validateEmployeeSession
 router.route('/new').post([validateEmployeeSession, validateRole(['AD', 'BH', 'SA']), validate(addAgentSchema)], addNewAgentController);
 router.route('/new/:agentId').patch([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], editAgentController);
 router.route('/new/:agentId/promote').patch([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], promoteAgentController);
+router.route('/new/:agentId/demote-um').patch([validateEmployeeSession, validateRole(['AD', 'BH', 'SA']), validate(demoteUMSchema)], demoteUMtoSPController);
 router.route('/:agentId').delete([validateEmployeeSession, validateRole(['AD', 'BH', 'SA'])], deleteAgentController);
 router.route('/').get([validateAgentEmployeeSession], getAgentsController);
 router.route('/').post([validateEmployeeSession, validateRole(['AD', 'BH','SA'])], addAgentController);

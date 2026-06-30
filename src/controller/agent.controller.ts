@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { get } from "http"
-import { addAgentService, deleteAgentService, editAgentService, getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService, lookupAgentRegistrationService } from "../service/agents.service"
+import { addAgentService, deleteAgentService, demoteUMtoSPService, editAgentService, getAgentRegistrationsService, getAgentsService, lookupAgentDetailsService, lookupAgentRegistrationService } from "../service/agents.service"
 
 export const getAgentsController = async (req: Request, res: Response) => {
 
@@ -345,6 +345,37 @@ export const promoteAgentController = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json({success: true, message: 'Agent promoted.', data: result.data})
+}
+
+export const demoteUMtoSPController = async (req: Request, res: Response) => {
+    const session = req.session
+
+    if(!session){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    if(!session.userID){
+        res.status(401).json({success: false, data: {}, message: 'Unauthorized'})
+        return;
+    }
+
+    const {
+        agentId
+    } = req.params
+
+    const {
+        replacementUmId
+    } = req.body || {}
+    
+    const result = await demoteUMtoSPService(session.userID, Number(agentId), replacementUmId ? Number(replacementUmId) : undefined);
+
+    if(!result.success) {
+        res.status(result.error?.code || 500).json({success: false, message: result.error?.message || 'Failed to demote agent.', data: {}})
+        return;
+    }
+
+    return res.status(200).json({success: true, message: 'Agent demoted.', data: result.data})
 }
 
 export const deleteAgentController = async (req: Request, res: Response) => {

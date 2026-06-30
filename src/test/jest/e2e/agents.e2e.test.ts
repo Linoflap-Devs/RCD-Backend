@@ -1,5 +1,5 @@
 import express from 'express'
-import { createAdmin, createSD, createSP, createSPs, createUM } from '../../helpers/users.helpers'
+import { createAdmin, createSD, createSP, createSPs, createUM, createUMs } from '../../helpers/users.helpers'
 import { seedDivisions, seedPositions } from '../../helpers/seed.helpers'
 import request from 'supertest'
 import { db } from '../../../db/db'
@@ -11,6 +11,8 @@ import agentRouter from '../../../routes/agents.routes'
 import { IAgentRegistrationListItem, ITblAgentUser, ITblUsersWeb } from '../../../types/auth.types'
 import cookieParser from 'cookie-parser'
 import { ITblAgent } from '../../../types/agent.types'
+import { TblAgents } from '../../../db/db-types'
+import { Selectable } from 'kysely'
 
 const app = express()
 
@@ -113,7 +115,7 @@ describe('Agents E2E Test', () => {
         })
     })
 
-    describe.only('POST /new/agent (add agent with email and pass)', () => {
+    describe('POST /new/agent (add agent with email and pass)', () => {
 
         const agent = request.agent(app)
         let adminUser: ITblUsersWeb = {} as ITblUsersWeb
@@ -304,8 +306,7 @@ describe('Agents E2E Test', () => {
             await truncateAllTables()
         })
     })
-    
-    
+       
     describe('PATCH /new/agent/:agentId/promote', () => {
         const agent = request.agent(app)
         let spUser: ITblAgentUser = {} as ITblAgentUser
@@ -598,7 +599,154 @@ describe('Agents E2E Test', () => {
         })
     })
 
+    describe.only('PATCH /api/agents/new/:agentId/demote-um (With replacement)', () => {
+        const agent = request.agent(app)
+        let spUser: ITblAgentUser[] = [] as ITblAgentUser[]
+        let umUser: ITblAgentUser = {} as ITblAgentUser
+        let umUser2: ITblAgentUser = {} as ITblAgentUser
+        let umUser3: ITblAgentUser = {} as ITblAgentUser
+        let umData: ITblAgent = {} as ITblAgent
+        let umData2: ITblAgent = {} as ITblAgent
+        let adminUser: ITblUsersWeb = {} as ITblUsersWeb
+
+        it('should seed divisions', async () => {
+            const divisions = await seedDivisions()
+            expect(divisions.success).toBe(true)
+        })
+
+        it('should seed positions', async () => {
+            const positions = await seedPositions()
+            expect(positions.success).toBe(true)
+        })
+
+        it('should create 2 UM user', async () => {
+            const um = await createUMs(2, 1)
+            umUser = um.data[0]
+            umUser2 = um.data[1]
+
+            const data: Selectable<TblAgents>[] = await db.selectFrom('Tbl_Agents')
+                .where('AgentID', 'in', um.data.map(um => um.AgentID))
+                .selectAll()
+                .execute()
+
+            umData = data.find(d => d.AgentID === umUser.AgentID)!
+            umData2 = data.find(d => d.AgentID === umUser2.AgentID)!
+
+            expect(um.success).toBe(true)
+        })
+
+        it('should create a UM user from another division', async () => {
+            const um = await createUM(2)
+
+            umUser3 = um.data
+            expect(um.success).toBe(true)
+        })
+
+        it('should create 3 SP users', async () => {
+            const sps = await createSPs(3, 1, umUser.AgentID!)
+
+            spUser = sps.data.map(sp => sp as ITblAgentUser)
+            expect(sps.success).toBe(true)
+        })
+
+        it('should create an admin user', async () => {
+            const admin = await createAdmin()
+            adminUser = admin.data
+            expect(admin.success).toBe(true)
+        })
+
+        it('should login the admin', async () => {
+            const login = await agent
+                .post('/api/auth/login-employee')
+                .send({
+                    username: adminUser.UserName,
+                    password: process.env.TESTING_PW || 'password'
+                })
+
+            expect(login.statusCode).toBe(200)
+        })
+
+        // negative tests
+
+        it('should reject demoting a SP', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + spUser[0].AgentID + '/demote-um')
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        it('should reject demoting a non-existent UM', async () => {
+            const result = await agent
+                .patch('/api/agents/new/1000/demote-um')
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        it('should reject demoting if there is no replacement', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID + '/demote-um')
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        it('should reject demoting if replacement is non-existing', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID + '/demote-um')
+                .send({ replacementUmId: 1000 })
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        it('should reject demoting if replacement is not a UM', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID + '/demote-um')
+                .send({ replacementUmId: spUser[0].AgentID })
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        it('should reject demoting if replacement is not from the same division', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID + '/demote-um')
+                .send({ replacementUmId: umUser3.AgentID })
+
+            expect(result.statusCode).toBe(404)
+        })
+
+        // positive tests
+
+        it('should demote a UM', async () => {
+            const result = await agent
+                .patch('/api/agents/new/' + umUser.AgentID + '/demote-um')
+                .send({ replacementUmId: umUser2.AgentID })
+
+            console.log(umUser, umUser2)
+            console.log(result.body)
+
+            expect(result.statusCode).toBe(200)
+        })
+
+        it('should transfer the SPs to the new UM', async () => {
+            const result = await db.selectFrom('Tbl_Agents')
+                .where('AgentID', 'in', spUser.map(sp => sp.AgentID))
+                .selectAll()
+                .execute()
+
+            expect(result[0].ReferredByID).toBe(umUser2.AgentID)
+            expect(result[1].ReferredByID).toBe(umUser2.AgentID)
+            expect(result[2].ReferredByID).toBe(umUser2.AgentID)
+
+            expect(result[0].ReferredCode).toBe(umData2.AgentCode)
+            expect(result[1].ReferredCode).toBe(umData2.AgentCode)
+            expect(result[2].ReferredCode).toBe(umData2.AgentCode)
+        })
+
+        afterAll(async () => {
+            await truncateAllTables()
+        })
+    })
     afterAll(async () => {
+        console.log('afterAll')
         await db.destroy()
     })
 })

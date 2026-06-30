@@ -343,6 +343,41 @@ export const createUM = async (divisionId?: number, referredById?: number, refer
     }
 }
 
+export const createUMs = async (amount: number, divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser[]> => {
+    const results: ITblAgentUser[] = [];
+
+    for (let i = 0; i < amount; i++) {
+
+        const result = await createUser({ 
+            firstName: 'UNITMANAGER',
+            agentCode: 'UM',
+            email: `um-${i}@gmail.com`,
+            password: process.env.TESTING_PW || 'password',
+            roleId: 86,
+            divisionId: divisionId,
+            referredById: referredById,
+            referredCode: referredCode
+        })
+    
+        if(!result.success){
+            return {
+                success: false,
+                data: [] as ITblAgentUser[],
+                error: result.error
+            }
+        }
+
+        results.push(result.data)
+    }
+    
+
+    return {
+        success: true,
+        data: results,
+    }
+}
+
+
 export const createSD = async (divisionId?: number, referredById?: number, referredCode?: string): QueryResult<ITblAgentUser> => {
     const result = await createUser({ 
         firstName: 'SALESDIRECTOR',
